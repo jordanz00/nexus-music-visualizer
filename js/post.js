@@ -55,7 +55,19 @@
   var OUTPUT_FS = [
     'precision mediump float;varying vec2 uv;',
     'uniform sampler2D tex,bloom,streak;uniform vec2 R;',
-    'uniform float BT,T,B,M,H,FL,BM;',
+    'uniform float BT,T,B,M,H,FL,BM,HS;',
+    'vec3 rgb2hsv(vec3 c){',
+    ' vec4 K=vec4(0.,-1./3.,2./3.,-1.);',
+    ' vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));',
+    ' vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r));',
+    ' float d=q.x-min(q.w,q.y),e=1.0e-10;',
+    ' return vec3(abs(q.z+(q.w-q.y)/(6.*d+e)),d/(q.x+e),q.x);',
+    '}',
+    'vec3 hsv2rgb(vec3 c){',
+    ' vec4 K=vec4(1.,2./3.,1./3.,3.);',
+    ' vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www);',
+    ' return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y);',
+    '}',
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
     'void main(){',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
@@ -96,6 +108,8 @@
     /* grain */
     '  float grain=fract(sin(dot(uv+T*.13,vec2(12.99,78.23)))*43758.)-0.5;',
     '  col+=grain*(.017+BT*.021+H*.015);',
+    /* hue (MIDI / UI color shift) */
+    '  vec3 hsv=rgb2hsv(col); hsv.x=fract(hsv.x+HS); col=hsv2rgb(hsv);',
     /* vignette */
     '  vec2 vp=uv*2.-1.;col*=1.-dot(vp,vp)*(.34-BT*.09-B*.05);',
     '  gl_FragColor=vec4(clamp(col,0.,1.),1.);',
@@ -191,6 +205,7 @@
     gl.uniform1f(u(outProg, 'FL'), Math.min(1.25, S.sFlux * 1.08 + S.beat * 0.22));
     gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
     gl.uniform1f(u(outProg, 'BM'), bm);
+    gl.uniform1f(u(outProg, 'HS'), Math.max(-0.5, Math.min(0.5, S.hueShift || 0)));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 

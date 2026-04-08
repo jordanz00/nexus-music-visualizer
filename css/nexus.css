@@ -1,10 +1,21 @@
-/* nexus.css — Core dark-pro theme for NEXUS Engine VJ stack.
-   Body: #0a0a0f, panels: #111, pads: #1a1a22, cyan accent: #00e5ff. */
+/* nexus.css — NEXUS Engine Mark V — premium VJ chrome */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Orbitron:wght@500;700&display=swap');
 
+:root{
+  --bg-color:#111;
+  --accent-color:#00ffd5;
+  --accent-dim:rgba(0,255,213,.35);
+  --slider-track:#333;
+  --slider-thumb:#00ffb0;
+  --panel-bg:rgba(0,0,0,.72);
+  --text-color:#fff;
+  --surface-elev:#1a1a22;
+  --border-subtle:rgba(0,255,213,.14);
+}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;color:#d0d0d4;font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-color);color:var(--text-color);font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
 
 /* -- Canvas --------------------------------------------------------- */
 #c-bc{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block;opacity:0;pointer-events:none;transition:opacity .6s ease}
@@ -22,29 +33,33 @@ body.nexus-mode-bc #c{pointer-events:none}
 
 /* -- Top bar -------------------------------------------------------- */
 #topbar{position:fixed;top:0;left:0;right:0;height:36px;z-index:60;display:flex;align-items:center;padding:0 14px;background:rgba(10,10,15,.92);border-bottom:1px solid rgba(0,229,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-#topbar .brand{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:.18em;color:#00e5ff;flex:0 0 auto}
-#topbar .brand span{color:rgba(0,229,255,.4);font-weight:500;font-size:10px;margin-left:6px;letter-spacing:.12em}
+#topbar .brand{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--accent-color);flex:0 0 auto}
+#topbar .brand span{color:var(--accent-dim);font-weight:500;font-size:10px;margin-left:6px;letter-spacing:.12em}
+#topbar .brand .ver-mark{font-size:7px;letter-spacing:.2em;color:rgba(255,255,255,.35);border:1px solid var(--border-subtle);padding:2px 6px;border-radius:3px;margin-left:8px}
 #topbar .spacer{flex:1}
-#topbar .meta{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:.14em;color:rgba(0,229,255,.4);margin-right:12px}
-.top-btn{background:none;border:1px solid rgba(0,229,255,.2);color:#00e5ff;font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.1em;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .2s;min-height:28px;margin-left:6px}
-.top-btn:hover,.top-btn.on{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.45)}
-.top-btn.on{color:#fff;text-shadow:0 0 8px rgba(0,229,255,.4)}
+#topbar .meta{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:.14em;color:var(--accent-dim);margin-right:12px}
+.top-btn{background:none;border:1px solid var(--border-subtle);color:var(--accent-color);font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.1em;padding:4px 10px;border-radius:4px;cursor:pointer;transition:transform .2s ease,background .2s,border-color .2s,box-shadow .2s;min-height:28px;margin-left:6px}
+.top-btn:hover,.top-btn.on{background:rgba(0,255,213,.1);border-color:rgba(0,255,213,.45);transform:translateY(-1px)}
+.top-btn.on{color:#fff;text-shadow:0 0 10px rgba(0,255,213,.45)}
 .top-btn.rec{border-color:rgba(255,23,68,.3);color:#ff1744}
 .top-btn.rec.on{background:rgba(255,23,68,.18);border-color:#ff1744;animation:rec-pulse 1.2s ease infinite}
 @keyframes rec-pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* -- Bottom panel --------------------------------------------------- */
-#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(17,17,17,.94);border-top:1px solid rgba(0,229,255,.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:50vh;overflow-y:auto}
+#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--panel-bg);border-top:1px solid var(--border-subtle);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:min(52vh,640px);overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.45)}
 #panel.hide{transform:translateY(100%)}
 .panel-row{display:flex;align-items:center;padding:6px 10px;gap:8px;flex-wrap:wrap}
 
 /* -- Scene grid (pads) ---------------------------------------------- */
-#scene-grid{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;max-height:148px;overflow-y:auto}
-.scene-pad{width:68px;height:52px;border:1px solid rgba(255,255,255,.08);border-radius:5px;background:#1a1a22;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
+.scene-grid-wrap{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;max-height:min(200px,28vh);overflow-y:auto}
+.scene-grid-wrap.grid-4x4{max-width:calc(4 * 74px + 24px)}
+.pad-toolbar{padding:4px 10px 0}
+.scene-pad.pad-hidden{display:none!important}
+.scene-pad{width:68px;height:52px;border:1px solid rgba(255,255,255,.08);border-radius:6px;background:var(--surface-elev);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform .18s ease,box-shadow .18s,border-color .18s,background .18s;position:relative;overflow:hidden}
 .scene-pad .sp-name{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);pointer-events:none;text-align:center;line-height:1.15;padding:0 3px}
 .scene-pad .sp-idx{font-family:'Orbitron',monospace;font-size:8px;color:rgba(255,255,255,.2);position:absolute;top:2px;right:4px}
-.scene-pad:hover{border-color:rgba(0,229,255,.3);background:#20202a}
-.scene-pad.active{border-color:var(--pad-color,#00e5ff);box-shadow:0 0 12px var(--pad-color,rgba(0,229,255,.25)),inset 0 0 18px rgba(0,229,255,.08);background:#1e1e28}
+.scene-pad:hover{border-color:rgba(0,255,213,.35);background:#22222c;transform:translateY(-2px)}
+.scene-pad.active{border-color:var(--pad-color,var(--accent-color));box-shadow:0 0 14px var(--pad-color,rgba(0,255,213,.3)),inset 0 0 20px rgba(0,255,213,.08);background:#1e2428}
 .scene-pad.active .sp-name{color:#fff}
 .scene-pad.beat-pulse{animation:pad-beat .18s ease-out}
 @keyframes pad-beat{0%{transform:scale(1.08);box-shadow:0 0 18px var(--pad-color,rgba(0,229,255,.4))}100%{transform:scale(1)}}
@@ -54,9 +69,9 @@ body.nexus-mode-bc #c{pointer-events:none}
 .ctrl-group .g-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,229,255,.45);width:56px;flex-shrink:0}
 .ctrl-slider{display:flex;align-items:center;gap:5px}
 .ctrl-slider label{font-size:9px;color:rgba(255,255,255,.45);width:38px;text-align:right;letter-spacing:.04em}
-.ctrl-slider input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;outline:none}
-.ctrl-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#00e5ff;border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(0,229,255,.3)}
-.ctrl-slider .val{font-family:'Orbitron',monospace;font-size:8px;color:rgba(0,229,255,.5);width:24px;text-align:left}
+.ctrl-slider input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:5px;background:var(--slider-track);border-radius:3px;outline:none}
+.ctrl-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--slider-thumb);border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(0,255,176,.4)}
+.ctrl-slider .val{font-family:'Orbitron',monospace;font-size:8px;color:var(--accent-dim);width:28px;text-align:left}
 
 /* -- Palette row ---------------------------------------------------- */
 .pal-row{display:flex;gap:4px;align-items:center}
@@ -68,7 +83,7 @@ body.nexus-mode-bc #c{pointer-events:none}
 #meters{display:flex;gap:8px;align-items:flex-end;height:38px;padding:4px 0}
 .meter{display:flex;flex-direction:column;align-items:center;gap:2px;width:28px}
 .meter-bar{width:8px;height:28px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;position:relative}
-.meter-fill{position:absolute;bottom:0;left:0;right:0;background:#00e5ff;border-radius:3px;transition:height .06s}
+.meter-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,var(--accent-color),var(--slider-thumb));border-radius:3px;transition:height .06s}
 .meter-label{font-size:7px;letter-spacing:.08em;color:rgba(255,255,255,.3);text-transform:uppercase}
 
 /* -- Preset selector ------------------------------------------------ */
@@ -87,14 +102,14 @@ body.nexus-mode-bc #c{pointer-events:none}
 /* -- Splash --------------------------------------------------------- */
 #splash{position:fixed;inset:0;z-index:200;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease}
 #splash.out{opacity:0;pointer-events:none}
-#splash h1{font-family:'Orbitron',monospace;font-size:36px;font-weight:700;letter-spacing:.22em;color:#00e5ff;margin-bottom:8px;text-shadow:0 0 32px rgba(0,229,255,.25)}
+#splash h1{font-family:'Orbitron',monospace;font-size:36px;font-weight:700;letter-spacing:.22em;color:var(--accent-color);margin-bottom:8px;text-shadow:0 0 32px rgba(0,255,213,.22)}
 #splash .sub{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:.16em;margin-bottom:28px}
-#splash .start-btn{background:transparent;border:1px solid rgba(0,229,255,.35);color:#00e5ff;font-family:'Orbitron',monospace;font-size:14px;letter-spacing:.18em;padding:12px 36px;border-radius:6px;cursor:pointer;transition:all .25s}
-#splash .start-btn:hover{background:rgba(0,229,255,.1);border-color:#00e5ff;box-shadow:0 0 24px rgba(0,229,255,.2)}
+#splash .start-btn{background:transparent;border:1px solid var(--border-subtle);color:var(--accent-color);font-family:'Orbitron',monospace;font-size:14px;letter-spacing:.18em;padding:12px 36px;border-radius:6px;cursor:pointer;transition:all .25s}
+#splash .start-btn:hover{background:rgba(0,255,213,.1);border-color:var(--accent-color);box-shadow:0 0 24px rgba(0,255,213,.2)}
 #splash .hint{font-size:10px;color:rgba(255,255,255,.2);margin-top:14px;letter-spacing:.08em}
 
 /* -- Present mode --------------------------------------------------- */
-body.nexus-present #topbar,body.nexus-present #panel{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
+body.nexus-present #topbar,body.nexus-present #panel,body.nexus-present #preview-wrap{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
 body.nexus-present{cursor:none}
 body.nexus-present:hover #present-hint{opacity:1}
 
@@ -118,6 +133,37 @@ body.letterbox #c,body.letterbox #c-bc{top:50%;transform:translateY(-50%);height
 .pro-badge{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:.14em;padding:2px 7px;border-radius:3px;margin-left:8px;flex-shrink:0}
 .pro-badge.free{color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.1);background:transparent}
 .pro-badge.pro{color:#00e676;border:1px solid rgba(0,230,118,.3);background:rgba(0,230,118,.06)}
+
+/* -- Accordion panels ----------------------------------------------- */
+.nx-acc{border-bottom:1px solid rgba(255,255,255,.04)}
+.nx-acc-sum{cursor:pointer;list-style:none;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:.14em;color:var(--accent-dim);padding:10px 14px;user-select:none;transition:color .2s,background .2s;display:flex;align-items:center;gap:10px}
+.nx-acc-sum::-webkit-details-marker{display:none}
+.nx-acc-sum:hover{color:var(--accent-color);background:rgba(0,255,213,.04)}
+.nx-acc-tag{font-size:8px;letter-spacing:.1em;padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);color:rgba(255,255,255,.45)}
+.nx-acc-body{padding:0 4px 8px}
+
+/* -- Program preview ------------------------------------------------ */
+#preview-wrap{position:fixed;right:12px;bottom:min(52vh,340px);z-index:55;width:min(320px,28vw);border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);box-shadow:0 8px 32px rgba(0,0,0,.5);transition:opacity .3s,transform .3s}
+#preview-wrap:hover{transform:translateY(-2px)}
+.preview-title{display:block;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:.2em;color:var(--accent-dim);padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
+#preview-canvas{display:block;width:100%;height:auto;vertical-align:middle}
+
+/* -- MIDI map overlay ----------------------------------------------- */
+.midi-map-panel{position:fixed;left:12px;top:48px;z-index:70;width:min(380px,92vw);max-height:min(70vh,520px);overflow:auto;background:rgba(8,10,12,.94);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.6);display:none;flex-direction:column}
+.midi-map-panel.open{display:flex}
+.midi-map-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-family:'Orbitron',monospace;font-size:11px;letter-spacing:.16em;color:var(--accent-color)}
+.midi-map-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;line-height:1;padding:4px 8px}
+.midi-map-close:hover{color:var(--accent-color)}
+.midi-map-hint{font-size:10px;color:rgba(255,255,255,.4);padding:8px 12px;line-height:1.4}
+.midi-learn-grid{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 10px}
+.midi-learn-grid button{font-size:9px;letter-spacing:.06em;padding:5px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:rgba(255,255,255,.75);cursor:pointer;transition:all .15s}
+.midi-learn-grid button:hover,.midi-learn-grid button.active{border-color:var(--accent-color);color:var(--accent-color);background:rgba(0,255,213,.08)}
+.midi-scene-lab{flex-basis:100%;font-size:8px;letter-spacing:.12em;color:rgba(255,255,255,.35);margin:6px 0 2px}
+.midi-map-list{list-style:none;padding:8px 12px 12px;font-size:10px;color:rgba(255,255,255,.55);line-height:1.5}
+.midi-map-list li{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.midi-map-list code{color:var(--accent-color);font-size:9px}
+
+body.nexus-perf-top #perfbtn.on{background:rgba(0,255,213,.2);border-color:var(--accent-color)}
 
 /* -- Responsive ----------------------------------------------------- */
 @media(max-width:640px){

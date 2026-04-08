@@ -5,6 +5,7 @@
 (function () {
   var raw = null;
   var keys = [];
+  var showcase = [];
   var byCategory = { ambient: [], heavy: [], psychedelic: [], glitch: [], other: [] };
   var FAV_KEY = 'nx_bc_favorites';
 
@@ -29,7 +30,15 @@
       var cat = categorize(k);
       (byCategory[cat] || byCategory.other).push(k);
     });
+    showcase = [];
+    if (window.NXBcShowcase && typeof NXBcShowcase.resolve === 'function') {
+      showcase = NXBcShowcase.resolve(keys);
+    }
     return true;
+  }
+
+  function getShowcase() {
+    return showcase.slice();
   }
 
   function getPreset(name) {
@@ -56,6 +65,7 @@
     loadFromGlobal: loadFromGlobal,
     getKeys: function () { return keys.slice(); },
     getRaw: function () { return raw; },
+    getShowcase: getShowcase,
     byCategory: byCategory,
     getPreset: getPreset,
     categorize: categorize,

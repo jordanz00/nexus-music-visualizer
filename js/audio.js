@@ -87,9 +87,11 @@
       S.sFlux += (Math.min(1, fluxRaw / (S.bufLen * 0.42)) - S.sFlux) * 0.52;
       var i1 = Math.floor(S.bufLen * .02), i2 = Math.floor(S.bufLen * .08), i2b = Math.floor(S.bufLen * .14);
       var i3 = Math.floor(S.bufLen * .32), i4 = Math.floor(S.bufLen * .72);
-      var bv = 0, bv2 = 0, mv = 0, hv = 0, vv = 0;
+      var iLm1 = Math.floor((i2 + i3) * 0.5);
+      var bv = 0, bv2 = 0, lmv = 0, mv = 0, hv = 0, vv = 0;
       for (var i = i1; i < i2; i++) bv += S.freqArr[i];
       for (var i = i2; i < i2b; i++) bv2 += S.freqArr[i];
+      for (var i = i2b; i < iLm1; i++) lmv += S.freqArr[i];
       for (var i = i2; i < i3; i++) mv += S.freqArr[i];
       for (var i = i3; i < i4; i++) hv += S.freqArr[i];
       for (var i = 0; i < i4; i++) vv += S.freqArr[i];
@@ -99,6 +101,7 @@
       var mb = Math.min(1, (bv / ((i2 - i1) * 255)) * s * 4.2);
       mb = Math.max(mb, (bv2 / ((i2b - i2) * 255 || 1)) * s * 2.6);
       var mm = Math.min(1, (mv / ((i3 - i2) * 255)) * s * 3.5);
+      var mlm = Math.min(1, (lmv / (Math.max(1, (iLm1 - i2b)) * 255)) * s * 3.35);
       var mh = Math.min(1, (hv / ((i4 - i3) * 255)) * s * 3.25);
       var mv2 = Math.min(1, (vv / (i4 * 255)) * s * 2.85);
       var blend = Math.min(1, mv2 * 2.4);
@@ -106,6 +109,7 @@
       if (atk > 0.14 && mb > 0.18) S.beat = Math.max(S.beat, 0.92);
       if (atk > 0.22 && mb > 0.28) S.beat = Math.max(S.beat, 1.12);
       S.sBass += (Math.max(demo.bass * (1 - blend), mb) - S.sBass) * .4;
+      S.sLowMid += (mlm - S.sLowMid) * 0.38;
       S.sMid += (Math.max(demo.mid * (1 - blend), mm) - S.sMid) * .36;
       S.sHigh += (Math.max(demo.high * (1 - blend), mh) - S.sHigh) * .34;
       S.sVol += (Math.max(demo.vol * (1 - blend), mv2) - S.sVol) * .32;
@@ -113,7 +117,9 @@
       for (var i = 0; i < 256; i++) abuf[i] = Math.min(255, Math.floor((S.freqArr[i * step] || 0) * (1 + S.sBass * 0.35 + S.beat * 0.25)));
       for (var i = 0; i < 256; i++) abuf[256 + i] = S.waveArr[i * step] || 128;
     } else {
-      S.sBass += (demo.bass - S.sBass) * .42; S.sMid += (demo.mid - S.sMid) * .38;
+      S.sBass += (demo.bass - S.sBass) * .42;
+      S.sLowMid += (demo.mid * 0.85 + demo.bass * 0.12 - S.sLowMid) * 0.36;
+      S.sMid += (demo.mid - S.sMid) * .38;
       S.sHigh += (demo.high - S.sHigh) * .34; S.sVol += (demo.vol - S.sVol) * .36;
       var dKick = Math.abs(Math.sin(S.GT * 2. * 3.14159));
       S.sFlux += (Math.min(1, dKick * demo.beat * 1.8) - S.sFlux) * 0.55;

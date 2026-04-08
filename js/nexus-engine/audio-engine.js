@@ -9,6 +9,7 @@
   function getSnapshot() {
     return {
       bass: S.sBass,
+      lowMid: S.sLowMid,
       mid: S.sMid,
       high: S.sHigh,
       sub: S.sSub,

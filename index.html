@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a0a0f">
-  <meta name="description" content="NEXUS Engine — hybrid Butterchurn + WebGL VJ: MilkDrop presets, raymarched scenes, MIDI, performance mode, recording.">
-  <title>NEXUS Engine — Live VJ</title>
+  <meta name="description" content="NEXUS Engine Mark V — professional browser VJ: Butterchurn + WebGL, MIDI, performance mode, hybrid layers, export.">
+  <title>NEXUS Engine — Mark V</title>
   <link rel="stylesheet" href="css/nexus.css">
 </head>
 <body>
@@ -22,14 +22,14 @@
 <!-- ── SPLASH ─────────────────────────────────────────────────────── -->
 <div id="splash">
   <h1>NEXUS ENGINE</h1>
-  <p class="sub">HYBRID VJ · BUTTERCHURN + WEBGL</p>
+  <p class="sub">MARK V · PROFESSIONAL HYBRID VJ</p>
   <button class="start-btn" id="start-btn">LAUNCH</button>
   <p class="hint">Works best with audio input &middot; runs in demo mode without mic</p>
 </div>
 
 <!-- ── TOP BAR ────────────────────────────────────────────────────── -->
 <div id="topbar">
-  <div class="brand">NEXUS<span>ENGINE</span></div>
+  <div class="brand">NEXUS<span>ENGINE</span><span class="ver-mark">Mark V</span></div>
   <span id="pro-badge" class="pro-badge free">FREE</span>
   <div class="spacer"></div>
   <div class="meta" id="scene-name">&mdash;</div>
@@ -42,7 +42,19 @@
   <button class="top-btn" id="xbtn" title="Explode (X)">⚡</button>
   <button class="top-btn" id="micbtn" title="Toggle mic (M)">MIC</button>
   <button class="top-btn" id="inputbtn" title="Audio input device">IN</button>
+  <select class="top-btn" id="rec-profile" title="Record resolution" style="background:#111;color:var(--accent-color,#00ffd5);border-color:rgba(0,255,213,.25);font-size:9px;padding:4px 6px;max-width:72px">
+    <option value="native" selected>Native</option>
+    <option value="1080">1080p</option>
+    <option value="4k">4K</option>
+  </select>
+  <select class="top-btn" id="rec-fps" title="Record FPS" style="background:#111;color:var(--accent-color,#00ffd5);border-color:rgba(0,255,213,.25);font-size:9px;padding:4px 6px;max-width:56px">
+    <option value="30">30</option>
+    <option value="45">45</option>
+    <option value="60" selected>60</option>
+  </select>
   <button class="top-btn rec" id="recbtn" title="Record WebM">REC</button>
+  <button class="top-btn" id="perfbtn" title="Performance lock (stable FPS)">PERF</button>
+  <button class="top-btn" id="midimapbtn" title="MIDI mapping overlay">MAP</button>
   <button class="top-btn" id="adaptbtn" title="Adaptive GPU quality">AUTO Q</button>
   <button class="top-btn" id="directorbtn" title="AI Director — smart scene switching">AI DIR</button>
   <select class="top-btn" id="demosel" title="Play demo sequence for recording" style="background:#111;color:#00e5ff;border-color:rgba(0,229,255,.2);font-size:9px;padding:4px 6px">
@@ -67,12 +79,42 @@
   </div>
 </div>
 
+<!-- ── Live preview (scaled program bus) ─────────────────────────── -->
+<div id="preview-wrap" aria-hidden="false">
+  <span class="preview-title">PROGRAM</span>
+  <canvas id="preview-canvas" width="320" height="180"></canvas>
+</div>
+
+<!-- Offscreen composite for 1080p/4K recording -->
+<canvas id="c-rec" width="1920" height="1080" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none"></canvas>
+
+<!-- MIDI mapping overlay -->
+<div id="midi-map-panel" class="midi-map-panel" aria-hidden="true">
+  <div class="midi-map-head">
+    <span>MIDI MAP</span>
+    <button type="button" class="midi-map-close" id="midi-map-close">&times;</button>
+  </div>
+  <p class="midi-map-hint">MIDI Learn: pick a target, then move a knob or pad.</p>
+  <div id="midi-map-learn-btns" class="midi-learn-grid"></div>
+  <ul id="midi-map-list" class="midi-map-list"></ul>
+</div>
+
 <!-- ── BOTTOM PANEL ───────────────────────────────────────────────── -->
 <div id="panel" class="hide">
 
-  <!-- Scene grid -->
-  <div id="scene-grid"></div>
+  <details class="nx-acc" open>
+    <summary class="nx-acc-sum">Scenes <span class="nx-acc-tag">WebGL</span></summary>
+    <div class="nx-acc-body">
+      <div class="panel-row pad-toolbar">
+        <label class="nx-inline"><input type="checkbox" id="pad-compact"> Show first 16 only</label>
+      </div>
+      <div id="scene-grid" class="scene-grid-wrap"></div>
+    </div>
+  </details>
 
+  <details class="nx-acc" open>
+    <summary class="nx-acc-sum">Engine &amp; audio</summary>
+    <div class="nx-acc-body">
   <!-- Controls row 1: Engine -->
   <div class="panel-row">
     <div class="ctrl-group">
@@ -95,6 +137,7 @@
     <!-- Audio meters -->
     <div id="meters">
       <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-bass"></div></div><span class="meter-label">B</span></div>
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-lowmid"></div></div><span class="meter-label">LM</span></div>
       <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-mid"></div></div><span class="meter-label">M</span></div>
       <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-high"></div></div><span class="meter-label">H</span></div>
       <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-flux"></div></div><span class="meter-label">Fx</span></div>
@@ -111,8 +154,14 @@
       <div class="pal-sw" data-p="4" style="background:linear-gradient(135deg,#78909c,#37474f)" title="Mono"></div>
       <div class="pal-sw" data-p="5" style="background:linear-gradient(135deg,#ffd600,#ff6d00)" title="Gold"></div>
     </div>
+    <div class="ctrl-slider"><label>Hue</label><input type="range" id="r-hue" min="-100" max="100" value="0" title="Global hue shift (post)"><span class="val">0</span></div>
   </div>
+    </div>
+  </details>
 
+  <details class="nx-acc" open>
+    <summary class="nx-acc-sum">Output &amp; presets</summary>
+    <div class="nx-acc-body">
   <!-- Controls row 3: Output + Presets -->
   <div class="panel-row">
     <div class="ctrl-group">
@@ -130,7 +179,12 @@
       <button class="sm-btn" id="save-preset">Save</button>
     </div>
   </div>
+    </div>
+  </details>
 
+  <details class="nx-acc" open>
+    <summary class="nx-acc-sum">Hybrid stack <span class="nx-acc-tag">Butterchurn</span></summary>
+    <div class="nx-acc-body">
   <!-- Nexus Engine: visual stack + post FX -->
   <div class="panel-row nexus-row">
     <div class="ctrl-group nexus-group">
@@ -147,10 +201,13 @@
     </div>
     <div class="ctrl-group nexus-group flex-grow">
       <span class="g-label">MilkDrop</span>
-      <select id="bc-preset-sel" class="preset-select wide-select" title="Butterchurn preset (enable mic)"><option value="">— Preset —</option></select>
+      <select id="bc-showcase-sel" class="preset-select" style="min-width:160px" title="20 showcase presets (mapped to pack)"><option value="">— Showcase 20 —</option></select>
+      <select id="bc-preset-sel" class="preset-select wide-select" title="All pack presets"><option value="">— All presets —</option></select>
       <button type="button" class="sm-btn" id="bc-random" title="Random Butterchurn preset">RND BC</button>
     </div>
   </div>
+    </div>
+  </details>
 </div>
 
 <!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
@@ -167,6 +224,7 @@
 <script src="js/camera.js"></script>
 <script src="js/post.js"></script>
 <script src="js/nexus-engine/audio-engine.js"></script>
+<script src="js/nexus-engine/bc-showcase.js"></script>
 <script src="js/nexus-engine/preset-library.js"></script>
 <script src="js/nexus-engine/visual-engine-manager.js"></script>
 <script src="js/nexus-engine/butterchurn-scene.js"></script>

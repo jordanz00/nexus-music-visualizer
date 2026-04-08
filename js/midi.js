@@ -22,7 +22,7 @@
     morph: { set: function (v) { S.morphDurationSec = 0.55 + v * 3.65; } },
     palette: { set: function (v) { P.PAL = Math.floor(v * 6); if (NX.ui && NX.ui.setPalette) NX.ui.setPalette(P.PAL); } },
     bloom: { set: function (v) { S.postBloomMul = v * 2.2; } },
-    colorShift: { set: function (v) { S.hueShift = v; } },
+    colorShift: { set: function (v) { S.hueShift = (v - 0.5) * 0.55; var el = document.getElementById('r-hue'); if (el) el.value = String(Math.round(S.hueShift * 200)); } },
     bcNext: { set: function () {
       if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
       var keys = NX.PresetLibrary.getKeys();
@@ -53,6 +53,7 @@
       saveMappings();
       learnTarget = null;
       if (NX.ui && NX.ui.setMidiStatus) NX.ui.setMidiStatus('mapped');
+      if (NX.ui && NX.ui.refreshMidiMapPanel) NX.ui.refreshMidiMapPanel();
       return;
     }
 
@@ -105,5 +106,21 @@
   function clearMappings() { mappings = {}; saveMappings(); }
   function getMappings() { return Object.assign({}, mappings); }
 
-  NX.midi = { init: init, startLearn: startLearn, clearMappings: clearMappings, getMappings: getMappings };
+  function getMappingList() {
+    var out = [];
+    Object.keys(mappings).forEach(function (k) {
+      var m = mappings[k];
+      if (m) out.push({ midiKey: k, type: m.type, param: m.param });
+    });
+    return out;
+  }
+
+  function getParamCatalog() {
+    return Object.keys(paramDefs);
+  }
+
+  NX.midi = {
+    init: init, startLearn: startLearn, clearMappings: clearMappings, getMappings: getMappings,
+    getMappingList: getMappingList, getParamCatalog: getParamCatalog, paramDefs: paramDefs
+  };
 })();

@@ -15,7 +15,7 @@ window.NX = window.NX || {};
   var S = {
     W: 0, H: 0, FW: 0, FH: 0, GT: 0, frame: 0, hudTick: 0,
     mouseRaw: [0, 0], mouseSmooth: [0, 0],
-    sBass: 0, sMid: 0, sHigh: 0, sSub: 0, sVol: 0, sFlux: 0, sCent: 0.35,
+    sBass: 0, sLowMid: 0, sMid: 0, sHigh: 0, sSub: 0, sVol: 0, sFlux: 0, sCent: 0.35,
     prevBass: 0, prevMbRaw: 0, bpmList: [], lastBeat: 0, bpm: 0, beat: 0, explode: 0,
     _lastAudT: 0, prevFreqFlux: null,
     micOn: false, analyser: null, waveArr: null, freqArr: null, bufLen: 0,
@@ -33,7 +33,9 @@ window.NX = window.NX || {};
     postBloomMul: 1,
     hueShift: 0,
     bcIntensity: 1,
-    bcSpeed: 1
+    bcSpeed: 1,
+    /** When set, main loop composites layers into #c-rec for export resolution */
+    recCompositeDims: null
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -322,6 +324,23 @@ window.NX = window.NX || {};
     }
 
     if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
+
+    if (S.recording && S.recCompositeDims) {
+      var rc = document.getElementById('c-rec');
+      if (rc) {
+        var x2d = rc.getContext('2d');
+        var d = S.recCompositeDims;
+        if (rc.width !== d.w || rc.height !== d.h) { rc.width = d.w; rc.height = d.h; }
+        x2d.fillStyle = '#000';
+        x2d.fillRect(0, 0, d.w, d.h);
+        var vm = S.visualMode || 'shader';
+        if (vm !== 'shader') {
+          var cbc = document.getElementById('c-bc');
+          if (cbc) try { x2d.drawImage(cbc, 0, 0, d.w, d.h); } catch (eR) { }
+        }
+        try { x2d.drawImage(C, 0, 0, d.w, d.h); } catch (eR2) { }
+      }
+    }
   }
 
   /* ---- Mouse / touch ----------------------------------------------- */

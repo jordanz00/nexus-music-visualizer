@@ -102,6 +102,7 @@
   function setSpeed(v) {
     speed = Math.max(0.25, Math.min(2, v));
     S.bcSpeed = speed;
+    /* Butterchurn 2.6 drives time from audio; speed is stored for future renderer hooks / presets */
   }
 
   function destroy() {

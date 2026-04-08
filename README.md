@@ -1,6 +1,8 @@
-# NEXUS Engine — Hybrid VJ (Butterchurn + WebGL)
+# NEXUS Engine — Mark V (Hybrid VJ)
 
-**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) as a modular visual engine **plus** 20 custom raymarched WebGL scenes, shared audio analysis, MIDI, grading, recording. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) as a modular visual engine **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / 4K** with **30–60 FPS**. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
+
+**Showcase 20:** curated display names (Cosmic Tunnel, Laser Grid, …) map to the **closest real presets** in the loaded pack via keyword scoring — not fabricated MilkDrop JSON.
 
 > **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
 > **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)

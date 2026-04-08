@@ -11,10 +11,14 @@
     var grid = document.getElementById('scene-grid');
     if (!grid) return;
     while (grid.firstChild) grid.removeChild(grid.firstChild);
+    var compactEl = document.getElementById('pad-compact');
+    var compact = compactEl && compactEl.checked;
+    grid.classList.toggle('grid-4x4', compact);
     NX.scenes.forEach(function (sc, i) {
       var pad = document.createElement('div');
       pad.className = 'scene-pad' + (i === S.curS ? ' active' : '');
-      pad.style.setProperty('--pad-color', sc.c || '#00e5ff');
+      if (compact && i >= 16) pad.classList.add('pad-hidden');
+      pad.style.setProperty('--pad-color', sc.c || 'var(--accent-color,#00ffd5)');
       pad.dataset.idx = i;
       var idx = document.createElement('span');
       idx.className = 'sp-idx'; idx.textContent = i + 1;
@@ -56,6 +60,19 @@
     });
   }
 
+  function buildShowcaseSelect() {
+    var sel = document.getElementById('bc-showcase-sel');
+    if (!sel || !NX.PresetLibrary) return;
+    while (sel.childNodes.length > 1) sel.removeChild(sel.lastChild);
+    var list = NX.PresetLibrary.getShowcase();
+    list.forEach(function (item, i) {
+      var o = document.createElement('option');
+      o.value = item.key;
+      o.textContent = (i + 1) + '. ' + item.label;
+      sel.appendChild(o);
+    });
+  }
+
   function buildButterchurnPresets() {
     var sel = document.getElementById('bc-preset-sel');
     if (!sel || !NX.PresetLibrary) return;
@@ -86,6 +103,12 @@
     });
     var rmorph = document.getElementById('rmorph');
     if (rmorph) rmorph.value = Math.round(S.morphDurationSec * 10);
+    var rh = document.getElementById('r-hue');
+    if (rh) {
+      rh.value = String(Math.round((S.hueShift || 0) * 200));
+      var row = rh.closest('.ctrl-slider');
+      if (row) { var vd = row.querySelector('.val'); if (vd) vd.textContent = rh.value; }
+    }
     setPalette(P.PAL);
   }
 
@@ -98,9 +121,9 @@
   function tickHud(st) {
     if (++st.hudTick % 6 !== 0) return;
 
-    var bp = Math.round(st.sBass * 100), mp = Math.round(st.sMid * 100), hp = Math.round(st.sHigh * 100);
+    var bp = Math.round(st.sBass * 100), lmp = Math.round((st.sLowMid || 0) * 100), mp = Math.round(st.sMid * 100), hp = Math.round(st.sHigh * 100);
     var fb = Math.round(st.sFlux * 100), vb = Math.round(st.sVol * 100);
-    setMeter('m-bass', bp); setMeter('m-mid', mp); setMeter('m-high', hp);
+    setMeter('m-bass', bp); setMeter('m-lowmid', lmp); setMeter('m-mid', mp); setMeter('m-high', hp);
     setMeter('m-flux', fb); setMeter('m-vol', vb);
 
     var bpmEl = document.getElementById('bpm-val');
@@ -118,6 +141,25 @@
     }
 
     pulsePads();
+    tickPreview();
+  }
+
+  var _pvTick = 0;
+  function tickPreview() {
+    _pvTick++;
+    if (_pvTick % 4 !== 0) return;
+    var prev = document.getElementById('preview-canvas');
+    if (!prev || !NX.C) return;
+    var ctx = prev.getContext('2d');
+    var pw = prev.width, ph = prev.height;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, pw, ph);
+    var mode = S.visualMode || 'shader';
+    if (mode !== 'shader') {
+      var bc = document.getElementById('c-bc');
+      if (bc) try { ctx.drawImage(bc, 0, 0, pw, ph); } catch (e) { }
+    }
+    try { ctx.drawImage(NX.C, 0, 0, pw, ph); } catch (e2) { }
   }
 
   function setMeter(id, pct) {
@@ -150,18 +192,50 @@
   /* ---- Recording --------------------------------------------------- */
   var mediaRec = null, recChunks = [];
 
+  function createMediaRecorder(stream, br) {
+    var types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    for (var i = 0; i < types.length; i++) {
+      var t = types[i];
+      if (typeof MediaRecorder === 'undefined') break;
+      if (MediaRecorder.isTypeSupported && !MediaRecorder.isTypeSupported(t)) continue;
+      try {
+        return new MediaRecorder(stream, { mimeType: t, videoBitsPerSecond: br });
+      } catch (e) { /* try next codec */ }
+    }
+    return new MediaRecorder(stream, { videoBitsPerSecond: br });
+  }
+
   function startRecording() {
     if (S.recording) return;
     try {
-      var stream = NX.C.captureStream(30);
-      mediaRec = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+      var profEl = document.getElementById('rec-profile');
+      var fpsEl = document.getElementById('rec-fps');
+      var prof = profEl ? profEl.value : 'native';
+      var fps = fpsEl ? Math.max(24, Math.min(60, parseInt(fpsEl.value, 10) || 60)) : 60;
+      var stream;
+      var br = 10000000;
+      if (prof === '1080') {
+        S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
+        stream = document.getElementById('c-rec').captureStream(fps);
+        br = 14000000;
+      } else if (prof === '4k') {
+        S.recCompositeDims = { w: 3840, h: 2160, fps: fps };
+        stream = document.getElementById('c-rec').captureStream(fps);
+        br = 32000000;
+      } else {
+        S.recCompositeDims = null;
+        stream = NX.C.captureStream(fps);
+        br = 12000000;
+      }
+      mediaRec = createMediaRecorder(stream, br);
       recChunks = [];
       mediaRec.ondataavailable = function (e) { if (e.data.size > 0) recChunks.push(e.data); };
       mediaRec.onstop = function () {
+        S.recCompositeDims = null;
         var blob = new Blob(recChunks, { type: 'video/webm' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'NEXUS_' + Date.now() + '.webm';
+        a.download = 'NEXUS_MarkV_' + Date.now() + '.webm';
         a.click(); URL.revokeObjectURL(a.href);
         S.recording = false;
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
@@ -169,12 +243,83 @@
       mediaRec.start(1000);
       S.recording = true;
       var b = document.getElementById('recbtn'); if (b) b.classList.add('on');
-    } catch (e) { console.warn('Recording failed:', e.message); }
+    } catch (e) { console.warn('Recording failed:', e.message); S.recCompositeDims = null; }
   }
   function stopRecording() { if (mediaRec && S.recording) mediaRec.stop(); }
   function toggleRecording() { S.recording ? stopRecording() : startRecording(); }
 
   /* ---- Present mode ------------------------------------------------ */
+  var _midiGridBuilt = false;
+
+  function refreshMidiMapPanel() {
+    var ul = document.getElementById('midi-map-list');
+    if (!ul || !NX.midi || !NX.midi.getMappingList) return;
+    while (ul.firstChild) ul.removeChild(ul.firstChild);
+    NX.midi.getMappingList().forEach(function (row) {
+      var li = document.createElement('li');
+      var c = document.createElement('code');
+      c.textContent = row.midiKey;
+      li.appendChild(c);
+      li.appendChild(document.createTextNode(' \u2192 ' + row.type + ' '));
+      var st = document.createElement('strong');
+      st.textContent = String(row.param);
+      li.appendChild(st);
+      ul.appendChild(li);
+    });
+  }
+
+  function buildMidiLearnGrid() {
+    var wrap = document.getElementById('midi-map-learn-btns');
+    if (!wrap || !NX.midi) return;
+    while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+    NX.midi.getParamCatalog().forEach(function (name) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = name;
+      b.addEventListener('click', function () {
+        wrap.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        NX.midi.startLearn(name);
+        setMidiStatus('learning: ' + name);
+      });
+      wrap.appendChild(b);
+    });
+    var lab = document.createElement('div');
+    lab.className = 'midi-scene-lab';
+    lab.textContent = 'Pads → scene index';
+    wrap.appendChild(lab);
+    for (var i = 0; i < Math.min(16, NX.scenes.length); i++) {
+      (function (idx) {
+        var b2 = document.createElement('button');
+        b2.type = 'button';
+        b2.textContent = 'S' + (idx + 1);
+        b2.addEventListener('click', function () {
+          wrap.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+          b2.classList.add('active');
+          NX.midi.startLearn(idx);
+          setMidiStatus('learning: scene ' + (idx + 1));
+        });
+        wrap.appendChild(b2);
+      })(i);
+    }
+  }
+
+  function openMidiMapPanel() {
+    var p = document.getElementById('midi-map-panel');
+    if (!p) return;
+    if (!_midiGridBuilt) { buildMidiLearnGrid(); _midiGridBuilt = true; }
+    refreshMidiMapPanel();
+    p.classList.add('open');
+    p.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeMidiMapPanel() {
+    var p = document.getElementById('midi-map-panel');
+    if (!p) return;
+    p.classList.remove('open');
+    p.setAttribute('aria-hidden', 'true');
+  }
+
   function togglePresent() {
     S.presentMode = !S.presentMode;
     document.body.classList.toggle('nexus-present', S.presentMode);
@@ -209,6 +354,9 @@
     wireSlider('rgain', function (e) { P.GAIN = e.target.value / 100; if (S.gainNode) S.gainNode.gain.value = P.GAIN; });
     wireSlider('rsmth', function (e) { P.SMTH = +e.target.value; if (S.analyser) S.analyser.smoothingTimeConstant = P.SMTH / 100; });
     wireSlider('rmorph', function (e) { S.morphDurationSec = Math.max(0.55, Math.min(4.2, e.target.value * 0.1)); });
+    wireSlider('r-hue', function (e) {
+      S.hueShift = Math.max(-0.5, Math.min(0.5, parseInt(e.target.value, 10) / 200));
+    });
 
     /* Palette */
     document.querySelectorAll('.pal-sw').forEach(function (sw) {
@@ -337,6 +485,16 @@
         if (NX.SceneManager) NX.SceneManager.setMode(this.value, { crossfade: true });
       });
     }
+    var bcShow = document.getElementById('bc-showcase-sel');
+    if (bcShow) bcShow.addEventListener('change', function () {
+      if (!this.value || !NX.PresetLibrary || !NX.VisualEngineManager) return;
+      var p = NX.PresetLibrary.getPreset(this.value);
+      var bb = document.getElementById('bc-blend');
+      var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
+      bt = Math.max(1, Math.min(3, bt));
+      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+    });
+
     var bcSel = document.getElementById('bc-preset-sel');
     if (bcSel) bcSel.addEventListener('change', function () {
       if (!this.value || !NX.PresetLibrary || !NX.VisualEngineManager) return;
@@ -370,9 +528,34 @@
       nxPerf.addEventListener('change', function () {
         S.nexusPerfLock = this.checked;
         if (this.checked && NX.setQualityPreset) NX.setQualityPreset('perf');
+        document.body.classList.toggle('nexus-perf-top', this.checked);
+        var pb = document.getElementById('perfbtn');
+        if (pb) pb.classList.toggle('on', this.checked);
         NX.resize();
       });
     }
+
+    var perfBtn = document.getElementById('perfbtn');
+    if (perfBtn) perfBtn.addEventListener('click', function () {
+      S.nexusPerfLock = !S.nexusPerfLock;
+      if (nxPerf) nxPerf.checked = S.nexusPerfLock;
+      if (S.nexusPerfLock && NX.setQualityPreset) NX.setQualityPreset('perf');
+      document.body.classList.toggle('nexus-perf-top', S.nexusPerfLock);
+      this.classList.toggle('on', S.nexusPerfLock);
+      NX.resize();
+    });
+
+    var padComp = document.getElementById('pad-compact');
+    if (padComp) padComp.addEventListener('change', function () { buildPads(); setActiveScene(S.curS); });
+
+    var mmapBtn = document.getElementById('midimapbtn');
+    var mmapClose = document.getElementById('midi-map-close');
+    if (mmapBtn) mmapBtn.addEventListener('click', function () {
+      var p = document.getElementById('midi-map-panel');
+      if (p && p.classList.contains('open')) closeMidiMapPanel();
+      else openMidiMapPanel();
+    });
+    if (mmapClose) mmapClose.addEventListener('click', closeMidiMapPanel);
 
     /* Demo sequence selector */
     var demoSel = document.getElementById('demosel');
@@ -400,6 +583,7 @@
     buildPads();
     buildPresets();
     buildButterchurnPresets();
+    buildShowcaseSelect();
     wireEvents();
     syncControls();
     setActiveScene(S.curS);
@@ -407,8 +591,9 @@
 
   NX.ui = {
     init: init, showName: showName, setActiveScene: setActiveScene, tickHud: tickHud,
-    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets,
+    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
-    togglePresent: togglePresent, toggleRecording: toggleRecording
+    togglePresent: togglePresent, toggleRecording: toggleRecording,
+    refreshMidiMapPanel: refreshMidiMapPanel, openMidiMapPanel: openMidiMapPanel, closeMidiMapPanel: closeMidiMapPanel
   };
 })();
