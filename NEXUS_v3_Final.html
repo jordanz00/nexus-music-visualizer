@@ -63,6 +63,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height
 .lvlf{height:100%;background:#00e5ff;width:0%;transition:width .05s}
 .dbadge{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:15;font-family:'Orbitron';font-size:8px;letter-spacing:.25em;color:rgba(255,200,0,.5);text-transform:uppercase;pointer-events:none;transition:opacity .4s}
 .dbadge.h{opacity:0}
+/* Venue / broadcast: hide chrome, optional cursor */
+body.nexus-present #hud,body.nexus-present #panel,body.nexus-present #ipanel,body.nexus-present #db{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
+body.nexus-present #fpsBadge{opacity:.25}
+body.nexus-present{cursor:none}
+#fpsBadge{position:fixed;top:10px;right:12px;z-index:90;font-family:Orbitron,monospace;font-size:8px;letter-spacing:.14em;color:rgba(0,229,255,.4);pointer-events:none;display:none;white-space:pre;text-align:right}
+#fpsBadge.on{display:block}
+#presentHint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:90;font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,.18);opacity:0;transition:opacity .35s;pointer-events:none}
+body.nexus-present:hover #presentHint{opacity:1}
 </style>
 </head>
 <body>
@@ -73,6 +81,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height
   <div class="sn">Demo mode active · Mic optional · Chrome / Safari</div>
 </div>
 <canvas id="c"></canvas>
+<div id="fpsBadge" aria-hidden="true"></div>
+<div id="presentHint">P — exit present · ` (backtick) — FPS meter</div>
 <div class="dbadge" id="db">◉ DEMO MODE</div>
 <div id="hud">
   <div class="ht">
@@ -114,7 +124,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height
   <div class="sep"></div>
   <span style="font-size:8px;letter-spacing:.1em;color:rgba(255,190,0,.45)">SCENE <b id="vpn" style="color:rgba(255,190,0,.85)">—</b></span>
   <div class="sep"></div>
+  <span style="font-size:8px;letter-spacing:.1em;color:rgba(0,229,255,.4)">GPU</span>
+  <select class="ipsel" id="qsel" style="width:96px;margin:0" title="Render resolution vs speed">
+    <option value="perf">Performance</option>
+    <option value="balanced" selected>Balanced</option>
+    <option value="ultra">Ultra</option>
+  </select>
+  <div class="kn"><label>Morph</label><input type="range" id="rmorph" min="8" max="45" value="14" title="Crossfade (×0.1s)"></div>
+  <button class="btn" id="adaptbtn" title="Auto-lower internal resolution if FPS dips">AUTO</button>
+  <div class="sep"></div>
   <button class="btn" id="fullbtn">⛶</button>
+  <button class="btn" id="presentbtn" title="Clean output (P)">SHOW</button>
   <button class="btn" id="hidebtn">HIDE</button>
 </div>
 <div id="ipanel">
@@ -152,20 +172,42 @@ var prevBass=0,bpmList=[],lastBeat=0,bpm=0,beat=0,explode=0;
 var micOn=false,analyser=null,waveArr,freqArr,bufLen=0;
 var audioCtx=null,micStream=null,gainNode=null,curDev='';
 
-// Resize
-var rawW=0,rawH=0; // physical canvas pixels before renderScale
+// Resize (maxDpr + renderScale — both applied only here or via rebuildFBOs for scale-only)
+var rawW=0,rawH=0;
+var maxDpr=2;
+var renderScale=0.78;
+var pendingRenderScale=null;
 function resize(){
-  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var dpr=Math.min(window.devicePixelRatio||1,maxDpr);
   W=innerWidth;H=innerHeight;
   C.width=Math.floor(W*dpr);C.height=Math.floor(H*dpr);
   C.style.width=W+'px';C.style.height=H+'px';
   rawW=C.width;rawH=C.height;
+  if(pendingRenderScale!=null){
+    renderScale=pendingRenderScale;
+    pendingRenderScale=null;
+  }
   FW=Math.max(1,Math.floor(rawW*renderScale));
   FH=Math.max(1,Math.floor(rawH*renderScale));
   gl.viewport(0,0,FW,FH);
   rebuildFBOs();
 }
 addEventListener('resize',resize);
+
+/** Apply GPU preset without touching canvas DPR (internal buffer scale only). */
+function applyRenderScaleOnly(next){
+  next=Math.max(0.42,Math.min(1,next));
+  if(Math.abs(next-renderScale)<0.02)return;
+  renderScale=next;
+  rebuildFBOs();
+}
+
+function setQualityPreset(mode){
+  if(mode==='perf'){maxDpr=1.25;pendingRenderScale=0.52;}
+  else if(mode==='ultra'){maxDpr=2;pendingRenderScale=1;}
+  else{maxDpr=2;pendingRenderScale=0.78;}
+  resize();
+}
 
 // GL utils
 function mkSh(type,src){
@@ -1445,7 +1487,16 @@ var OUTPUT_FS=[
 ].join('\n');
 
 // -- BLEND SHADER -------------------------------------------------
-var BLEND_FS='precision mediump float;varying vec2 uv;uniform sampler2D A,B2;uniform float mix2;void main(){float s=mix2*mix2*(3.-2.*mix2);gl_FragColor=mix(texture2D(A,uv),texture2D(B2,uv),s);}';
+var BLEND_FS=[
+'precision mediump float;varying vec2 uv;uniform sampler2D A,B2;uniform float mix2;',
+'void main(){',
+'  float t=mix2*mix2*mix2*(mix2*(mix2*6.-15.)+10.);',
+'  vec3 a=texture2D(A,uv).rgb,b=texture2D(B2,uv).rgb;',
+'  float lum=dot(b,vec3(.299,.587,.114));',
+'  float glow=smoothstep(.35,.95,lum)*0.08;',
+'  gl_FragColor=vec4(mix(a,b,t)+glow*t*(1.-t),1.);',
+'}'
+].join('');
 
 // Compile all
 console.log('Compiling shaders...');
@@ -1482,10 +1533,35 @@ function u(prog,name){
   });
 })();
 
-// -- RENDER SCALE --------------------------------------------------
-var renderScale=1.0; // Fixed at 1.0 - dynamic scaling caused mid-frame FBO corruption
-var _fpsHist=[]; var _lastScale=0;
-function autoScale(now){ _fpsHist.push(1); } // disabled - was destroying FBOs mid-frame
+// -- QUALITY / ADAPTIVE FPS ----------------------------------------
+var adaptiveGpu=false;
+var _emaFps=60;
+var _adaptiveTick=0;
+var morphDurationSec=1.4;
+var showFpsOverlay=false;
+var presentMode=false;
+
+function readMorphSlider(){
+  var el=document.getElementById('rmorph');
+  if(!el)return;
+  morphDurationSec=Math.max(0.55,Math.min(4.2,el.valueAsNumber*0.1));
+}
+readMorphSlider();
+
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  morphDurationSec=Math.min(morphDurationSec,0.85);
+}
+
+function tickAdaptiveFps(dt){
+  if(!adaptiveGpu)return;
+  _adaptiveTick+=dt;
+  if(_adaptiveTick<0.75)return;
+  _adaptiveTick=0;
+  var q=document.getElementById('qsel');
+  if(q&&q.value!=='balanced')return;
+  if(_emaFps<26&&renderScale>0.48)applyRenderScaleOnly(renderScale-0.06);
+  else if(_emaFps>52&&renderScale<0.92)applyRenderScaleOnly(renderScale+0.04);
+}
 
 // -- RENDER UTILITIES ----------------------------------------------
 function bindQuad(prog){
@@ -1523,6 +1599,9 @@ function renderScene(idx,targetFBO,prevTex,w,h){
 // -- SCENE MANAGER -------------------------------------------------
 var curS=0,nxtS=1,morphing=false,morphBlend=0;
 var autoMorph=true,presTimer=0,presInterval=20;
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  presInterval=Math.max(presInterval,38);
+}
 var _morphFrame=0;
 
 function showName(idx){
@@ -1559,10 +1638,18 @@ function loop(now){
   // (fps tracking removed - autoScale disabled)
 
   GT+=dt*5*(SPD/5); frame++;
+  var instFps=1/Math.max(dt,0.001);
+  _emaFps+=0.15*(instFps-_emaFps);
+  tickAdaptiveFps(dt);
   tickAudio();
   mouseSmooth[0]+=(mouseRaw[0]-mouseSmooth[0])*0.05;
   mouseSmooth[1]+=(mouseRaw[1]-mouseSmooth[1])*0.05;
   if(!fbA[0]||!fbB[0])return;
+
+  if(showFpsOverlay&&hudTick%8===0){
+    var el=document.getElementById('fpsBadge');
+    el.textContent='FPS '+Math.round(_emaFps)+' · '+Math.round(renderScale*100)+'% · '+FW+'×'+FH;
+  }
 
   if(autoMorph){
     presTimer+=dt;
@@ -1571,8 +1658,9 @@ function loop(now){
     if(presTimer>=presInterval&&!morphing)goNext();
   }
   if(morphing){
-    // 0.025/frame = ~40 frames = ~0.67s transition. Was 0.007 = 142 frames = 2.4s.
-    morphBlend+=0.025*(SPD/5); _morphFrame++;
+    var spdBoost=Math.max(0.35,SPD/5);
+    morphBlend+=dt/(morphDurationSec/spdBoost);
+    _morphFrame++;
     if(morphBlend>=1){morphBlend=1;morphing=false;curS=nxtS;}
   }
 
@@ -1714,13 +1802,37 @@ document.getElementById('hidebtn').addEventListener('click',function(){
   document.getElementById('hud').classList.toggle('hide',uiHide);
   document.getElementById('panel').classList.toggle('hide',uiHide);
 });
+function togglePresentMode(){
+  presentMode=!presentMode;
+  document.body.classList.toggle('nexus-present',presentMode);
+  var b=document.getElementById('presentbtn');
+  b.textContent=presentMode?'DONE':'SHOW';
+  presentMode?b.classList.add('on'):b.classList.remove('on');
+}
+document.getElementById('presentbtn').addEventListener('click',togglePresentMode);
+document.getElementById('qsel').addEventListener('change',function(){
+  setQualityPreset(this.value);
+  adaptiveGpu=false;
+  document.getElementById('adaptbtn').classList.remove('on');
+});
+document.getElementById('rmorph').addEventListener('input',readMorphSlider);
+document.getElementById('adaptbtn').addEventListener('click',function(){
+  adaptiveGpu=!adaptiveGpu;
+  this.classList.toggle('on',adaptiveGpu);
+  if(adaptiveGpu&&document.getElementById('qsel').value!=='balanced'){
+    document.getElementById('qsel').value='balanced';
+    setQualityPreset('balanced');
+  }
+});
 document.addEventListener('keydown',function(e){
-  if(e.target.tagName==='INPUT')return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
   if(e.key==='ArrowRight'||e.key===' '){goNext();e.preventDefault();}
   else if(e.key==='ArrowLeft')goPrev();
   else if(e.key==='r'||e.key==='R')goRandom();
   else if(e.key==='f'||e.key==='F')document.getElementById('fullbtn').click();
   else if(e.key==='h'||e.key==='H')document.getElementById('hidebtn').click();
+  else if(e.key==='p'||e.key==='P')togglePresentMode();
+  else if(e.code==='Backquote'){showFpsOverlay=!showFpsOverlay;document.getElementById('fpsBadge').classList.toggle('on',showFpsOverlay);}
   else if(e.key==='a'||e.key==='A')document.getElementById('autobtn').click();
   else if(e.key==='m'||e.key==='M')toggleMic();
   else if(e.key==='x'||e.key==='X'){explode=1.5;beat=1.0;}
