@@ -1,6 +1,6 @@
-# NEXUS Visualizer
+# NEXUS Pro Visualizer
 
-Browser-based **live visual engine** (canvas, audio-reactive demo, optional microphone). Single-file app plus a small launcher.
+Browser-based **broadcast-style WebGL** engine: multi-scene 3D raymarching, **spectral flux** transients, **centroid-tinted** palettes, knee bloom, and mic/demo audio. Single-file app plus a small launcher.
 
 **Repository:** [github.com/jordanz00/nexus-music-visualizer](https://github.com/jordanz00/nexus-music-visualizer)
 
