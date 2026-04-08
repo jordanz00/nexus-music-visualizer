@@ -1,52 +1,175 @@
-# NEXUS Pro Visualizer
+# NEXUS MARK IV — Live Visual Engine
 
-Browser-based **broadcast-style WebGL** engine: multi-scene 3D raymarching, **spectral flux** transients, **centroid-tinted** palettes, knee bloom, and mic/demo audio. Single-file app plus a small launcher.
+**Broadcast-grade, audio-reactive 3D visualizer for DJs, VJs, bands, and streamers.**
+20 raymarched WebGL scenes, Afterlife-aesthetic cinematic visuals, Hollywood color grading, WebMIDI control, canvas recording — zero dependencies, runs on GitHub Pages.
 
-**Repository:** [github.com/jordanz00/nexus-music-visualizer](https://github.com/jordanz00/nexus-music-visualizer)
+> **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)
 
-## Files
+---
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Entry point — redirects to the visualizer |
-| `NEXUS_v3_Final.html` | Full app (styles + logic inlined) |
+## Features
 
-## Run locally
+| Category | Details |
+|----------|---------|
+| **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
+| **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
+| **Post-processing** | Tinted knee bloom, anamorphic streak, Laplacian sharpen, lift/gamma/gain grading, ACES tonemapping, beat flash |
+| **Camera** | 5 cinematic modes — orbit, dolly, crane, handheld, snap (beat-triggered angle jumps) |
+| **MIDI** | WebMIDI with auto-detect, learn mode (click control → move knob), CC mapping, pad scene triggers |
+| **Recording** | MediaRecorder canvas capture to WebM (VP9, 8 Mbps) — start/stop from UI or MIDI |
+| **Presets** | Save/load engine state to localStorage; 4 built-in presets (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
+| **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
+| **Performance** | 3 GPU quality presets (Performance / Balanced / Ultra), adaptive FPS, `prefers-reduced-motion` support |
 
-- **Quick:** open `index.html` in a modern browser (Chrome or Safari recommended per in-app copy).
-- **Safer for mic / CORS:** serve the folder, then open the served URL:
+---
 
-```bash
-cd /path/to/NEXUS
-python3 -m http.server 8080
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| **Space / →** | Next scene |
+| **←** | Previous scene |
+| **1–9, 0** | Jump to scene 1–10 |
+| **R** | Random scene |
+| **A** | Toggle auto-morph |
+| **X** | Explode / beat trigger |
+| **M** | Toggle mic input |
+| **P** | Present mode (hide UI) |
+| **F** | Fullscreen |
+| **H** | Hide/show bottom panel |
+| **`** (backtick) | Toggle FPS overlay |
+
+---
+
+## Scene Roster (20)
+
+### Cosmic
+HYPERSPACE · BLACK HOLE · MANDELBULB · CHROME PLANET · GALAXY CORE
+
+### Energy
+VORTEX ENGINE · PLASMA SPHERE · ALIEN MONOLITH
+
+### Fluid
+INK & OIL · LIQUID METAL · DEEP SEA
+
+### Environment
+NEON CITY · NEON GRID · NEBULA FLYTHROUGH
+
+### Afterlife
+VOID CATHEDRAL · SACRED GEOMETRY · NEURAL SWARM · DARK MONOLITH · LASER CATHEDRAL · AFTERLIFE RINGS
+
+---
+
+## MIDI Setup
+
+1. Connect a MIDI controller (Launchpad, APC Mini, any CC-capable device)
+2. Open NEXUS MARK IV in **Chrome** (WebMIDI requires Chrome or Edge)
+3. The controller auto-detects — check the MIDI status indicator in the input panel
+4. **Learn mode:** Click "MIDI Learn" in the input panel, then move a knob/fader on your controller to map it
+5. **Scene triggers:** MIDI note-on messages trigger scenes by note number (note 0 = scene 1, etc.)
+6. **CC mapping:** Any CC channel maps to engine parameters (speed, react, warp, gain, morph, palette)
+7. Mappings persist in localStorage across sessions
+
+### Launchpad / APC Mini Quick Map
+- Bottom row pads → scene 1–8
+- Top faders/knobs → speed, react, warp, gain
+
+---
+
+## OBS / Streaming Guide
+
+1. Open NEXUS MARK IV and click LAUNCH
+2. Enter **Present mode** (press P) — this hides all UI, leaving only the canvas
+3. In OBS, add a **Window Capture** source → select the NEXUS browser window
+4. **Auto-present URL:** Add `?obs=1` to the URL to auto-enter present mode and skip the splash:
+   ```
+   https://jordanz00.github.io/nexus-music-visualizer/?obs=1
+   ```
+5. For transparent background compositing, use OBS color-key on the black background
+
+### Audio Routing for OBS
+- Use **VoiceMeeter** or **BlackHole** (macOS) to route system audio to a virtual mic device
+- In NEXUS, click the IN button and select the virtual mic as input
+- This makes the visualizer react to your DJ set / music player output
+
+---
+
+## Recording
+
+1. Click the **REC** button in the top bar (or trigger via MIDI)
+2. The button pulses red while recording
+3. Click REC again to stop — the WebM file downloads automatically
+4. Quality: 1080p30 at 8 Mbps VP9 (adjusts to your canvas resolution)
+
+---
+
+## Presets
+
+### Built-in
+| Preset | Style | Speed | React | Warp |
+|--------|-------|-------|-------|------|
+| **Afterlife Dark** | Dark cinematic | 3 | 8 | 6 |
+| **Festival Energy** | High energy | 7 | 9 | 7 |
+| **Ambient Chill** | Slow, relaxed | 2 | 4 | 3 |
+| **Laser Show** | Aggressive, fast | 8 | 10 | 8 |
+
+### Custom Presets
+- Click **Save** next to the preset dropdown to save your current settings
+- Presets store: speed, reactivity, warp, morph time, palette, quality, and active scene
+- Stored in localStorage — clear browser data to reset
+
+---
+
+## Architecture
+
+```
+NEXUS/
+  index.html              ← App shell (Resolume-style layout)
+  css/
+    nexus.css             ← Dark pro theme + component styles
+  js/
+    engine.js             ← WebGL context, FBO pipeline, render loop
+    audio.js              ← Mic, analyser, spectral flux/centroid, beat detection
+    scenes.js             ← Shared GLSL HEAD, scene registry, compilation
+    camera.js             ← 5-mode cinematic camera system
+    post.js               ← Bloom, streak, grading, ACES output
+    ui.js                 ← Scene pads, sliders, meters, present mode, recording
+    midi.js               ← WebMIDI learn mode + CC mapping
+    presets.js            ← Save/load to localStorage
+    scenes/
+      cosmic.js           ← Hyperspace, Black Hole, Mandelbulb, Chrome Planet, Galaxy Core
+      energy.js           ← Vortex Engine, Plasma Sphere, Alien Monolith
+      fluid.js            ← Ink & Oil, Liquid Metal, Deep Sea
+      environment.js      ← Neon City, Neon Grid, Nebula Flythrough
+      afterlife.js        ← Void Cathedral, Sacred Geometry, Neural Swarm, Dark Monolith, Laser Cathedral, Afterlife Rings
+  NEXUS_v3_Final.html     ← Legacy standalone (original monolith)
 ```
 
-Then visit `http://localhost:8080/`.
+No npm, no bundler, no build step. Plain `<script>` tags loaded in order. GitHub Pages serves it directly.
 
-## Live / venue / broadcast
+---
 
-NEXUS is a **browser WebGL** show: great for IMAG screens, stream overlays, and club visuals when the machine can run Chrome or Edge full-screen.
-
-| Goal | Suggestion |
-|------|------------|
-| **Smooth 30–60 fps** | Start **GPU → Balanced**; use **Performance** on older GPUs or laptops. **AUTO** (Balanced only) nudges internal resolution down if FPS dips, and back up when headroom returns. |
-| **Clean output** | **SHOW** (or **P**) = present mode: hides HUD, control bar, and demo badge; move the mouse to see the hint strip. |
-| **Crossfades** | **Morph** slider sets scene-to-scene blend time (about **0.8–4.2 s**); **Spd** still scales how fast the engine runs and how snappy morphs feel. |
-| **Tech check** | **Backtick** (grave accent key, same as tilde) toggles a small **FPS / internal % / buffer size** readout (top-right). |
-| **House audio** | For *true* line-level or mixer feed, browsers only see **microphone** or **loopback** (e.g. OS/virtual cable). Plan capture in OBS/vMix and use **Window/Display Capture**, or route mixer → audio interface → mic input with sane gain. |
-
-This is not a replacement for dedicated VJ apps (Resolume, Notch, TouchDesigner) for every tour—but it is **zero-install for guests** and easy to host on **GitHub Pages**.
-
-## GitHub Pages (optional)
-
-In the repo: **Settings → Pages →** deploy from branch **`main`**, folder **`/` (root)**. Live URL: `https://jordanz00.github.io/nexus-music-visualizer/`
-
-Further updates from this folder:
+## Run Locally
 
 ```bash
-git add -A && git commit -m "Your message" && git push
+cd NEXUS
+python3 -m http.server 8888
+# Open http://localhost:8888
 ```
+
+---
+
+## Browser Support
+
+| Browser | Support |
+|---------|---------|
+| Chrome / Edge | Full (WebGL + WebMIDI + MediaRecorder) |
+| Firefox | Visual + Audio (no WebMIDI, recording may vary) |
+| Safari | Visual + Audio (no WebMIDI) |
+| Mobile Chrome | Visual + Audio (touch supported, no MIDI) |
+
+---
 
 ## License
 
-Add a `LICENSE` file in this repo if you want to specify terms for others.
+MIT — free for personal and commercial use. Attribution appreciated.

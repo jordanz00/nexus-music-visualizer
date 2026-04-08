@@ -1,11 +1,149 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=NEXUS_v3_Final.html">
-<title>NEXUS Pro — Live Visual Engine</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="NEXUS MARK IV — broadcast-grade WebGL live visual engine: audio-reactive 3D, Afterlife-aesthetic scenes, cinematic camera, MIDI control, recording.">
+  <title>NEXUS MARK IV — Live Visual Engine</title>
+  <link rel="stylesheet" href="css/nexus.css">
 </head>
 <body>
-<p><a href="NEXUS_v3_Final.html">Launch NEXUS Pro</a></p>
+
+<!-- ── CANVAS ─────────────────────────────────────────────────────── -->
+<canvas id="c"></canvas>
+<div id="fps-badge" aria-hidden="true"></div>
+<div id="present-hint">P — exit present &middot; ` — FPS</div>
+
+<!-- ── SPLASH ─────────────────────────────────────────────────────── -->
+<div id="splash">
+  <h1>NEXUS MARK IV</h1>
+  <p class="sub">LIVE VISUAL ENGINE</p>
+  <button class="start-btn" id="start-btn">LAUNCH</button>
+  <p class="hint">Works best with audio input &middot; runs in demo mode without mic</p>
+</div>
+
+<!-- ── TOP BAR ────────────────────────────────────────────────────── -->
+<div id="topbar">
+  <div class="brand">NEXUS<span>MK IV</span></div>
+  <div class="spacer"></div>
+  <div class="meta" id="scene-name">&mdash;</div>
+  <div class="meta" id="bpm-val">--</div>
+  <div class="meta" id="auto-timer">-</div>
+  <button class="top-btn" id="autobtn" title="Auto-morph (A)">AUTO</button>
+  <button class="top-btn" id="rndbtn" title="Random scene (R)">RND</button>
+  <button class="top-btn" id="prevbtn" title="Previous (←)">◀</button>
+  <button class="top-btn" id="nextbtn" title="Next (→ / Space)">▶</button>
+  <button class="top-btn" id="xbtn" title="Explode (X)">⚡</button>
+  <button class="top-btn" id="micbtn" title="Toggle mic (M)">MIC</button>
+  <button class="top-btn" id="inputbtn" title="Audio input device">IN</button>
+  <button class="top-btn rec" id="recbtn" title="Record WebM">REC</button>
+  <button class="top-btn" id="adaptbtn" title="Adaptive GPU quality">AUTO Q</button>
+  <button class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
+  <button class="top-btn" id="presentbtn" title="Present mode (P)">PRESENT</button>
+</div>
+
+<!-- ── INPUT PANEL (mic device selector) ──────────────────────────── -->
+<div id="ipanel">
+  <label>Audio Input Device</label>
+  <select id="devsel"><option value="">Default Microphone</option></select>
+  <div class="ip-row">
+    <span class="sm-btn" id="midi-learn">MIDI Learn</span>
+    <span id="midi-status">MIDI: —</span>
+  </div>
+</div>
+
+<!-- ── BOTTOM PANEL ───────────────────────────────────────────────── -->
+<div id="panel" class="hide">
+
+  <!-- Scene grid -->
+  <div id="scene-grid"></div>
+
+  <!-- Controls row 1: Engine -->
+  <div class="panel-row">
+    <div class="ctrl-group">
+      <span class="g-label">Engine</span>
+      <div class="ctrl-slider"><label>Speed</label><input type="range" id="rspd" min="0" max="10" value="5"><span class="val">5</span></div>
+      <div class="ctrl-slider"><label>React</label><input type="range" id="rrct" min="0" max="10" value="7"><span class="val">7</span></div>
+      <div class="ctrl-slider"><label>Warp</label><input type="range" id="rwrp" min="0" max="10" value="5"><span class="val">5</span></div>
+      <div class="ctrl-slider"><label>Morph</label><input type="range" id="rmorph" min="6" max="42" value="14"><span class="val">14</span></div>
+    </div>
+  </div>
+
+  <!-- Controls row 2: Audio -->
+  <div class="panel-row">
+    <div class="ctrl-group">
+      <span class="g-label">Audio</span>
+      <div class="ctrl-slider"><label>Gain</label><input type="range" id="rgain" min="20" max="300" value="100"><span class="val">100</span></div>
+      <div class="ctrl-slider"><label>Smooth</label><input type="range" id="rsmth" min="10" max="95" value="58"><span class="val">58</span></div>
+    </div>
+
+    <!-- Audio meters -->
+    <div id="meters">
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-bass"></div></div><span class="meter-label">B</span></div>
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-mid"></div></div><span class="meter-label">M</span></div>
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-high"></div></div><span class="meter-label">H</span></div>
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-flux"></div></div><span class="meter-label">Fx</span></div>
+      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-vol"></div></div><span class="meter-label">V</span></div>
+    </div>
+
+    <!-- Palette -->
+    <div class="pal-row">
+      <span class="g-label" style="width:auto">Palette</span>
+      <div class="pal-sw on" data-p="0" style="background:linear-gradient(135deg,#2196f3,#e91e63)" title="Spectrum"></div>
+      <div class="pal-sw" data-p="1" style="background:linear-gradient(135deg,#ff9100,#f44336)" title="Fire"></div>
+      <div class="pal-sw" data-p="2" style="background:linear-gradient(135deg,#00e676,#00bcd4)" title="Matrix"></div>
+      <div class="pal-sw" data-p="3" style="background:linear-gradient(135deg,#e040fb,#651fff)" title="Neon"></div>
+      <div class="pal-sw" data-p="4" style="background:linear-gradient(135deg,#78909c,#37474f)" title="Mono"></div>
+      <div class="pal-sw" data-p="5" style="background:linear-gradient(135deg,#ffd600,#ff6d00)" title="Gold"></div>
+    </div>
+  </div>
+
+  <!-- Controls row 3: Output + Presets -->
+  <div class="panel-row">
+    <div class="ctrl-group">
+      <span class="g-label">Output</span>
+      <span style="font-size:9px;letter-spacing:.08em;color:rgba(0,229,255,.4)">GPU</span>
+      <select id="qsel" class="preset-select" style="min-width:90px">
+        <option value="perf">Performance</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="ultra">Ultra</option>
+      </select>
+    </div>
+    <div class="preset-row">
+      <span class="g-label" style="width:auto">Preset</span>
+      <select id="preset-sel" class="preset-select"></select>
+      <button class="sm-btn" id="save-preset">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
+<script src="js/engine.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/scenes/cosmic.js"></script>
+<script src="js/scenes/energy.js"></script>
+<script src="js/scenes/fluid.js"></script>
+<script src="js/scenes/environment.js"></script>
+<script src="js/scenes/afterlife.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/post.js"></script>
+<script src="js/midi.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/ui.js"></script>
+<script>
+/* ── Bootstrap: compile, wire, run ─────────────────────────────────── */
+(function () {
+  var ok = NX.compileScenes();
+  console.log('Scenes compiled:', ok, '/', NX.scenes.length);
+  NX.post.compile();
+  NX.resize();
+  NX.ui.init();
+  if (NX.midi) NX.midi.init();
+  NX.showName(0);
+  NX.loop();
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,112 @@
+/* nexus.css — Core dark-pro theme for NEXUS MARK IV VJ engine.
+   Body: #0a0a0f, panels: #111, pads: #1a1a22, cyan accent: #00e5ff. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Orbitron:wght@500;700&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;color:#d0d0d4;font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+
+/* -- Canvas --------------------------------------------------------- */
+#c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block}
+
+/* -- Top bar -------------------------------------------------------- */
+#topbar{position:fixed;top:0;left:0;right:0;height:36px;z-index:60;display:flex;align-items:center;padding:0 14px;background:rgba(10,10,15,.92);border-bottom:1px solid rgba(0,229,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#topbar .brand{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:.18em;color:#00e5ff;flex:0 0 auto}
+#topbar .brand span{color:rgba(0,229,255,.4);font-weight:500;font-size:10px;margin-left:6px;letter-spacing:.12em}
+#topbar .spacer{flex:1}
+#topbar .meta{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:.14em;color:rgba(0,229,255,.4);margin-right:12px}
+.top-btn{background:none;border:1px solid rgba(0,229,255,.2);color:#00e5ff;font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.1em;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .2s;min-height:28px;margin-left:6px}
+.top-btn:hover,.top-btn.on{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.45)}
+.top-btn.on{color:#fff;text-shadow:0 0 8px rgba(0,229,255,.4)}
+.top-btn.rec{border-color:rgba(255,23,68,.3);color:#ff1744}
+.top-btn.rec.on{background:rgba(255,23,68,.18);border-color:#ff1744;animation:rec-pulse 1.2s ease infinite}
+@keyframes rec-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* -- Bottom panel --------------------------------------------------- */
+#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(17,17,17,.94);border-top:1px solid rgba(0,229,255,.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:50vh;overflow-y:auto}
+#panel.hide{transform:translateY(100%)}
+.panel-row{display:flex;align-items:center;padding:6px 10px;gap:8px;flex-wrap:wrap}
+
+/* -- Scene grid (pads) ---------------------------------------------- */
+#scene-grid{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;max-height:148px;overflow-y:auto}
+.scene-pad{width:68px;height:52px;border:1px solid rgba(255,255,255,.08);border-radius:5px;background:#1a1a22;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
+.scene-pad .sp-name{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);pointer-events:none;text-align:center;line-height:1.15;padding:0 3px}
+.scene-pad .sp-idx{font-family:'Orbitron',monospace;font-size:8px;color:rgba(255,255,255,.2);position:absolute;top:2px;right:4px}
+.scene-pad:hover{border-color:rgba(0,229,255,.3);background:#20202a}
+.scene-pad.active{border-color:var(--pad-color,#00e5ff);box-shadow:0 0 12px var(--pad-color,rgba(0,229,255,.25)),inset 0 0 18px rgba(0,229,255,.08);background:#1e1e28}
+.scene-pad.active .sp-name{color:#fff}
+.scene-pad.beat-pulse{animation:pad-beat .18s ease-out}
+@keyframes pad-beat{0%{transform:scale(1.08);box-shadow:0 0 18px var(--pad-color,rgba(0,229,255,.4))}100%{transform:scale(1)}}
+
+/* -- Controls ------------------------------------------------------- */
+.ctrl-group{display:flex;align-items:center;gap:10px;padding:2px 0}
+.ctrl-group .g-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,229,255,.45);width:56px;flex-shrink:0}
+.ctrl-slider{display:flex;align-items:center;gap:5px}
+.ctrl-slider label{font-size:9px;color:rgba(255,255,255,.45);width:38px;text-align:right;letter-spacing:.04em}
+.ctrl-slider input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;outline:none}
+.ctrl-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#00e5ff;border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(0,229,255,.3)}
+.ctrl-slider .val{font-family:'Orbitron',monospace;font-size:8px;color:rgba(0,229,255,.5);width:24px;text-align:left}
+
+/* -- Palette row ---------------------------------------------------- */
+.pal-row{display:flex;gap:4px;align-items:center}
+.pal-sw{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.1);cursor:pointer;transition:all .15s}
+.pal-sw:hover{border-color:rgba(255,255,255,.35);transform:scale(1.1)}
+.pal-sw.on{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.25);transform:scale(1.15)}
+
+/* -- Audio meters --------------------------------------------------- */
+#meters{display:flex;gap:8px;align-items:flex-end;height:38px;padding:4px 0}
+.meter{display:flex;flex-direction:column;align-items:center;gap:2px;width:28px}
+.meter-bar{width:8px;height:28px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;position:relative}
+.meter-fill{position:absolute;bottom:0;left:0;right:0;background:#00e5ff;border-radius:3px;transition:height .06s}
+.meter-label{font-size:7px;letter-spacing:.08em;color:rgba(255,255,255,.3);text-transform:uppercase}
+
+/* -- Preset selector ------------------------------------------------ */
+.preset-row{display:flex;align-items:center;gap:6px}
+.preset-select{background:#1a1a22;border:1px solid rgba(0,229,255,.15);color:#d0d0d4;font-size:11px;padding:3px 8px;border-radius:4px;outline:none;min-width:120px}
+.preset-select:focus{border-color:rgba(0,229,255,.4)}
+.sm-btn{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);font-size:9px;padding:3px 8px;border-radius:4px;cursor:pointer;transition:all .15s}
+.sm-btn:hover{border-color:rgba(0,229,255,.3);color:#00e5ff}
+
+/* -- MIDI status ---------------------------------------------------- */
+#midi-status{font-size:8px;letter-spacing:.1em;color:rgba(0,229,255,.35);padding:0 8px}
+#midi-status.connected{color:#00e676}
+#midi-status.learning{color:#ffab00;animation:midi-blink .6s infinite}
+@keyframes midi-blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* -- Splash --------------------------------------------------------- */
+#splash{position:fixed;inset:0;z-index:200;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease}
+#splash.out{opacity:0;pointer-events:none}
+#splash h1{font-family:'Orbitron',monospace;font-size:36px;font-weight:700;letter-spacing:.22em;color:#00e5ff;margin-bottom:8px;text-shadow:0 0 32px rgba(0,229,255,.25)}
+#splash .sub{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:.16em;margin-bottom:28px}
+#splash .start-btn{background:transparent;border:1px solid rgba(0,229,255,.35);color:#00e5ff;font-family:'Orbitron',monospace;font-size:14px;letter-spacing:.18em;padding:12px 36px;border-radius:6px;cursor:pointer;transition:all .25s}
+#splash .start-btn:hover{background:rgba(0,229,255,.1);border-color:#00e5ff;box-shadow:0 0 24px rgba(0,229,255,.2)}
+#splash .hint{font-size:10px;color:rgba(255,255,255,.2);margin-top:14px;letter-spacing:.08em}
+
+/* -- Present mode --------------------------------------------------- */
+body.nexus-present #topbar,body.nexus-present #panel{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
+body.nexus-present{cursor:none}
+body.nexus-present:hover #present-hint{opacity:1}
+
+#fps-badge{position:fixed;top:42px;right:12px;z-index:90;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:.12em;color:rgba(0,229,255,.35);pointer-events:none;display:none;white-space:pre;text-align:right}
+#fps-badge.on{display:block}
+body.nexus-present #fps-badge{top:10px;opacity:.25}
+
+#present-hint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:90;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.16);opacity:0;transition:opacity .35s;pointer-events:none}
+
+/* -- Input panel (mic device selector) ------------------------------ */
+#ipanel{position:fixed;bottom:52px;right:10px;z-index:65;background:rgba(17,17,17,.96);border:1px solid rgba(0,229,255,.15);border-radius:6px;padding:10px 12px;min-width:200px;display:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#ipanel.open{display:block}
+#ipanel label{font-size:9px;letter-spacing:.1em;color:rgba(0,229,255,.45);display:block;margin-bottom:4px}
+#ipanel select{width:100%;background:#1a1a22;border:1px solid rgba(0,229,255,.15);color:#d0d0d4;font-size:11px;padding:4px 6px;border-radius:4px;margin-bottom:6px}
+#ipanel .ip-row{display:flex;gap:6px;align-items:center;margin-top:4px}
+
+/* -- Letterbox ------------------------------------------------------ */
+body.letterbox #c{top:50%;transform:translateY(-50%);height:calc(100vw / 2.39)}
+
+/* -- Responsive ----------------------------------------------------- */
+@media(max-width:640px){
+  .scene-pad{width:54px;height:42px}
+  .scene-pad .sp-name{font-size:7px}
+  .ctrl-slider input[type=range]{width:64px}
+  #topbar .brand{font-size:11px}
+}
