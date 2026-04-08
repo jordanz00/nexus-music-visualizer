@@ -1,8 +1,12 @@
-# NEXUS Engine — Mark V (Hybrid VJ)
+# NEXUS Engine — Super (Hybrid VJ)
 
-**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) as a modular visual engine **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / 4K** with **30–60 FPS**. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p (high bitrate) / 4K** with **30–60 FPS**. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
 
-**Showcase 20:** curated display names (Cosmic Tunnel, Laser Grid, …) map to the **closest real presets** in the loaded pack via keyword scoring — not fabricated MilkDrop JSON.
+**Anti-flash tuning:** a smoothed **`beatVisual`** channel drives shaders and post (attack ~90ms, release ~400ms) so kicks and bloom no longer strobe as hard as raw beat spikes.
+
+**Showcase 20:** curated display names map to the **closest real presets** in the loaded pack (keyword scoring — no fabricated MilkDrop JSON).
+
+**Super 60:** each showcase preset × three variants (**Apex / Flux / Nova**) — same Butterchurn key, different procedural engine params (palette, warp, speed, react, hue, bloom) + scene nudge for evolving hybrid looks.
 
 > **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
 > **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)
@@ -15,13 +19,13 @@
 |----------|---------|
 | **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
 | **Butterchurn** | Local `vendor/butterchurn.min.js` + `butterchurnPresetsMinimal.min.js`; preset browser by category; `loadPreset(preset, blendSeconds)`; requires **mic / audio context** |
-| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `NexusEngine` host (`init` / `update` / `renderButterchurnLayer`) |
+| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `super-presets.js` (Super 60), `NexusEngine` host (`init` / `update` / `renderButterchurnLayer`) |
 | **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
-| **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage (ping-pong buffer), sharpen, ACES, beat flash |
+| **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage, sharpen, ACES, subtle beat lift (smoothed) |
 | **Camera** | 5 cinematic modes — orbit, dolly, crane, handheld, snap (beat-triggered angle jumps) |
 | **MIDI** | WebMIDI + learn mode; extended CC targets: **bloom**, **colorShift** (reserved), **bcNext** (random Butterchurn preset), **visualMode** (shader / BC / hybrid) |
-| **Recording** | MediaRecorder canvas capture to WebM (VP9, 8 Mbps) — start/stop from UI or MIDI |
+| **Recording** | MediaRecorder WebM (VP9→VP8 fallback); profiles include **Stream 1080p** (~22 Mbps) for cleaner OBS re-encode |
 | **Presets** | Save/load engine state to localStorage; 4 built-in presets (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
 | **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
 | **Performance** | 3 GPU quality presets, adaptive FPS; **Perf lock** caps DPR and internal resolution; `prefers-reduced-motion` support |

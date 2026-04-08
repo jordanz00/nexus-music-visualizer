@@ -62,7 +62,7 @@
     /* Note On → scene trigger or explode */
     if (status === 0x90 && vel > 0) {
       var m = mappings[mkey];
-      if (m && m.type === 'note' && m.param === 'explode') { S.explode = 1.5; S.beat = 1.0; return; }
+      if (m && m.type === 'note' && m.param === 'explode') { S.explode = 0.95; S.beat = 0.72; return; }
       if (m && m.type === 'note' && typeof m.param === 'number') { NX.goNext(m.param); return; }
       if (note < NX.scenes.length) NX.goNext(note);
       return;

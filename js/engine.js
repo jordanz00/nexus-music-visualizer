@@ -16,7 +16,10 @@ window.NX = window.NX || {};
     W: 0, H: 0, FW: 0, FH: 0, GT: 0, frame: 0, hudTick: 0,
     mouseRaw: [0, 0], mouseSmooth: [0, 0],
     sBass: 0, sLowMid: 0, sMid: 0, sHigh: 0, sSub: 0, sVol: 0, sFlux: 0, sCent: 0.35,
-    prevBass: 0, prevMbRaw: 0, bpmList: [], lastBeat: 0, bpm: 0, beat: 0, explode: 0,
+    prevBass: 0, prevMbRaw: 0, bpmList: [], lastBeat: 0, bpm: 0, beat: 0,
+    /** Smoothed beat 0–1 for shaders/post — reduces harsh strobing vs raw `beat`. */
+    beatVisual: 0,
+    explode: 0,
     _lastAudT: 0, prevFreqFlux: null,
     micOn: false, analyser: null, waveArr: null, freqArr: null, bufLen: 0,
     audioCtx: null, micStream: null, gainNode: null, curDev: '',
@@ -169,17 +172,18 @@ window.NX = window.NX || {};
 
   function setCommonUniforms(prog) {
     gl.uniform2f(u(prog, 'R'), S.FW, S.FH);
-    gl.uniform1f(u(prog, 'T'), S.GT * (1 + S.sBass * 0.078 + S.beat * 0.055 + S.sFlux * 0.035));
-    var Bd = shapeDrive(S.sBass, 1.84) + S.beat * 0.48;
+    var bv = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
+    gl.uniform1f(u(prog, 'T'), S.GT * (1 + S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032));
+    var Bd = shapeDrive(S.sBass, 1.84) + bv * 0.28;
     gl.uniform1f(u(prog, 'B'), Bd);
     gl.uniform1f(u(prog, 'M'), shapeDrive(S.sMid, 1.72));
     gl.uniform1f(u(prog, 'H'), shapeDrive(S.sHigh, 1.78));
     gl.uniform1f(u(prog, 'V'), shapeDrive(S.sVol, 1.55));
-    gl.uniform1f(u(prog, 'BT'), Math.min(1.48, S.beat * 1.24));
+    gl.uniform1f(u(prog, 'BT'), Math.min(1.22, bv * 1.02 + S.sBass * 0.06));
     gl.uniform1f(u(prog, 'EX'), S.explode);
     gl.uniform1f(u(prog, 'SP'), P.SPD / 5); gl.uniform1f(u(prog, 'WP'), P.WRP / 5);
     gl.uniform1f(u(prog, 'PAL'), P.PAL);
-    gl.uniform1f(u(prog, 'FL'), Math.min(1.35, S.sFlux * 1.18 + S.beat * 0.32));
+    gl.uniform1f(u(prog, 'FL'), Math.min(1.22, S.sFlux * 1.08 + bv * 0.16));
     gl.uniform1f(u(prog, 'SC'), S.sCent);
   }
 

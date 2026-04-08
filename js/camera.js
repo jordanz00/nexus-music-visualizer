@@ -18,7 +18,8 @@
     },
 
     dolly: function (t, az, el, dist, mx) {
-      var d = dist + S.sBass * 0.6 + S.beat * 0.3;
+      var bv = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.55;
+      var d = dist + S.sBass * 0.6 + bv * 0.22;
       az += t * 0.15 + mx[0] * 2.5;
       el = Math.max(-1.2, Math.min(1.2, 0.3 + mx[1] * 0.7));
       var ro = [d * Math.cos(el) * Math.cos(az), d * Math.sin(el), d * Math.cos(el) * Math.sin(az)];
@@ -47,10 +48,11 @@
 
     snap: function (t, az, el, dist, mx) {
       var snapAz = az + t * 0.2 + mx[0] * 3.14;
-      if (S.beat > 0.8) snapAz += (Math.random() - 0.5) * S.sFlux * 1.5;
+      var bv2 = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.55;
+      if (bv2 > 0.62) snapAz += (Math.random() - 0.5) * S.sFlux * 0.85;
       el = Math.max(-1.3, Math.min(1.3, 0.3 + mx[1] * 0.8));
       var ro = [dist * Math.cos(el) * Math.cos(snapAz), dist * Math.sin(el), dist * Math.cos(el) * Math.sin(snapAz)];
-      return { ro: ro, ta: [0, 0, 0], roll: S.beat * 0.04 * (Math.random() > 0.5 ? 1 : -1) };
+      return { ro: ro, ta: [0, 0, 0], roll: bv2 * 0.022 * (Math.random() > 0.5 ? 1 : -1) };
     }
   };
 

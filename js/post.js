@@ -1,10 +1,16 @@
 'use strict';
-/*  post.js — Bloom (knee + tinted), kawase blur, Hollywood color grading,
-    anamorphic streak, ACES output, beat flash.                            */
+/*  post.js — Bloom (knee + tinted), kawase blur, grading, anamorphic streak,
+    ACES output. Beat-driven lift uses smoothed `S.beatVisual` (see audio.js). */
 
 (function () {
   var gl = NX.gl, S = NX.S, P = NX.P;
   var u = NX.u, bindQuad = NX.bindQuad, shapeDrive = NX.shapeDrive;
+
+  /** Smoothed beat for post (matches engine `beatVisual`). */
+  function beatForPost() {
+    var bv = typeof S.beatVisual === 'number' ? S.beatVisual : Math.min(1, S.beat * 0.55);
+    return Math.min(1.32, bv * 1.04 + S.sBass * 0.05);
+  }
 
   var SAT = '#define sat(x) clamp(x,0.,1.)\n';
 
@@ -71,7 +77,7 @@
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
     'void main(){',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
-    '  float ca=.0026+BT*.007+B*.0038+H*.0024+FL*.0022;',
+    '  float ca=.0024+BT*.0035+B*.0034+H*.0022+FL*.002;',
     '  vec3 cM=texture2D(tex,uv).rgb;',
     '  float r=texture2D(tex,vec2(uv.x+ca,uv.y)).r;',
     '  float g=cM.g;',
@@ -83,35 +89,35 @@
     '  vec3 lf=texture2D(tex,uv-vec2(px.x,0.)).rgb;',
     '  vec3 rt=texture2D(tex,uv+vec2(px.x,0.)).rgb;',
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
-    '  float shp=.11+BT*.14+FL*.12+H*.08;',
+    '  float shp=.1+BT*.07+FL*.1+H*.07;',
     '  col+=lap*shp;',
     /* bloom + anamorphic (BM = master bloom mix, performance toggle) */
-    '  vec3 blm=texture2D(bloom,uv).rgb*2.62*(1.+BT*1.1+B*.44+M*.17+FL*.22);',
-    '  vec3 stk=texture2D(streak,uv).rgb*.45*(1.+BT*.6+B*.25);',
+    '  vec3 blm=texture2D(bloom,uv).rgb*2.45*(1.+BT*.42+B*.38+M*.15+FL*.18);',
+    '  vec3 stk=texture2D(streak,uv).rgb*.4*(1.+BT*.32+B*.22);',
     '  col+=(blm+stk)*BM;',
     /* lift / gamma / gain  — warm shadows, cool highlights */
     '  vec3 lift=vec3(.025,.018,.01);',
     '  vec3 gain=vec3(.97,.98,1.02);',
     '  col=col*gain+lift;',
     /* brightness pump */
-    '  col*=1.+B*.38+BT*1.15+M*.16+H*.16+FL*.14;',
-    /* beat flash */
-    '  col+=vec3(1.)*BT*.18*smoothstep(.6,1.2,BT);',
+    '  col*=1.+B*.32+BT*.48+M*.14+H*.14+FL*.11;',
+    /* beat lift — kept subtle (BT is pre-smoothed in JS) */
+    '  col+=vec3(1.)*BT*.042*smoothstep(.2,.88,BT);',
     /* S-curve contrast */
     '  col=col*col*(3.-2.*col);',
     /* ACES */
     '  col=ACES(col);',
     /* saturation pump */
     '  float L=dot(col,vec3(.299,.587,.114));',
-    '  float satm=1.08+BT*.14+H*.11+M*.07+FL*.09;',
+    '  float satm=1.06+BT*.06+H*.09+M*.06+FL*.07;',
     '  col=mix(vec3(L),col,satm);',
     /* grain */
     '  float grain=fract(sin(dot(uv+T*.13,vec2(12.99,78.23)))*43758.)-0.5;',
-    '  col+=grain*(.017+BT*.021+H*.015);',
+    '  col+=grain*(.015+BT*.012+H*.014);',
     /* hue (MIDI / UI color shift) */
     '  vec3 hsv=rgb2hsv(col); hsv.x=fract(hsv.x+HS); col=hsv2rgb(hsv);',
     /* vignette */
-    '  vec2 vp=uv*2.-1.;col*=1.-dot(vp,vp)*(.34-BT*.09-B*.05);',
+    '  vec2 vp=uv*2.-1.;col*=1.-dot(vp,vp)*(.34-BT*.04-B*.05);',
     '  gl_FragColor=vec4(clamp(col,0.,1.),1.);',
     '}'
   ].join('\n');
@@ -197,12 +203,13 @@
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomSam); gl.uniform1i(u(outProg, 'bloom'), 1);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, streakSam); gl.uniform1i(u(outProg, 'streak'), 2);
-    gl.uniform1f(u(outProg, 'BT'), Math.min(1.48, S.beat * 1.24));
+    var bPost = beatForPost();
+    gl.uniform1f(u(outProg, 'BT'), bPost);
     gl.uniform1f(u(outProg, 'T'), S.GT);
-    gl.uniform1f(u(outProg, 'B'), shapeDrive(S.sBass, 1.84) + S.beat * 0.48);
+    gl.uniform1f(u(outProg, 'B'), shapeDrive(S.sBass, 1.84) + bPost * 0.3);
     gl.uniform1f(u(outProg, 'M'), shapeDrive(S.sMid, 1.72));
     gl.uniform1f(u(outProg, 'H'), shapeDrive(S.sHigh, 1.78));
-    gl.uniform1f(u(outProg, 'FL'), Math.min(1.25, S.sFlux * 1.08 + S.beat * 0.22));
+    gl.uniform1f(u(outProg, 'FL'), Math.min(1.2, S.sFlux * 1.05 + bPost * 0.14));
     gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
     gl.uniform1f(u(outProg, 'BM'), bm);
     gl.uniform1f(u(outProg, 'HS'), Math.max(-0.5, Math.min(0.5, S.hueShift || 0)));
@@ -222,9 +229,10 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f); gl.viewport(0, 0, hw, hh);
       gl.useProgram(bloomProg); bindQuad(bloomProg);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(bloomProg, 'tex'), 0);
-      gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.23, 0.43 - S.beat * 0.29 - Math.min(0.22, S.sBass * 0.31) - Math.min(0.1, S.sHigh * 0.07) - S.sFlux * 0.08));
-      gl.uniform1f(u(bloomProg, 'BT'), Math.min(1.48, S.beat * 1.24));
-      gl.uniform1f(u(bloomProg, 'B'), shapeDrive(S.sBass, 1.84) + S.beat * 0.48);
+      var bBl = beatForPost();
+      gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.26, 0.41 - bBl * 0.14 - Math.min(0.2, S.sBass * 0.28) - Math.min(0.09, S.sHigh * 0.06) - S.sFlux * 0.07));
+      gl.uniform1f(u(bloomProg, 'BT'), bBl);
+      gl.uniform1f(u(bloomProg, 'B'), shapeDrive(S.sBass, 1.84) + bBl * 0.3);
       gl.uniform1f(u(bloomProg, 'H'), shapeDrive(S.sHigh, 1.78));
       gl.uniform1f(u(bloomProg, 'FL'), Math.min(1.2, S.sFlux * 1.12));
       gl.uniform1f(u(bloomProg, 'M'), shapeDrive(S.sMid, 1.72));
@@ -247,7 +255,7 @@
         gl.useProgram(streakProg); bindQuad(streakProg);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(streakProg, 'tex'), 0);
         gl.uniform1f(u(streakProg, 'str'), 0.004);
-        gl.uniform1f(u(streakProg, 'BT'), Math.min(1.48, S.beat * 1.24));
+        gl.uniform1f(u(streakProg, 'BT'), beatForPost());
         gl.uniform1f(u(streakProg, 'B'), shapeDrive(S.sBass, 1.84));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }

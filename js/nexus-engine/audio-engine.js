@@ -17,6 +17,7 @@
       flux: S.sFlux,
       centroid: S.sCent,
       beat: S.beat,
+      beatVisual: typeof S.beatVisual === 'number' ? S.beatVisual : 0,
       bpm: S.bpm,
       energy: Math.min(1, S.sBass * 0.45 + S.sMid * 0.3 + S.sHigh * 0.15 + S.sFlux * 0.25),
       micOn: !!S.micOn

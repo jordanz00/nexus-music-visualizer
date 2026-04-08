@@ -1,6 +1,6 @@
 'use strict';
 /**
- * NexusEngine — init / update / render orchestration (facade over NX modules).
+ * NexusEngine Super — init / update / render orchestration (facade over NX modules).
  */
 (function () {
   var S = NX.S;
@@ -20,7 +20,8 @@
     }
     var snap = NX.AudioEngine ? NX.AudioEngine.getSnapshot() : {};
     if ((S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') && NX.VisualEngineManager && NX.VisualEngineManager.isReady()) {
-      NX.VisualEngineManager.setIntensity(0.55 + (snap.energy || 0) * 0.65);
+      var eMix = (snap.energy || 0) * 0.58 + (snap.beatVisual || 0) * 0.22;
+      NX.VisualEngineManager.setIntensity(0.52 + eMix * 0.62);
     }
   }
 
@@ -38,7 +39,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '1.0.0'
+    version: '2.0.0-super'
   };
 
   NX.NexusEngine = window.NexusEngine;

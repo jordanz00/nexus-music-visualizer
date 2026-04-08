@@ -73,6 +73,20 @@
     });
   }
 
+  var _superList = [];
+  function buildSuperSelect() {
+    var sel = document.getElementById('bc-super-sel');
+    if (!sel || !NX.PresetLibrary || !window.NXSuperPresets) return;
+    while (sel.childNodes.length > 1) sel.removeChild(sel.lastChild);
+    _superList = NXSuperPresets.build(NX.PresetLibrary.getShowcase());
+    _superList.forEach(function (item, i) {
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = (i + 1) + '. ' + item.label;
+      sel.appendChild(o);
+    });
+  }
+
   function buildButterchurnPresets() {
     var sel = document.getElementById('bc-preset-sel');
     if (!sel || !NX.PresetLibrary) return;
@@ -218,6 +232,10 @@
         S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
         br = 14000000;
+      } else if (prof === 'stream') {
+        S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
+        stream = document.getElementById('c-rec').captureStream(fps);
+        br = 22000000;
       } else if (prof === '4k') {
         S.recCompositeDims = { w: 3840, h: 2160, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
@@ -235,7 +253,7 @@
         var blob = new Blob(recChunks, { type: 'video/webm' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'NEXUS_MarkV_' + Date.now() + '.webm';
+        a.download = 'NEXUS_Super_' + Date.now() + '.webm';
         a.click(); URL.revokeObjectURL(a.href);
         S.recording = false;
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
@@ -382,7 +400,7 @@
     if (rndBtn) rndBtn.addEventListener('click', NX.goRandom);
 
     var xBtn = document.getElementById('xbtn');
-    if (xBtn) xBtn.addEventListener('click', function () { S.explode = 1.5; S.beat = 1.0; });
+    if (xBtn) xBtn.addEventListener('click', function () { S.explode = 0.95; S.beat = 0.72; });
 
     var nextBtn = document.getElementById('nextbtn');
     if (nextBtn) nextBtn.addEventListener('click', function () { NX.goNext(); });
@@ -459,7 +477,7 @@
       else if (e.code === 'Backquote') { S.showFpsOverlay = !S.showFpsOverlay; document.getElementById('fps-badge').classList.toggle('on', S.showFpsOverlay); }
       else if (e.key === 'a' || e.key === 'A') { if (autoBtn) autoBtn.click(); }
       else if (e.key === 'm' || e.key === 'M') NX.audio.toggleMic();
-      else if (e.key === 'x' || e.key === 'X') { S.explode = 1.5; S.beat = 1.0; }
+      else if (e.key === 'x' || e.key === 'X') { S.explode = 0.95; S.beat = 0.72; }
       var n = parseInt(e.key);
       if (!isNaN(n) && n >= 1 && n <= 9) NX.goNext(n - 1);
       if (e.key === '0') NX.goNext(9);
@@ -493,6 +511,17 @@
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
       bt = Math.max(1, Math.min(3, bt));
       if (p) NX.VisualEngineManager.loadPreset(p, bt);
+      var bss = document.getElementById('bc-super-sel');
+      if (bss) bss.selectedIndex = 0;
+    });
+
+    var bcSuper = document.getElementById('bc-super-sel');
+    if (bcSuper) bcSuper.addEventListener('change', function () {
+      var idx = parseInt(this.value, 10);
+      if (isNaN(idx) || !_superList[idx] || !window.NXSuperPresets) return;
+      NXSuperPresets.apply(_superList[idx], { loadBc: true, goScene: true });
+      var bcs = document.getElementById('bc-showcase-sel');
+      if (bcs) bcs.selectedIndex = 0;
     });
 
     var bcSel = document.getElementById('bc-preset-sel');
@@ -502,6 +531,8 @@
       var bb = document.getElementById('bc-blend');
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
       if (p) NX.VisualEngineManager.loadPreset(p, bt);
+      var bss2 = document.getElementById('bc-super-sel');
+      if (bss2) bss2.selectedIndex = 0;
     });
     var bcRnd = document.getElementById('bc-random');
     if (bcRnd) bcRnd.addEventListener('click', function () {
@@ -584,6 +615,7 @@
     buildPresets();
     buildButterchurnPresets();
     buildShowcaseSelect();
+    buildSuperSelect();
     wireEvents();
     syncControls();
     setActiveScene(S.curS);
@@ -591,7 +623,7 @@
 
   NX.ui = {
     init: init, showName: showName, setActiveScene: setActiveScene, tickHud: tickHud,
-    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect,
+    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildSuperSelect: buildSuperSelect,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
     togglePresent: togglePresent, toggleRecording: toggleRecording,
     refreshMidiMapPanel: refreshMidiMapPanel, openMidiMapPanel: openMidiMapPanel, closeMidiMapPanel: closeMidiMapPanel

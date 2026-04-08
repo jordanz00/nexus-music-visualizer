@@ -15,7 +15,7 @@
   /* ---- Execute a single action ------------------------------------ */
   function exec(action) {
     if (action.scene != null) NX.goNext(action.scene);
-    if (action.explode) { S.explode = 1.5; S.beat = 1.0; }
+    if (action.explode) { S.explode = 0.95; S.beat = 0.72; }
     if (action.palette != null) { P.PAL = action.palette; if (NX.ui) NX.ui.setPalette(action.palette); }
     if (action.speed != null) P.SPD = action.speed;
     if (action.react != null) P.RCT = action.react;

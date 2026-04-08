@@ -114,7 +114,8 @@
       S.sHigh += (Math.max(demo.high * (1 - blend), mh) - S.sHigh) * .34;
       S.sVol += (Math.max(demo.vol * (1 - blend), mv2) - S.sVol) * .32;
       var step = Math.floor(S.bufLen / 256);
-      for (var i = 0; i < 256; i++) abuf[i] = Math.min(255, Math.floor((S.freqArr[i * step] || 0) * (1 + S.sBass * 0.35 + S.beat * 0.25)));
+      var bvA = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.5;
+      for (var i = 0; i < 256; i++) abuf[i] = Math.min(255, Math.floor((S.freqArr[i * step] || 0) * (1 + S.sBass * 0.32 + bvA * 0.1)));
       for (var i = 0; i < 256; i++) abuf[256 + i] = S.waveArr[i * step] || 128;
     } else {
       S.sBass += (demo.bass - S.sBass) * .42;
@@ -125,7 +126,8 @@
       S.sFlux += (Math.min(1, dKick * demo.beat * 1.8) - S.sFlux) * 0.55;
       S.sCent += (0.32 + 0.22 * Math.sin(S.GT * 0.37) + demo.mid * 0.12 - S.sCent) * 0.22;
       if (demo.beat > 0.65) S.beat = Math.max(S.beat, demo.beat * 0.95);
-      for (var i = 0; i < 256; i++) abuf[i] = Math.floor(Math.min(255, S.sBass * 240 * Math.exp(-i / 48) + S.beat * 40));
+      var bvD = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.5;
+      for (var i = 0; i < 256; i++) abuf[i] = Math.floor(Math.min(255, S.sBass * 240 * Math.exp(-i / 48) + bvD * 22));
       for (var i = 0; i < 256; i++) abuf[256 + i] = 128 + Math.floor(S.sMid * 55 * Math.sin(i * 0.2 + S.GT * 3) + S.sHigh * 35 * Math.sin(i * 0.37 - S.GT * 4));
     }
     gl.bindTexture(gl.TEXTURE_2D, atex);
@@ -143,6 +145,12 @@
     S.prevBass = S.sBass;
     if (S.beat > 0) S.beat = Math.max(0, S.beat - adt * 2.65);
     if (S.explode > 0) S.explode = Math.max(0, S.explode - adt * 2.2);
+
+    /* Visual beat: attack ~90ms, release ~400ms — tames post/bloom strobing */
+    var bvTarget = Math.min(0.92, S.beat * 0.52 + S.sBass * 0.1);
+    var tau = bvTarget > (S.beatVisual || 0) ? 0.09 : 0.42;
+    var alpha = 1 - Math.exp(-Math.min(adt * 2.5, 0.35) / tau);
+    S.beatVisual = (S.beatVisual || 0) + (bvTarget - (S.beatVisual || 0)) * alpha;
   }
 
   NX.audio = { tick: tick, startMic: startMic, stopMic: stopMic, toggleMic: toggleMic, enumDevices: enumDevices };

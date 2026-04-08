@@ -80,13 +80,13 @@
     var isBigDrop = spike > 0.5 && _prevEnergy < 0.2 && _energy > 0.55 && sinceLast > 4;
 
     if (isBigDrop) {
-      S.explode = 1.5; S.beat = 1.3;
+      S.explode = 0.72; S.beat = 0.78;
       S.morphDurationSec = 0.5;
       switchVisual(intenseScenes, null, 0.55);
       _lastSwitch = now;
       _calmTimer = 0; _buildTimer = 0;
     } else if (isDrop) {
-      S.beat = 1.1;
+      S.beat = 0.62;
       S.morphDurationSec = 0.8;
       switchVisual(intenseScenes, null, 1.2);
       _lastSwitch = now;
