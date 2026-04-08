@@ -354,6 +354,11 @@
     var startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.addEventListener('click', async function () {
       try { await NX.audio.startMic(); } catch (e) { }
+      if (!S.audioCtx && NX.audio.ensureButterchurnAudioGraph) {
+        try { await NX.audio.ensureButterchurnAudioGraph(); } catch (e2) { }
+      } else if (NX.audio.resumeAudioContext) {
+        try { await NX.audio.resumeAudioContext(); } catch (e3) { }
+      }
       var sp = document.getElementById('splash');
       sp.classList.add('out');
       setTimeout(function () { sp.style.display = 'none'; }, 900);

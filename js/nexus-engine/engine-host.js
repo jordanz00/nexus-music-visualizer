@@ -4,6 +4,7 @@
  */
 (function () {
   var S = NX.S;
+  var _bcPrimeInFlight = null;
 
   function init() {
     if (NX.PresetLibrary) NX.PresetLibrary.loadFromGlobal();
@@ -29,9 +30,24 @@
 
   function renderButterchurnLayer() {
     if (!NX.SceneManager || !NX.SceneManager.shouldRenderButterchurn()) return;
-    if (!NX.VisualEngineManager.ensureAudioForBC()) return;
+    if (!NX.VisualEngineManager.ensureAudioForBC()) {
+      if (!_bcPrimeInFlight && NX.audio && NX.audio.primeForButterchurn) {
+        _bcPrimeInFlight = NX.audio.primeForButterchurn()
+          .then(function () {
+            if (NX.VisualEngineManager.ensureAudioForBC()) {
+              NX.VisualEngineManager.initVisualizer();
+              NX.VisualEngineManager.connectAudio();
+            }
+          })
+          .finally(function () { _bcPrimeInFlight = null; });
+      }
+      return;
+    }
     if (!NX.VisualEngineManager.isReady()) {
-      if (S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') NX.VisualEngineManager.initVisualizer();
+      if (S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') {
+        NX.VisualEngineManager.initVisualizer();
+        NX.VisualEngineManager.connectAudio();
+      }
     }
     NX.VisualEngineManager.resize();
     NX.VisualEngineManager.render();
@@ -41,7 +57,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '3.1.0-pro'
+    version: '3.2.0-pro'
   };
 
   NX.NexusEngine = window.NexusEngine;

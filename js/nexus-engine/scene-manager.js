@@ -46,22 +46,35 @@
     document.body.classList.toggle('nexus-mode-bc', mode === 'butterchurn');
     document.body.classList.toggle('nexus-mode-hybrid', mode === 'hybrid');
     if (mode === 'butterchurn' || mode === 'hybrid') {
-      if (!S.micOn && NX.audio && NX.audio.startMic) {
-        NX.audio.startMic(S.curDev || '').catch(function () { });
+      function seedFirstPreset() {
+        setTimeout(function () {
+          if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
+          var ks = NX.PresetLibrary.getKeys();
+          if (!ks || !ks.length) return;
+          var k = ks[Math.floor(Math.random() * ks.length)];
+          var pr = NX.PresetLibrary.getPreset(k);
+          if (pr) NX.VisualEngineManager.loadPreset(pr, 2.4, k, { fromConductor: true });
+        }, 120);
+        setTimeout(function () {
+          if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
+          var ks = NX.PresetLibrary.getKeys();
+          if (!ks || !ks.length) return;
+          var k = ks[Math.floor(Math.random() * ks.length)];
+          var pr = NX.PresetLibrary.getPreset(k);
+          if (pr) NX.VisualEngineManager.loadPreset(pr, 2.2, k, { fromConductor: true });
+        }, 900);
       }
-      if (NX.VisualEngineManager.ensureAudioForBC()) {
+      function primeBC() {
+        if (!NX.VisualEngineManager || !NX.VisualEngineManager.ensureAudioForBC()) return;
         NX.VisualEngineManager.initVisualizer();
         NX.VisualEngineManager.connectAudio();
+        seedFirstPreset();
       }
-      /* Seed a MilkDrop preset so the layer isn’t blank on first hybrid/BC switch */
-      setTimeout(function () {
-        if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
-        var ks = NX.PresetLibrary.getKeys();
-        if (!ks || !ks.length) return;
-        var k = ks[Math.floor(Math.random() * ks.length)];
-        var pr = NX.PresetLibrary.getPreset(k);
-        if (pr) NX.VisualEngineManager.loadPreset(pr, 2.4, k, { fromConductor: true });
-      }, 320);
+      if (NX.audio && NX.audio.primeForButterchurn) {
+        NX.audio.primeForButterchurn().then(primeBC).catch(function (err) {
+          console.warn('Butterchurn audio:', err && err.message);
+        });
+      }
     }
     if (mode === 'shader' && NX.VisualEngineManager) {
       NX.VisualEngineManager.disconnectAudio();

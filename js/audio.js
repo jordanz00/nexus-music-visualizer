@@ -20,9 +20,73 @@
     };
   }
 
+  /**
+   * Minimal Web Audio graph so Butterchurn can connectAudio + analyze (no mic).
+   * Used when getUserMedia fails or before the user grants mic.
+   */
+  async function ensureButterchurnAudioGraph() {
+    if (S.audioCtx && S.gainNode && S.analyser) {
+      if (S.audioCtx.state === 'suspended') { try { await S.audioCtx.resume(); } catch (e) { } }
+      return;
+    }
+    S.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100, latencyHint: 'interactive' });
+    if (S.audioCtx.state === 'suspended') { try { await S.audioCtx.resume(); } catch (e) { } }
+    S.gainNode = S.audioCtx.createGain();
+    S.gainNode.gain.value = P.GAIN;
+    S.analyser = S.audioCtx.createAnalyser();
+    S.analyser.fftSize = 2048;
+    S.analyser.smoothingTimeConstant = P.SMTH / 100;
+    S.analyser.minDecibels = -88;
+    S.analyser.maxDecibels = -28;
+    S.bufLen = S.analyser.frequencyBinCount;
+    S.waveArr = new Uint8Array(S.bufLen);
+    S.freqArr = new Uint8Array(S.bufLen);
+    S.prevFreqFlux = new Uint8Array(S.bufLen);
+    var bridge = S.audioCtx.createGain();
+    bridge.gain.value = 1e-5;
+    var osc = S.audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(55, S.audioCtx.currentTime);
+    osc.connect(bridge);
+    bridge.connect(S.gainNode);
+    S.gainNode.connect(S.analyser);
+    osc.start(0);
+    S._bcSilentOsc = osc;
+    S._bcSilentBridge = bridge;
+    S.micOn = false;
+    if (NX.VisualEngineManager && NX.VisualEngineManager.isReady()) NX.VisualEngineManager.connectAudio();
+  }
+
+  /** Resume suspended context (required after user gesture on some browsers). */
+  async function resumeAudioContext() {
+    if (S.audioCtx && S.audioCtx.state === 'suspended') {
+      try { await S.audioCtx.resume(); } catch (e) { }
+    }
+  }
+
+  /**
+   * Prefer mic; otherwise silent graph — always resolves when Butterchurn can run.
+   */
+  async function primeForButterchurn() {
+    if (S.audioCtx && S.gainNode && S.analyser) {
+      await resumeAudioContext();
+      return;
+    }
+    try {
+      await startMic(S.curDev || '');
+    } catch (e) { /* denied / unavailable */ }
+    if (S.audioCtx && S.gainNode && S.analyser) {
+      await resumeAudioContext();
+      return;
+    }
+    await ensureButterchurnAudioGraph();
+  }
+
   async function startMic(devId) {
     try {
       if (S.micStream) S.micStream.getTracks().forEach(function (t) { t.stop(); });
+      S._bcSilentOsc = null;
+      S._bcSilentBridge = null;
       if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } }
       S.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100, latencyHint: 'interactive' });
       if (S.audioCtx.state === 'suspended') await S.audioCtx.resume();
@@ -49,6 +113,8 @@
 
   async function stopMic() {
     if (S.micStream) { S.micStream.getTracks().forEach(function (t) { t.stop(); }); S.micStream = null; }
+    S._bcSilentOsc = null;
+    S._bcSilentBridge = null;
     if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } S.audioCtx = null; }
     S.analyser = null; S.micOn = false; S.prevFreqFlux = null;
     if (NX.VisualEngineManager) NX.VisualEngineManager.disconnectAudio();
@@ -153,5 +219,14 @@
     S.beatVisual = (S.beatVisual || 0) + (bvTarget - (S.beatVisual || 0)) * alpha;
   }
 
-  NX.audio = { tick: tick, startMic: startMic, stopMic: stopMic, toggleMic: toggleMic, enumDevices: enumDevices };
+  NX.audio = {
+    tick: tick,
+    startMic: startMic,
+    stopMic: stopMic,
+    toggleMic: toggleMic,
+    enumDevices: enumDevices,
+    ensureButterchurnAudioGraph: ensureButterchurnAudioGraph,
+    resumeAudioContext: resumeAudioContext,
+    primeForButterchurn: primeForButterchurn
+  };
 })();

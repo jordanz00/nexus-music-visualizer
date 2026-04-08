@@ -12,8 +12,11 @@
   var speed = 1;
 
   function getBC() {
-    var b = typeof butterchurn !== 'undefined' ? butterchurn : null;
+    var g = typeof globalThis !== 'undefined' ? globalThis : window;
+    var b = typeof butterchurn !== 'undefined' ? butterchurn : (g && g.butterchurn) ? g.butterchurn : null;
     if (!b) return null;
+    if (typeof b.createVisualizer === 'function') return b;
+    if (b.default && typeof b.default.createVisualizer === 'function') return b.default;
     return b.default || b;
   }
 

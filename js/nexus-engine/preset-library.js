@@ -26,8 +26,13 @@
     if (!mod) return null;
     var c = mod.default !== undefined ? mod.default : mod;
     if (c && typeof c.getPresets === 'function') {
-      var pmap = c.getPresets();
-      return pmap && typeof pmap === 'object' ? pmap : null;
+      try {
+        var pmap = c.getPresets();
+        return pmap && typeof pmap === 'object' ? pmap : null;
+      } catch (e) {
+        console.warn('PresetLibrary: getPresets() failed', e.message);
+        return null;
+      }
     }
     var o = c;
     if (o && o.default && typeof o.default === 'object' && !o.baseVals) o = o.default;
