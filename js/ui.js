@@ -152,6 +152,19 @@
     var bpmEl = document.getElementById('bpm-val');
     if (bpmEl) bpmEl.textContent = st.bpm || '--';
 
+    var bcHud = document.getElementById('bc-preset-hud');
+    if (bcHud) {
+      var vm = st.visualMode || 'shader';
+      if ((vm === 'butterchurn' || vm === 'hybrid') && st.bcLastPresetKey) {
+        var nm = st.bcLastPresetKey;
+        bcHud.textContent = nm.length > 36 ? nm.slice(0, 34) + '…' : nm;
+        bcHud.style.display = '';
+      } else {
+        bcHud.textContent = '';
+        bcHud.style.display = 'none';
+      }
+    }
+
     if (st.autoMorph) {
       var rem = Math.max(0, Math.round(st.presInterval - st.presTimer));
       var nxt = document.getElementById('auto-timer');
@@ -519,7 +532,7 @@
       var bb = document.getElementById('bc-blend');
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
       bt = Math.max(1, Math.min(3, bt));
-      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+      if (p) NX.VisualEngineManager.loadPreset(p, bt, this.value);
       var bps = document.getElementById('bc-pro-sel');
       if (bps) bps.selectedIndex = 0;
     });
@@ -548,7 +561,7 @@
       var p = NX.PresetLibrary.getPreset(this.value);
       var bb = document.getElementById('bc-blend');
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
-      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+      if (p) NX.VisualEngineManager.loadPreset(p, bt, this.value);
       var bps2 = document.getElementById('bc-pro-sel');
       if (bps2) bps2.selectedIndex = 0;
     });
@@ -556,11 +569,31 @@
     if (bcRnd) bcRnd.addEventListener('click', function () {
       var keys = NX.PresetLibrary && NX.PresetLibrary.getKeys();
       if (!keys || !keys.length) return;
-      var p = NX.PresetLibrary.getPreset(keys[Math.floor(Math.random() * keys.length)]);
+      var rk = keys[Math.floor(Math.random() * keys.length)];
+      var p = NX.PresetLibrary.getPreset(rk);
       var bb = document.getElementById('bc-blend');
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
-      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+      if (p) NX.VisualEngineManager.loadPreset(p, bt, rk);
     });
+
+    var bcAutoMorph = document.getElementById('bc-auto-morph');
+    var bcMorphBeats = document.getElementById('bc-morph-beats');
+    var bcMorphPool = document.getElementById('bc-morph-pool');
+    if (bcAutoMorph && NX.BcMorphConductor) {
+      bcAutoMorph.addEventListener('change', function () {
+        NX.BcMorphConductor.setEnabled(this.checked);
+      });
+    }
+    if (bcMorphBeats && NX.BcMorphConductor) {
+      bcMorphBeats.addEventListener('change', function () {
+        NX.BcMorphConductor.setBeatsInterval(parseInt(this.value, 10) || 32);
+      });
+    }
+    if (bcMorphPool && NX.BcMorphConductor) {
+      bcMorphPool.addEventListener('change', function () {
+        NX.BcMorphConductor.setPool(this.value);
+      });
+    }
     var nxBloom = document.getElementById('nx-bloom');
     if (nxBloom) {
       nxBloom.checked = !!S.nexusPostBloom;
@@ -632,6 +665,7 @@
     buildPads();
     buildPresets();
     buildButterchurnPresets();
+    if (NX.BcMorphConductor && NX.BcMorphConductor.rebuildPool) NX.BcMorphConductor.rebuildPool();
     buildShowcaseSelect();
     buildProSelect();
     wireEvents();

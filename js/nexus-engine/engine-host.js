@@ -7,6 +7,7 @@
 
   function init() {
     if (NX.PresetLibrary) NX.PresetLibrary.loadFromGlobal();
+    if (NX.BcMorphConductor && NX.BcMorphConductor.rebuildPool) NX.BcMorphConductor.rebuildPool();
     if (NX.SceneManager) {
       NX.SceneManager.setMode(S.visualMode || 'shader', { crossfade: false, force: true });
       NX.SceneManager.syncDOM();
@@ -23,6 +24,7 @@
       var eMix = (snap.energy || 0) * 0.58 + (snap.beatVisual || 0) * 0.22;
       NX.VisualEngineManager.setIntensity(0.52 + eMix * 0.62);
     }
+    if (NX.BcMorphConductor && NX.BcMorphConductor.tick) NX.BcMorphConductor.tick(dt);
   }
 
   function renderButterchurnLayer() {
@@ -39,7 +41,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '3.0.0-pro'
+    version: '3.1.0-pro'
   };
 
   NX.NexusEngine = window.NexusEngine;

@@ -33,6 +33,7 @@
   <span id="pro-badge" class="pro-badge free">FREE</span>
   <div class="spacer"></div>
   <div class="meta" id="scene-name">&mdash;</div>
+  <div class="meta bc-preset-hud" id="bc-preset-hud" style="display:none" title="Current MilkDrop preset"></div>
   <div class="meta" id="bpm-val">--</div>
   <div class="meta" id="auto-timer">-</div>
   <button class="top-btn" id="autobtn" title="Auto-morph (A)">AUTO</button>
@@ -207,6 +208,23 @@
         <option value="hybrid">Hybrid</option>
       </select></label>
       <label class="nx-inline">BC blend <input type="range" id="bc-blend" min="5" max="50" value="20" title="Preset crossfade (×0.1s)"></label>
+      <label class="nx-inline" title="BPM-aware MilkDrop morph (Butterchurn / Hybrid)"><input type="checkbox" id="bc-auto-morph"> Auto morph</label>
+      <select id="bc-morph-pool" class="preset-select" style="min-width:108px" title="Preset pool for auto morph">
+        <option value="all" selected>Pool: All</option>
+        <option value="psychedelic">Psychedelic</option>
+        <option value="heavy">Heavy</option>
+        <option value="ambient">Ambient</option>
+        <option value="glitch">Glitch</option>
+        <option value="other">Other</option>
+      </select>
+      <select id="bc-morph-beats" class="preset-select" style="min-width:92px" title="Beats between morphs (4/4)">
+        <option value="16">16 beats</option>
+        <option value="24">24 beats</option>
+        <option value="32" selected>32 beats</option>
+        <option value="48">48 beats</option>
+        <option value="64">64 beats</option>
+        <option value="96">96 beats</option>
+      </select>
       <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
       <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
       <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
@@ -233,7 +251,7 @@
 
 <!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
 <script src="vendor/butterchurn.min.js"></script>
-<script src="vendor/butterchurnPresetsMinimal.min.js"></script>
+<script src="vendor/butterchurnPresets.min.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/scenes.js"></script>
@@ -247,6 +265,7 @@
 <script src="js/nexus-engine/audio-engine.js"></script>
 <script src="js/nexus-engine/bc-showcase.js"></script>
 <script src="js/nexus-engine/preset-library.js"></script>
+<script src="js/nexus-engine/bc-morph-conductor.js"></script>
 <script src="js/nexus-engine/pro-presets.js"></script>
 <script src="js/nexus-engine/visual-engine-manager.js"></script>
 <script src="js/nexus-engine/butterchurn-scene.js"></script>

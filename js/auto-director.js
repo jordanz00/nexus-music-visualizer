@@ -42,7 +42,7 @@
     if (!keys || !keys.length) return;
     var k = keys[Math.floor(Math.random() * keys.length)];
     var p = NX.PresetLibrary.getPreset(k);
-    if (p) NX.VisualEngineManager.loadPreset(p, blend == null ? 2 : blend);
+    if (p) NX.VisualEngineManager.loadPreset(p, blend == null ? 2 : blend, k);
   }
 
   function switchVisual(intensePool, calmPool, blendHint) {

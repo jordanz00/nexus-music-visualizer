@@ -19,7 +19,9 @@
   }
 
   function loadFromGlobal() {
-    var mod = typeof butterchurnPresetsMinimal !== 'undefined' ? butterchurnPresetsMinimal : null;
+    /* Full pack (~hundreds): butterchurnPresets — fallback: butterchurnPresetsMinimal */
+    var mod = typeof butterchurnPresets !== 'undefined' ? butterchurnPresets : null;
+    if (!mod) mod = typeof butterchurnPresetsMinimal !== 'undefined' ? butterchurnPresetsMinimal : null;
     if (!mod) return false;
     raw = mod.default || mod;
     if (raw && raw.default && typeof raw.default === 'object' && !raw.baseVals) raw = raw.default;
@@ -34,6 +36,7 @@
     if (window.NXBcShowcase && typeof NXBcShowcase.resolve === 'function') {
       showcase = NXBcShowcase.resolve(keys);
     }
+    console.log('PresetLibrary: ' + keys.length + ' MilkDrop presets (Butterchurn)');
     return true;
   }
 

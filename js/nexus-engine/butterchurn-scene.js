@@ -16,7 +16,7 @@
     if (!NX.VisualEngineManager.ensureAudioForBC()) return;
     if (!NX.VisualEngineManager.initVisualizer()) return;
     if (this.presetName && NX.PresetLibrary.getPreset(this.presetName)) {
-      NX.VisualEngineManager.loadPreset(NX.PresetLibrary.getPreset(this.presetName), this.blendTime);
+      NX.VisualEngineManager.loadPreset(NX.PresetLibrary.getPreset(this.presetName), this.blendTime, this.presetName);
     }
   };
 

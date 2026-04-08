@@ -1,6 +1,6 @@
 # NEXUS Engine — Pro (DJ / VJ)
 
-**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p (high bitrate) / 4K** with **30–60 FPS**. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) with the **full vendored `butterchurn-presets` library** (hundreds of presets) **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p / 4K** with **30–60 FPS**. No build step.
 
 **Anti-flash tuning:** a smoothed **`beatVisual`** channel drives shaders and post (attack ~90ms, release ~400ms) so kicks and bloom no longer strobe as hard as raw beat spikes.
 
@@ -20,8 +20,8 @@
 | Category | Details |
 |----------|---------|
 | **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
-| **Butterchurn** | Local `vendor/butterchurn.min.js` + `butterchurnPresetsMinimal.min.js`; preset browser by category; `loadPreset(preset, blendSeconds)`; requires **mic / audio context** |
-| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `pro-presets.js` (Pro 60 + `applyVisualStyle`), `NexusEngine` host (`3.0.0-pro`, `init` / `update` / `renderButterchurnLayer`) |
+| **Butterchurn** | Local `vendor/butterchurn.min.js` + **full** `butterchurnPresets.min.js` (official `butterchurn-presets` bundle — hundreds of MilkDrop presets). Fallback in code to `butterchurnPresetsMinimal` if the full script is omitted. **Auto morph**: BPM-aware interval (16–96 beats), category pool, Butterchurn-native blends **1.5–4.5s** scaled by energy. **BC blend** slider still caps manual loads (1–3s). Mic / audio context required for BC. |
+| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `bc-morph-conductor.js`, `pro-presets.js` (Pro 60 + `applyVisualStyle`), `NexusEngine` host (`3.1.0-pro`, `init` / `update` / `renderButterchurnLayer`) |
 | **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
 | **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage, sharpen, ACES, subtle beat lift (smoothed) |

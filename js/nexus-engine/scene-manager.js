@@ -53,6 +53,15 @@
         NX.VisualEngineManager.initVisualizer();
         NX.VisualEngineManager.connectAudio();
       }
+      /* Seed a MilkDrop preset so the layer isn’t blank on first hybrid/BC switch */
+      setTimeout(function () {
+        if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
+        var ks = NX.PresetLibrary.getKeys();
+        if (!ks || !ks.length) return;
+        var k = ks[Math.floor(Math.random() * ks.length)];
+        var pr = NX.PresetLibrary.getPreset(k);
+        if (pr) NX.VisualEngineManager.loadPreset(pr, 2.4, k, { fromConductor: true });
+      }, 320);
     }
     if (mode === 'shader' && NX.VisualEngineManager) {
       NX.VisualEngineManager.disconnectAudio();
@@ -75,7 +84,7 @@
     if (queue.length === 0 || S.morphing) return;
     var item = queue.shift();
     if (item.type === 'bc' && item.preset && NX.PresetLibrary.getPreset(item.preset)) {
-      NX.VisualEngineManager.loadPreset(NX.PresetLibrary.getPreset(item.preset), item.blend != null ? item.blend : 2);
+      NX.VisualEngineManager.loadPreset(NX.PresetLibrary.getPreset(item.preset), item.blend != null ? item.blend : 2, item.preset);
     } else if (item.type === 'shader' && typeof item.index === 'number') {
       NX.goNext(item.index);
     }

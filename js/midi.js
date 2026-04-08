@@ -27,8 +27,9 @@
       if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
       var keys = NX.PresetLibrary.getKeys();
       if (!keys || !keys.length) return;
-      var p = NX.PresetLibrary.getPreset(keys[Math.floor(Math.random() * keys.length)]);
-      if (p) NX.VisualEngineManager.loadPreset(p, 1.6);
+      var k = keys[Math.floor(Math.random() * keys.length)];
+      var p = NX.PresetLibrary.getPreset(k);
+      if (p) NX.VisualEngineManager.loadPreset(p, 1.8, k);
     } },
     visualMode: { set: function (v) {
       var modes = ['shader', 'butterchurn', 'hybrid'];

@@ -38,7 +38,9 @@ window.NX = window.NX || {};
     bcIntensity: 1,
     bcSpeed: 1,
     /** When set, main loop composites layers into #c-rec for export resolution */
-    recCompositeDims: null
+    recCompositeDims: null,
+    /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
+    bcLastPresetKey: ''
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);

@@ -86,9 +86,22 @@
     } catch (e) { /* swallow frame errors */ }
   }
 
-  function loadPreset(presetObj, blendSec) {
+  /**
+   * @param {object} presetObj — MilkDrop JSON
+   * @param {number} blendSec — crossfade duration (Butterchurn native blend)
+   * @param {string} [presetKey] — catalog name (HUD + morph conductor)
+   * @param {{ fromConductor?: boolean }} [flags] — skip manual-morph reset when true
+   */
+  function loadPreset(presetObj, blendSec, presetKey, flags) {
     if (!viz || !presetObj) return;
     blendSec = blendSec == null ? 2 : blendSec;
+    flags = flags || {};
+    if (presetKey) {
+      S.bcLastPresetKey = presetKey;
+      if (!flags.fromConductor && NX.BcMorphConductor && NX.BcMorphConductor.notifyManualPresetLoad) {
+        NX.BcMorphConductor.notifyManualPresetLoad(presetKey);
+      }
+    }
     var p = viz.loadPreset(presetObj, blendSec);
     if (p && typeof p.then === 'function') p.catch(function () { });
   }

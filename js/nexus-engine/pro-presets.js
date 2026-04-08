@@ -74,7 +74,7 @@
       var preset = NX.PresetLibrary.getPreset(entry.key);
       var bt = 1.35 + (seed % 17) * 0.1;
       bt = Math.max(1, Math.min(3, bt));
-      if (preset) NX.VisualEngineManager.loadPreset(preset, bt);
+      if (preset) NX.VisualEngineManager.loadPreset(preset, bt, entry.key);
     }
 
     if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
