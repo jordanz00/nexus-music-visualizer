@@ -1,4 +1,4 @@
-# NEXUS Engine — Super (Hybrid VJ)
+# NEXUS Engine — Pro (DJ / VJ)
 
 **Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) **plus** 20 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p (high bitrate) / 4K** with **30–60 FPS**. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
 
@@ -6,7 +6,9 @@
 
 **Showcase 20:** curated display names map to the **closest real presets** in the loaded pack (keyword scoring — no fabricated MilkDrop JSON).
 
-**Super 60:** each showcase preset × three variants (**Apex / Flux / Nova**) — same Butterchurn key, different procedural engine params (palette, warp, speed, react, hue, bloom) + scene nudge for evolving hybrid looks.
+**Pro 60 hybrid library:** showcase × **Apex / Flux / Nova** variants — real Butterchurn key + procedural engine params; each row tagged **Trance / Techno / Ambient / EDM / Glitch** for the genre filter. **DJ style** macro (Output panel): one-click **Trance, Techno, Ambient, EDM, Glitch** — sets speed, react, warp, morph, trails, bloom, and stack mode.
+
+**User presets** (Save / Preset dropdown) now also store **hue, bloom, trails, visual mode** (shader / Butterchurn / hybrid) for full recall.
 
 > **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
 > **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)
@@ -19,14 +21,14 @@
 |----------|---------|
 | **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
 | **Butterchurn** | Local `vendor/butterchurn.min.js` + `butterchurnPresetsMinimal.min.js`; preset browser by category; `loadPreset(preset, blendSeconds)`; requires **mic / audio context** |
-| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `super-presets.js` (Super 60), `NexusEngine` host (`init` / `update` / `renderButterchurnLayer`) |
+| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `pro-presets.js` (Pro 60 + `applyVisualStyle`), `NexusEngine` host (`3.0.0-pro`, `init` / `update` / `renderButterchurnLayer`) |
 | **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
 | **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage, sharpen, ACES, subtle beat lift (smoothed) |
 | **Camera** | 5 cinematic modes — orbit, dolly, crane, handheld, snap (beat-triggered angle jumps) |
 | **MIDI** | WebMIDI + learn mode; extended CC targets: **bloom**, **colorShift** (reserved), **bcNext** (random Butterchurn preset), **visualMode** (shader / BC / hybrid) |
 | **Recording** | MediaRecorder WebM (VP9→VP8 fallback); profiles include **Stream 1080p** (~22 Mbps) for cleaner OBS re-encode |
-| **Presets** | Save/load engine state to localStorage; 4 built-in presets (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
+| **Presets** | Save/load engine + post + stack to localStorage; 4 built-in starting points (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
 | **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
 | **Performance** | 3 GPU quality presets, adaptive FPS; **Perf lock** caps DPR and internal resolution; `prefers-reduced-motion` support |
 | **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` |
@@ -127,7 +129,7 @@ VOID CATHEDRAL · SACRED GEOMETRY · NEURAL SWARM · DARK MONOLITH · LASER CATH
 
 ### Custom Presets
 - Click **Save** next to the preset dropdown to save your current settings
-- Presets store: speed, reactivity, warp, morph time, palette, quality, and active scene
+- Presets store: speed, reactivity, warp, morph time, palette, gain, smooth, quality, scene, **hue shift, bloom multiplier, bloom on/off, trails, visual stack mode**
 - Stored in localStorage — clear browser data to reset
 
 ---
@@ -147,7 +149,11 @@ NEXUS/
     post.js               ← Bloom, streak, grading, ACES output
     ui.js                 ← Scene pads, sliders, meters, present mode, recording
     midi.js               ← WebMIDI learn mode + CC mapping
-    presets.js            ← Save/load to localStorage
+    presets.js            ← Save/load to localStorage (full DJ state)
+    nexus-engine/
+      pro-presets.js      ← Pro 60 hybrids + genre filter + DJ style macros
+      preset-library.js   ← Butterchurn pack + showcase resolution
+      engine-host.js      ← NexusEngine facade
     scenes/
       cosmic.js           ← Hyperspace, Black Hole, Mandelbulb, Chrome Planet, Galaxy Core
       energy.js           ← Vortex Engine, Plasma Sphere, Alien Monolith

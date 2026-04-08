@@ -1,6 +1,6 @@
 'use strict';
 /**
- * NexusEngine Super — init / update / render orchestration (facade over NX modules).
+ * NexusEngine Pro — init / update / render orchestration (facade over NX modules).
  */
 (function () {
   var S = NX.S;
@@ -39,7 +39,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '2.0.0-super'
+    version: '3.0.0-pro'
   };
 
   NX.NexusEngine = window.NexusEngine;

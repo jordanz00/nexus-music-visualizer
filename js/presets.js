@@ -27,7 +27,12 @@
       GAIN: P.GAIN, SMTH: P.SMTH,
       morphDur: S.morphDurationSec,
       scene: S.curS,
-      quality: (function () { var q = document.getElementById('qsel'); return q ? q.value : 'balanced'; })()
+      quality: (function () { var q = document.getElementById('qsel'); return q ? q.value : 'balanced'; })(),
+      hueShift: S.hueShift,
+      postBloomMul: S.postBloomMul,
+      nexusPostBloom: S.nexusPostBloom,
+      nexusPostTrails: S.nexusPostTrails,
+      visualMode: S.visualMode || 'shader'
     };
   }
 
@@ -41,6 +46,13 @@
     if (preset.morphDur != null) S.morphDurationSec = preset.morphDur;
     if (preset.quality) NX.setQualityPreset(preset.quality);
     if (preset.scene != null && preset.scene < NX.scenes.length) NX.goNext(preset.scene);
+    if (preset.hueShift != null) S.hueShift = preset.hueShift;
+    if (preset.postBloomMul != null) S.postBloomMul = preset.postBloomMul;
+    if (preset.nexusPostBloom != null) S.nexusPostBloom = preset.nexusPostBloom;
+    if (preset.nexusPostTrails != null) S.nexusPostTrails = preset.nexusPostTrails;
+    if (preset.visualMode != null && NX.SceneManager) {
+      NX.SceneManager.setMode(preset.visualMode, { crossfade: true, fadeSec: 0.75 });
+    }
     if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
   }
 

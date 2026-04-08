@@ -73,16 +73,19 @@
     });
   }
 
-  var _superList = [];
-  function buildSuperSelect() {
-    var sel = document.getElementById('bc-super-sel');
-    if (!sel || !NX.PresetLibrary || !window.NXSuperPresets) return;
+  var _proList = [];
+  function buildProSelect() {
+    var sel = document.getElementById('bc-pro-sel');
+    if (!sel || !NX.PresetLibrary || !window.NXProPresets) return;
     while (sel.childNodes.length > 1) sel.removeChild(sel.lastChild);
-    _superList = NXSuperPresets.build(NX.PresetLibrary.getShowcase());
-    _superList.forEach(function (item, i) {
+    var full = NXProPresets.build(NX.PresetLibrary.getShowcase());
+    var gf = document.getElementById('pro-genre-filter');
+    var g = gf ? gf.value : 'all';
+    _proList = NXProPresets.filterByGenre(full, g);
+    _proList.forEach(function (item, i) {
       var o = document.createElement('option');
       o.value = String(i);
-      o.textContent = (i + 1) + '. ' + item.label;
+      o.textContent = (i + 1) + '. [' + item.genre + '] ' + item.label;
       sel.appendChild(o);
     });
   }
@@ -124,6 +127,12 @@
       if (row) { var vd = row.querySelector('.val'); if (vd) vd.textContent = rh.value; }
     }
     setPalette(P.PAL);
+    var nxBloom = document.getElementById('nx-bloom');
+    if (nxBloom) nxBloom.checked = !!S.nexusPostBloom;
+    var nxTr = document.getElementById('nx-trails');
+    if (nxTr) nxTr.value = String(Math.round((S.nexusPostTrails == null ? 0 : S.nexusPostTrails) * 100));
+    var nxMode = document.getElementById('nx-visual-mode');
+    if (nxMode) nxMode.value = S.visualMode || 'shader';
   }
 
   function setPalette(idx) {
@@ -253,7 +262,7 @@
         var blob = new Blob(recChunks, { type: 'video/webm' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'NEXUS_Super_' + Date.now() + '.webm';
+        a.download = 'NEXUS_Pro_' + Date.now() + '.webm';
         a.click(); URL.revokeObjectURL(a.href);
         S.recording = false;
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
@@ -511,17 +520,26 @@
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
       bt = Math.max(1, Math.min(3, bt));
       if (p) NX.VisualEngineManager.loadPreset(p, bt);
-      var bss = document.getElementById('bc-super-sel');
-      if (bss) bss.selectedIndex = 0;
+      var bps = document.getElementById('bc-pro-sel');
+      if (bps) bps.selectedIndex = 0;
     });
 
-    var bcSuper = document.getElementById('bc-super-sel');
-    if (bcSuper) bcSuper.addEventListener('change', function () {
+    var bcPro = document.getElementById('bc-pro-sel');
+    if (bcPro) bcPro.addEventListener('change', function () {
       var idx = parseInt(this.value, 10);
-      if (isNaN(idx) || !_superList[idx] || !window.NXSuperPresets) return;
-      NXSuperPresets.apply(_superList[idx], { loadBc: true, goScene: true });
+      if (isNaN(idx) || !_proList[idx] || !window.NXProPresets) return;
+      NXProPresets.apply(_proList[idx], { loadBc: true, goScene: true });
       var bcs = document.getElementById('bc-showcase-sel');
       if (bcs) bcs.selectedIndex = 0;
+    });
+
+    var proGenre = document.getElementById('pro-genre-filter');
+    if (proGenre) proGenre.addEventListener('change', function () { buildProSelect(); });
+
+    var nxStyle = document.getElementById('nx-visual-style');
+    if (nxStyle) nxStyle.addEventListener('change', function () {
+      if (!this.value || !window.NXProPresets) return;
+      NXProPresets.applyVisualStyle(this.value);
     });
 
     var bcSel = document.getElementById('bc-preset-sel');
@@ -531,8 +549,8 @@
       var bb = document.getElementById('bc-blend');
       var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
       if (p) NX.VisualEngineManager.loadPreset(p, bt);
-      var bss2 = document.getElementById('bc-super-sel');
-      if (bss2) bss2.selectedIndex = 0;
+      var bps2 = document.getElementById('bc-pro-sel');
+      if (bps2) bps2.selectedIndex = 0;
     });
     var bcRnd = document.getElementById('bc-random');
     if (bcRnd) bcRnd.addEventListener('click', function () {
@@ -615,7 +633,7 @@
     buildPresets();
     buildButterchurnPresets();
     buildShowcaseSelect();
-    buildSuperSelect();
+    buildProSelect();
     wireEvents();
     syncControls();
     setActiveScene(S.curS);
@@ -623,7 +641,7 @@
 
   NX.ui = {
     init: init, showName: showName, setActiveScene: setActiveScene, tickHud: tickHud,
-    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildSuperSelect: buildSuperSelect,
+    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildProSelect: buildProSelect,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
     togglePresent: togglePresent, toggleRecording: toggleRecording,
     refreshMidiMapPanel: refreshMidiMapPanel, openMidiMapPanel: openMidiMapPanel, closeMidiMapPanel: closeMidiMapPanel
