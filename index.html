@@ -81,12 +81,6 @@
   </div>
 </div>
 
-<!-- ── Live preview (scaled program bus) ─────────────────────────── -->
-<div id="preview-wrap" aria-hidden="false">
-  <span class="preview-title">PROGRAM</span>
-  <canvas id="preview-canvas" width="320" height="180"></canvas>
-</div>
-
 <!-- Offscreen composite for 1080p/4K recording -->
 <canvas id="c-rec" width="1920" height="1080" aria-hidden="true" style="position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none"></canvas>
 
@@ -252,6 +246,7 @@
 <!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
 <script src="vendor/butterchurn.min.js"></script>
 <script src="vendor/butterchurnPresets.min.js"></script>
+<!-- More MilkDrop packs: run vendor/fetch-extra-presets.sh, add sibling <script src=…> lines before engine.js (see README). -->
 <script src="js/engine.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/scenes.js"></script>

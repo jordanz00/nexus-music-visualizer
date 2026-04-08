@@ -1,6 +1,7 @@
 'use strict';
 /**
- * Butterchurn preset catalog: load minimal pack, bucket by name heuristics, favorites in localStorage.
+ * Butterchurn preset catalog: official packs expose a class with .getPresets() — NOT a plain object.
+ * Merges main + optional Extra / Extra2 / MD1 / NonMinimal / Minimal globals when present.
  */
 (function () {
   var raw = null;
@@ -18,14 +19,47 @@
     return 'other';
   }
 
+  /**
+   * npm butterchurn-presets bundles: default export is a class; presets map is getPresets().
+   */
+  function extractPresetMap(mod) {
+    if (!mod) return null;
+    var c = mod.default !== undefined ? mod.default : mod;
+    if (c && typeof c.getPresets === 'function') {
+      var pmap = c.getPresets();
+      return pmap && typeof pmap === 'object' ? pmap : null;
+    }
+    var o = c;
+    if (o && o.default && typeof o.default === 'object' && !o.baseVals) o = o.default;
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : null;
+  }
+
+  function mergeMaps(target, source) {
+    if (!source) return;
+    Object.keys(source).forEach(function (k) {
+      target[k] = source[k];
+    });
+  }
+
   function loadFromGlobal() {
-    /* Full pack (~hundreds): butterchurnPresets — fallback: butterchurnPresetsMinimal */
-    var mod = typeof butterchurnPresets !== 'undefined' ? butterchurnPresets : null;
-    if (!mod) mod = typeof butterchurnPresetsMinimal !== 'undefined' ? butterchurnPresetsMinimal : null;
-    if (!mod) return false;
-    raw = mod.default || mod;
-    if (raw && raw.default && typeof raw.default === 'object' && !raw.baseVals) raw = raw.default;
-    if (!raw || typeof raw !== 'object') return false;
+    var merged = {};
+    var prioritySources = [
+      typeof butterchurnPresets !== 'undefined' ? butterchurnPresets : null,
+      typeof butterchurnPresetsNonMinimal !== 'undefined' ? butterchurnPresetsNonMinimal : null,
+      typeof butterchurnPresetsExtra !== 'undefined' ? butterchurnPresetsExtra : null,
+      typeof butterchurnPresetsExtra2 !== 'undefined' ? butterchurnPresetsExtra2 : null,
+      typeof butterchurnPresetsMD1 !== 'undefined' ? butterchurnPresetsMD1 : null
+    ];
+    for (var i = 0; i < prioritySources.length; i++) {
+      var map = extractPresetMap(prioritySources[i]);
+      if (map) mergeMaps(merged, map);
+    }
+    if (!Object.keys(merged).length) {
+      var minMap = extractPresetMap(typeof butterchurnPresetsMinimal !== 'undefined' ? butterchurnPresetsMinimal : null);
+      if (minMap) mergeMaps(merged, minMap);
+    }
+    if (!Object.keys(merged).length) return false;
+    raw = merged;
     keys = Object.keys(raw).sort(function (a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); });
     byCategory = { ambient: [], heavy: [], psychedelic: [], glitch: [], other: [] };
     keys.forEach(function (k) {

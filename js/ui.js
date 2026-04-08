@@ -177,25 +177,6 @@
     }
 
     pulsePads();
-    tickPreview();
-  }
-
-  var _pvTick = 0;
-  function tickPreview() {
-    _pvTick++;
-    if (_pvTick % 4 !== 0) return;
-    var prev = document.getElementById('preview-canvas');
-    if (!prev || !NX.C) return;
-    var ctx = prev.getContext('2d');
-    var pw = prev.width, ph = prev.height;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, pw, ph);
-    var mode = S.visualMode || 'shader';
-    if (mode !== 'shader') {
-      var bc = document.getElementById('c-bc');
-      if (bc) try { ctx.drawImage(bc, 0, 0, pw, ph); } catch (e) { }
-    }
-    try { ctx.drawImage(NX.C, 0, 0, pw, ph); } catch (e2) { }
   }
 
   function setMeter(id, pct) {

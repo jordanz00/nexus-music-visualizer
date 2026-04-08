@@ -20,7 +20,7 @@
 | Category | Details |
 |----------|---------|
 | **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
-| **Butterchurn** | Local `vendor/butterchurn.min.js` + **full** `butterchurnPresets.min.js` (official `butterchurn-presets` bundle — hundreds of MilkDrop presets). Fallback in code to `butterchurnPresetsMinimal` if the full script is omitted. **Auto morph**: BPM-aware interval (16–96 beats), category pool, Butterchurn-native blends **1.5–4.5s** scaled by energy. **BC blend** slider still caps manual loads (1–3s). Mic / audio context required for BC. |
+| **Butterchurn** | `butterchurnPresets.min.js` ships the **official** npm pack: presets live behind **`getPresets()`** on the bundle’s default export (not a plain object — the catalog reads that map so **every** preset is addressable). Optional: run `vendor/fetch-extra-presets.sh` and add `<script src="vendor/butterchurnPresetsExtra.min.js">` (and siblings) before `preset-library` to merge **Extra / Extra2 / MD1 / NonMinimal** into one library. **Auto morph** + full dropdown + RND BC use the merged key list. Mic required for BC. |
 | **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `bc-morph-conductor.js`, `pro-presets.js` (Pro 60 + `applyVisualStyle`), `NexusEngine` host (`3.1.0-pro`, `init` / `update` / `renderButterchurnLayer`) |
 | **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
