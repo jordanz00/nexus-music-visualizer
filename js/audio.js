@@ -41,6 +41,7 @@
       S.micOn = true; S.curDev = devId || '';
       var db = document.getElementById('db'); if (db) db.classList.add('h');
       await enumDevices();
+      if (NX.VisualEngineManager && NX.VisualEngineManager.isReady()) NX.VisualEngineManager.connectAudio();
     } catch (e) {
       console.warn('Mic failed:', e.message);
     }
@@ -50,6 +51,7 @@
     if (S.micStream) { S.micStream.getTracks().forEach(function (t) { t.stop(); }); S.micStream = null; }
     if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } S.audioCtx = null; }
     S.analyser = null; S.micOn = false; S.prevFreqFlux = null;
+    if (NX.VisualEngineManager) NX.VisualEngineManager.disconnectAudio();
     var db = document.getElementById('db'); if (db) db.classList.remove('h');
   }
 

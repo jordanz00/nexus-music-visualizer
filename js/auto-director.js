@@ -36,6 +36,27 @@
     return idx;
   }
 
+  function loadRandomButterchurn(blend) {
+    if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
+    var keys = NX.PresetLibrary.getKeys();
+    if (!keys || !keys.length) return;
+    var k = keys[Math.floor(Math.random() * keys.length)];
+    var p = NX.PresetLibrary.getPreset(k);
+    if (p) NX.VisualEngineManager.loadPreset(p, blend == null ? 2 : blend);
+  }
+
+  function switchVisual(intensePool, calmPool, blendHint) {
+    var mode = S.visualMode || 'shader';
+    if (mode === 'butterchurn') {
+      loadRandomButterchurn(blendHint);
+      return;
+    }
+    if (mode === 'hybrid' && blendHint != null && blendHint < 1 && NX.VisualEngineManager && NX.VisualEngineManager.isReady()) {
+      loadRandomButterchurn(blendHint);
+    }
+    NX.goNext(randomFrom(intensePool || intenseScenes));
+  }
+
   function tick(dt) {
     if (!enabled) return;
 
@@ -61,13 +82,13 @@
     if (isBigDrop) {
       S.explode = 1.5; S.beat = 1.3;
       S.morphDurationSec = 0.5;
-      NX.goNext(randomFrom(intenseScenes));
+      switchVisual(intenseScenes, null, 0.55);
       _lastSwitch = now;
       _calmTimer = 0; _buildTimer = 0;
     } else if (isDrop) {
       S.beat = 1.1;
       S.morphDurationSec = 0.8;
-      NX.goNext(randomFrom(intenseScenes));
+      switchVisual(intenseScenes, null, 1.2);
       _lastSwitch = now;
       _calmTimer = 0; _buildTimer = 0;
     }
@@ -77,7 +98,8 @@
       _calmTimer += dt;
       if (_calmTimer > 8 && sinceLast > 6) {
         S.morphDurationSec = 3.0;
-        NX.goNext(randomFrom(calmScenes));
+        if ((S.visualMode || 'shader') === 'butterchurn') loadRandomButterchurn(3.5);
+        else NX.goNext(randomFrom(calmScenes));
         _lastSwitch = now; _calmTimer = 0;
       }
     } else {
@@ -89,7 +111,7 @@
       _buildTimer += dt;
       if (_buildTimer > 5 && sinceLast > 6) {
         S.morphDurationSec = 1.2;
-        NX.goNext(randomFrom(intenseScenes));
+        switchVisual(intenseScenes, null, 1.8);
         _lastSwitch = now; _buildTimer = 0;
       }
     } else {
@@ -99,7 +121,8 @@
     /* PERIODIC: if nothing else triggers, switch every 15-25s */
     if (sinceLast > 15 + Math.random() * 10) {
       S.morphDurationSec = 1.8;
-      NX.goNext(randomFrom(_smoothEnergy > 0.25 ? intenseScenes : calmScenes));
+      if ((S.visualMode || 'shader') === 'butterchurn') loadRandomButterchurn(2.5);
+      else NX.goNext(randomFrom(_smoothEnergy > 0.25 ? intenseScenes : calmScenes));
       _lastSwitch = now;
     }
 

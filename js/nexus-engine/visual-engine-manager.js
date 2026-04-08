@@ -1,0 +1,127 @@
+'use strict';
+/**
+ * VisualEngineManager — Butterchurn instance (modular; do not fork upstream).
+ * Output is 2D-bitblt from internal WebGL2; uses #c-bc.
+ */
+(function () {
+  var S = NX.S;
+  var viz = null;
+  var canvas = null;
+  var connectedNode = null;
+  var intensity = 1;
+  var speed = 1;
+
+  function getBC() {
+    var b = typeof butterchurn !== 'undefined' ? butterchurn : null;
+    if (!b) return null;
+    return b.default || b;
+  }
+
+  function ensureAudioForBC() {
+    if (S.audioCtx && S.gainNode) return true;
+    return false;
+  }
+
+  function disconnectAudio() {
+    if (viz && connectedNode && viz.disconnectAudio) {
+      try { viz.disconnectAudio(connectedNode); } catch (e) { }
+    }
+    connectedNode = null;
+  }
+
+  function connectAudio() {
+    if (!viz || !S.gainNode) return;
+    disconnectAudio();
+    try {
+      viz.connectAudio(S.gainNode);
+      connectedNode = S.gainNode;
+    } catch (e) { console.warn('Butterchurn connectAudio:', e.message); }
+  }
+
+  function initVisualizer() {
+    if (viz) return !!viz;
+    var BC = getBC();
+    canvas = document.getElementById('c-bc');
+    if (!BC || !canvas || !BC.createVisualizer) {
+      console.warn('Butterchurn not loaded or unsupported');
+      return false;
+    }
+    if (!S.audioCtx) return false;
+    var dpr = Math.min(window.devicePixelRatio || 1, S.nexusPerfLock ? 1 : 2);
+    var w = Math.floor((S.W || innerWidth) * dpr);
+    var h = Math.floor((S.H || innerHeight) * dpr);
+    try {
+      viz = BC.createVisualizer(S.audioCtx, canvas, {
+        width: w,
+        height: h,
+        pixelRatio: 1,
+        textureRatio: 1
+      });
+      connectAudio();
+      return true;
+    } catch (e) {
+      console.warn('Butterchurn init failed:', e.message);
+      viz = null;
+      return false;
+    }
+  }
+
+  function resize() {
+    if (!canvas) canvas = document.getElementById('c-bc');
+    if (!canvas) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, S.nexusPerfLock ? 1 : 2);
+    var w = Math.floor((S.W || innerWidth) * dpr);
+    var h = Math.floor((S.H || innerHeight) * dpr);
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = (S.W || window.innerWidth) + 'px';
+    canvas.style.height = (S.H || window.innerHeight) + 'px';
+    if (viz && viz.setRendererSize) viz.setRendererSize(w, h);
+  }
+
+  function render() {
+    if (!viz) return;
+    try {
+      viz.render();
+    } catch (e) { /* swallow frame errors */ }
+  }
+
+  function loadPreset(presetObj, blendSec) {
+    if (!viz || !presetObj) return;
+    blendSec = blendSec == null ? 2 : blendSec;
+    var p = viz.loadPreset(presetObj, blendSec);
+    if (p && typeof p.then === 'function') p.catch(function () { });
+  }
+
+  function setIntensity(v) {
+    intensity = Math.max(0, Math.min(1.5, v));
+    /* Preset-agnostic: mesh/detail hooks vary by Butterchurn version; store for future hooks */
+    S.bcIntensity = intensity;
+  }
+
+  function setSpeed(v) {
+    speed = Math.max(0.25, Math.min(2, v));
+    S.bcSpeed = speed;
+  }
+
+  function destroy() {
+    disconnectAudio();
+    viz = null;
+  }
+
+  function isReady() { return !!viz; }
+
+  NX.VisualEngineManager = {
+    initVisualizer: initVisualizer,
+    resize: resize,
+    render: render,
+    loadPreset: loadPreset,
+    setIntensity: setIntensity,
+    setSpeed: setSpeed,
+    connectAudio: connectAudio,
+    disconnectAudio: disconnectAudio,
+    destroy: destroy,
+    isReady: isReady,
+    ensureAudioForBC: ensureAudioForBC
+  };
+})();

@@ -55,7 +55,7 @@
   var OUTPUT_FS = [
     'precision mediump float;varying vec2 uv;',
     'uniform sampler2D tex,bloom,streak;uniform vec2 R;',
-    'uniform float BT,T,B,M,H,FL;',
+    'uniform float BT,T,B,M,H,FL,BM;',
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
     'void main(){',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
@@ -73,10 +73,10 @@
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
     '  float shp=.11+BT*.14+FL*.12+H*.08;',
     '  col+=lap*shp;',
-    /* bloom + anamorphic */
+    /* bloom + anamorphic (BM = master bloom mix, performance toggle) */
     '  vec3 blm=texture2D(bloom,uv).rgb*2.62*(1.+BT*1.1+B*.44+M*.17+FL*.22);',
     '  vec3 stk=texture2D(streak,uv).rgb*.45*(1.+BT*.6+B*.25);',
-    '  col+=blm+stk;',
+    '  col+=(blm+stk)*BM;',
     /* lift / gamma / gain  — warm shadows, cool highlights */
     '  vec3 lift=vec3(.025,.018,.01);',
     '  vec3 gain=vec3(.97,.98,1.02);',
@@ -114,9 +114,27 @@
     '}'
   ].join('');
 
+  var COPY_FS = [
+    'precision mediump float;varying vec2 uv;uniform sampler2D tex;',
+    'void main(){gl_FragColor=texture2D(tex,uv);}'
+  ].join('');
+
+  var TRAIL_FS = [
+    'precision mediump float;varying vec2 uv;',
+    'uniform sampler2D cur,prev;uniform float tr;',
+    'void main(){',
+    ' vec3 c=texture2D(cur,uv).rgb,p=texture2D(prev,uv).rgb;',
+    ' gl_FragColor=vec4(min(c+p*tr,vec3(1.)),1.);',
+    '}'
+  ].join('');
+
   /* ---- Compile ----------------------------------------------------- */
-  var bloomProg, blurProg, streakProg, outProg, blendProg;
+  var bloomProg, blurProg, streakProg, outProg, blendProg, copyProg, trailProg;
   var fbStreak = null;
+  var fbScratch = null, fbTr0 = null, fbTr1 = null;
+  var blackTex = null;
+  var trailWhich = 0;
+  var _auxW = 0, _auxH = 0;
 
   function compile() {
     bloomProg = NX.mkProg(NX.VS, BLOOM_FS);
@@ -124,58 +142,47 @@
     streakProg = NX.mkProg(NX.VS, STREAK_FS);
     outProg = NX.mkProg(NX.VS, OUTPUT_FS);
     blendProg = NX.mkProg(NX.VS, BLEND_FS);
-    NX.postProgs = { bloom: bloomProg, blur: blurProg, streak: streakProg, out: outProg, blend: blendProg };
-    console.log('Post: bloom', !!bloomProg, '| blur', !!blurProg, '| streak', !!streakProg, '| out', !!outProg);
-    return !!(bloomProg && blurProg && outProg && blendProg);
+    copyProg = NX.mkProg(NX.VS, COPY_FS);
+    trailProg = NX.mkProg(NX.VS, TRAIL_FS);
+    NX.postProgs = { bloom: bloomProg, blur: blurProg, streak: streakProg, out: outProg, blend: blendProg, copy: copyProg, trail: trailProg };
+    console.log('Post: bloom', !!bloomProg, '| out', !!outProg, '| copy', !!copyProg);
+    return !!(bloomProg && blurProg && outProg && blendProg && copyProg && trailProg);
   }
 
-  /* ---- Render post chain ------------------------------------------- */
-  function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
-    if (!fbStreak) fbStreak = NX.mkRT(hw, hh);
+  function ensureBlackTex() {
+    if (blackTex) return;
+    blackTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, blackTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  }
 
-    /* bloom threshold */
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f); gl.viewport(0, 0, hw, hh);
-    gl.useProgram(bloomProg); bindQuad(bloomProg);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(bloomProg, 'tex'), 0);
-    gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.23, 0.43 - S.beat * 0.29 - Math.min(0.22, S.sBass * 0.31) - Math.min(0.1, S.sHigh * 0.07) - S.sFlux * 0.08));
-    gl.uniform1f(u(bloomProg, 'BT'), Math.min(1.48, S.beat * 1.24));
-    gl.uniform1f(u(bloomProg, 'B'), shapeDrive(S.sBass, 1.84) + S.beat * 0.48);
-    gl.uniform1f(u(bloomProg, 'H'), shapeDrive(S.sHigh, 1.78));
-    gl.uniform1f(u(bloomProg, 'FL'), Math.min(1.2, S.sFlux * 1.12));
-    gl.uniform1f(u(bloomProg, 'M'), shapeDrive(S.sMid, 1.72));
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-    /* blur X */
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloomBlur.f);
-    gl.useProgram(blurProg); bindQuad(blurProg);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(blurProg, 'tex'), 0);
-    gl.uniform2f(u(blurProg, 'dir'), 1.8 / hw, 0);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-    /* blur Y */
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f);
-    gl.useProgram(blurProg); bindQuad(blurProg);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloomBlur.t); gl.uniform1i(u(blurProg, 'tex'), 0);
-    gl.uniform2f(u(blurProg, 'dir'), 0, 1.8 / hh);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-    /* anamorphic streak */
-    if (streakProg) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbStreak.f); gl.viewport(0, 0, hw, hh);
-      gl.useProgram(streakProg); bindQuad(streakProg);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(streakProg, 'tex'), 0);
-      gl.uniform1f(u(streakProg, 'str'), 0.004);
-      gl.uniform1f(u(streakProg, 'BT'), Math.min(1.48, S.beat * 1.24));
-      gl.uniform1f(u(streakProg, 'B'), shapeDrive(S.sBass, 1.84));
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  function releaseAux() {
+    function del(rt) {
+      if (!rt) return;
+      gl.deleteTexture(rt.t); gl.deleteFramebuffer(rt.f);
     }
+    del(fbScratch); del(fbTr0); del(fbTr1);
+    fbScratch = fbTr0 = fbTr1 = null; _auxW = _auxH = 0;
+  }
 
-    /* final output */
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, NX.C.width, NX.C.height);
+  function ensureAuxTargets() {
+    var w = NX.C.width | 0, h = NX.C.height | 0;
+    if (w < 4 || h < 4) return false;
+    if (fbScratch && w === _auxW && h === _auxH) return true;
+    releaseAux();
+    fbScratch = NX.mkRT(w, h); fbTr0 = NX.mkRT(w, h); fbTr1 = NX.mkRT(w, h);
+    _auxW = w; _auxH = h;
+    trailWhich = 0;
+    return true;
+  }
+
+  function drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm) {
     gl.useProgram(outProg); bindQuad(outProg);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
-    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(outProg, 'bloom'), 1);
-    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, fbStreak ? fbStreak.t : fbBloom.t); gl.uniform1i(u(outProg, 'streak'), 2);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomSam); gl.uniform1i(u(outProg, 'bloom'), 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, streakSam); gl.uniform1i(u(outProg, 'streak'), 2);
     gl.uniform1f(u(outProg, 'BT'), Math.min(1.48, S.beat * 1.24));
     gl.uniform1f(u(outProg, 'T'), S.GT);
     gl.uniform1f(u(outProg, 'B'), shapeDrive(S.sBass, 1.84) + S.beat * 0.48);
@@ -183,7 +190,88 @@
     gl.uniform1f(u(outProg, 'H'), shapeDrive(S.sHigh, 1.78));
     gl.uniform1f(u(outProg, 'FL'), Math.min(1.25, S.sFlux * 1.08 + S.beat * 0.22));
     gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
+    gl.uniform1f(u(outProg, 'BM'), bm);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /* ---- Render post chain ------------------------------------------- */
+  function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
+    ensureBlackTex();
+    var bloomOn = !!S.nexusPostBloom;
+    var bm = bloomOn ? Math.max(0, Math.min(2.2, S.postBloomMul == null ? 1 : S.postBloomMul)) : 0;
+    var bloomSam = blackTex;
+    var streakSam = blackTex;
+
+    if (bloomOn) {
+      if (!fbStreak) fbStreak = NX.mkRT(hw, hh);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f); gl.viewport(0, 0, hw, hh);
+      gl.useProgram(bloomProg); bindQuad(bloomProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(bloomProg, 'tex'), 0);
+      gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.23, 0.43 - S.beat * 0.29 - Math.min(0.22, S.sBass * 0.31) - Math.min(0.1, S.sHigh * 0.07) - S.sFlux * 0.08));
+      gl.uniform1f(u(bloomProg, 'BT'), Math.min(1.48, S.beat * 1.24));
+      gl.uniform1f(u(bloomProg, 'B'), shapeDrive(S.sBass, 1.84) + S.beat * 0.48);
+      gl.uniform1f(u(bloomProg, 'H'), shapeDrive(S.sHigh, 1.78));
+      gl.uniform1f(u(bloomProg, 'FL'), Math.min(1.2, S.sFlux * 1.12));
+      gl.uniform1f(u(bloomProg, 'M'), shapeDrive(S.sMid, 1.72));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloomBlur.f);
+      gl.useProgram(blurProg); bindQuad(blurProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(blurProg, 'tex'), 0);
+      gl.uniform2f(u(blurProg, 'dir'), 1.8 / hw, 0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f);
+      gl.useProgram(blurProg); bindQuad(blurProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloomBlur.t); gl.uniform1i(u(blurProg, 'tex'), 0);
+      gl.uniform2f(u(blurProg, 'dir'), 0, 1.8 / hh);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      if (streakProg) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbStreak.f); gl.viewport(0, 0, hw, hh);
+        gl.useProgram(streakProg); bindQuad(streakProg);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(streakProg, 'tex'), 0);
+        gl.uniform1f(u(streakProg, 'str'), 0.004);
+        gl.uniform1f(u(streakProg, 'BT'), Math.min(1.48, S.beat * 1.24));
+        gl.uniform1f(u(streakProg, 'B'), shapeDrive(S.sBass, 1.84));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      bloomSam = fbBloom.t;
+      streakSam = (streakProg && fbStreak) ? fbStreak.t : fbBloom.t;
+    }
+
+    if (!ensureAuxTargets()) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, NX.C.width, NX.C.height);
+      drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm);
+      return;
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbScratch.f); gl.viewport(0, 0, _auxW, _auxH);
+    drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm);
+
+    var tr = S.nexusPostTrails == null ? 0 : Math.max(0, Math.min(1, S.nexusPostTrails));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, _auxW, _auxH);
+
+    if (tr > 0.004 && trailProg) {
+      var prevRT = trailWhich === 0 ? fbTr0 : fbTr1;
+      var nextRT = trailWhich === 0 ? fbTr1 : fbTr0;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, nextRT.f); gl.viewport(0, 0, _auxW, _auxH);
+      gl.useProgram(trailProg); bindQuad(trailProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScratch.t); gl.uniform1i(u(trailProg, 'cur'), 0);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prevRT.t); gl.uniform1i(u(trailProg, 'prev'), 1);
+      gl.uniform1f(u(trailProg, 'tr'), tr * 0.88);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, _auxW, _auxH);
+      gl.useProgram(copyProg); bindQuad(copyProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, nextRT.t); gl.uniform1i(u(copyProg, 'tex'), 0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      trailWhich = 1 - trailWhich;
+    } else {
+      gl.useProgram(copyProg); bindQuad(copyProg);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScratch.t); gl.uniform1i(u(copyProg, 'tex'), 0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
   }
 
   NX.post = { compile: compile, render: render };

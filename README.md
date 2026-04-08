@@ -1,7 +1,6 @@
-# NEXUS MARK IV — Live Visual Engine
+# NEXUS Engine — Hybrid VJ (Butterchurn + WebGL)
 
-**Broadcast-grade, audio-reactive 3D visualizer for DJs, VJs, bands, and streamers.**
-20 raymarched WebGL scenes, Afterlife-aesthetic cinematic visuals, Hollywood color grading, WebMIDI control, canvas recording — zero dependencies, runs on GitHub Pages.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) as a modular visual engine **plus** 20 custom raymarched WebGL scenes, shared audio analysis, MIDI, grading, recording. Vendored Butterchurn + minimal preset pack ship in-repo; no build step.
 
 > **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
 > **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)
@@ -12,15 +11,18 @@
 
 | Category | Details |
 |----------|---------|
+| **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
+| **Butterchurn** | Local `vendor/butterchurn.min.js` + `butterchurnPresetsMinimal.min.js`; preset browser by category; `loadPreset(preset, blendSeconds)`; requires **mic / audio context** |
+| **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `NexusEngine` host (`init` / `update` / `renderButterchurnLayer`) |
 | **Scenes** | 20 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
-| **Post-processing** | Tinted knee bloom, anamorphic streak, Laplacian sharpen, lift/gamma/gain grading, ACES tonemapping, beat flash |
+| **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage (ping-pong buffer), sharpen, ACES, beat flash |
 | **Camera** | 5 cinematic modes — orbit, dolly, crane, handheld, snap (beat-triggered angle jumps) |
-| **MIDI** | WebMIDI with auto-detect, learn mode (click control → move knob), CC mapping, pad scene triggers |
+| **MIDI** | WebMIDI + learn mode; extended CC targets: **bloom**, **colorShift** (reserved), **bcNext** (random Butterchurn preset), **visualMode** (shader / BC / hybrid) |
 | **Recording** | MediaRecorder canvas capture to WebM (VP9, 8 Mbps) — start/stop from UI or MIDI |
 | **Presets** | Save/load engine state to localStorage; 4 built-in presets (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
 | **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
-| **Performance** | 3 GPU quality presets (Performance / Balanced / Ultra), adaptive FPS, `prefers-reduced-motion` support |
+| **Performance** | 3 GPU quality presets, adaptive FPS; **Perf lock** caps DPR and internal resolution; `prefers-reduced-motion` support |
 | **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` |
 | **AI Director** | Energy + drop detection for automatic scene switches — **AI DIR** (turns off auto-morph while active) |
 | **Free / Pro** | Free tier shows a subtle corner watermark; Pro unlock in dev: `NX.watermark.unlock('NEXUS_MK4_PRO')` or `earlyaccess2026` (stored in `localStorage`) |

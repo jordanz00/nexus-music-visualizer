@@ -24,7 +24,16 @@ window.NX = window.NX || {};
     curS: 0, nxtS: 1, morphing: false, morphBlend: 0,
     autoMorph: true, presTimer: 0, presInterval: 20, _morphFrame: 0,
     morphDurationSec: 1.4, showFpsOverlay: false, presentMode: false,
-    adaptiveGpu: false, uiHide: false, recording: false
+    adaptiveGpu: false, uiHide: false, recording: false,
+    /* Nexus Engine — hybrid Butterchurn + shader */
+    visualMode: 'shader',
+    nexusPerfLock: false,
+    nexusPostBloom: true,
+    nexusPostTrails: 0,
+    postBloomMul: 1,
+    hueShift: 0,
+    bcIntensity: 1,
+    bcSpeed: 1
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -37,16 +46,19 @@ window.NX = window.NX || {};
   var rawW = 0, rawH = 0, maxDpr = 2, renderScale = 0.78, pendingRenderScale = null;
 
   function resize() {
-    var dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    var capDpr = S.nexusPerfLock ? Math.min(maxDpr, 1) : maxDpr;
+    var dpr = Math.min(window.devicePixelRatio || 1, capDpr);
     S.W = innerWidth; S.H = innerHeight;
     C.width = Math.floor(S.W * dpr); C.height = Math.floor(S.H * dpr);
     C.style.width = S.W + 'px'; C.style.height = S.H + 'px';
     rawW = C.width; rawH = C.height;
     if (pendingRenderScale != null) { renderScale = pendingRenderScale; pendingRenderScale = null; }
-    S.FW = Math.max(1, Math.floor(rawW * renderScale));
-    S.FH = Math.max(1, Math.floor(rawH * renderScale));
+    var effScale = S.nexusPerfLock ? Math.min(renderScale, 0.56) : renderScale;
+    S.FW = Math.max(1, Math.floor(rawW * effScale));
+    S.FH = Math.max(1, Math.floor(rawH * effScale));
     gl.viewport(0, 0, S.FW, S.FH);
     rebuildFBOs();
+    if (NX.VisualEngineManager && NX.VisualEngineManager.resize) NX.VisualEngineManager.resize();
   }
   addEventListener('resize', resize);
 
@@ -102,8 +114,9 @@ window.NX = window.NX || {};
 
   function rebuildFBOs() {
     if (!rawW || !rawH) return;
-    S.FW = Math.max(1, Math.floor(rawW * renderScale));
-    S.FH = Math.max(1, Math.floor(rawH * renderScale));
+    var effScale = S.nexusPerfLock ? Math.min(renderScale, 0.56) : renderScale;
+    S.FW = Math.max(1, Math.floor(rawW * effScale));
+    S.FH = Math.max(1, Math.floor(rawH * effScale));
     var hw = Math.max(1, Math.floor(S.FW / 2)), hh = Math.max(1, Math.floor(S.FH / 2));
     for (var i = 0; i < 2; i++) {
       if (fbA[i]) { gl.deleteTexture(fbA[i].t); gl.deleteFramebuffer(fbA[i].f); }
@@ -265,6 +278,7 @@ window.NX = window.NX || {};
     if (NX.demo && NX.demo.tick) NX.demo.tick();
     if (NX.autoDirector && NX.autoDirector.tick) NX.autoDirector.tick(dt);
     if (NX.watermark && NX.watermark.tick) NX.watermark.tick();
+    if (window.NexusEngine && NexusEngine.update) NexusEngine.update(dt);
 
     if (S.autoMorph) {
       S.presTimer += dt;
@@ -279,11 +293,15 @@ window.NX = window.NX || {};
 
     var hw = Math.max(1, Math.floor(S.FW / 2)), hh = Math.max(1, Math.floor(S.FH / 2));
 
-    renderScene(S.curS, fbA[1 - pingA].f, fbA[pingA].t);
-    pingA = 1 - pingA;
-    var curOut = fbA[pingA].t, finalTex = curOut;
+    var drawShader = !NX.SceneManager || NX.SceneManager.shouldRenderShader();
+    if (drawShader) {
+      renderScene(S.curS, fbA[1 - pingA].f, fbA[pingA].t);
+      pingA = 1 - pingA;
+    }
+    var curOut = fbA[pingA] ? fbA[pingA].t : null;
+    var finalTex = curOut;
 
-    if (S.morphing && NX.postProgs.blend) {
+    if (drawShader && S.morphing && NX.postProgs.blend) {
       if (S._morphFrame % 2 === 1) { renderScene(S.nxtS, fbB[1 - pingB].f, fbB[pingB].t, hw, hh); pingB = 1 - pingB; }
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbMorph.f); gl.viewport(0, 0, S.FW, S.FH);
       gl.useProgram(NX.postProgs.blend); bindQuad(NX.postProgs.blend);
@@ -294,9 +312,16 @@ window.NX = window.NX || {};
       finalTex = fbMorph.t;
     }
 
-    if (NX.post && NX.post.render) {
+    if (drawShader && NX.post && NX.post.render) {
       NX.post.render(finalTex, fbBloom, fbBloomBlur, hw, hh);
+    } else if (!drawShader) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, C.width, C.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
+
+    if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
   }
 
   /* ---- Mouse / touch ----------------------------------------------- */

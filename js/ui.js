@@ -56,6 +56,27 @@
     });
   }
 
+  function buildButterchurnPresets() {
+    var sel = document.getElementById('bc-preset-sel');
+    if (!sel || !NX.PresetLibrary) return;
+    while (sel.childNodes.length > 1) sel.removeChild(sel.lastChild);
+    var n = NX.PresetLibrary.getKeys().length;
+    if (!n) { console.warn('No Butterchurn presets — check vendor/butterchurnPresetsMinimal.min.js'); return; }
+    ['ambient', 'heavy', 'psychedelic', 'glitch', 'other'].forEach(function (cat) {
+      var ks = NX.PresetLibrary.byCategory[cat];
+      if (!ks || !ks.length) return;
+      var og = document.createElement('optgroup');
+      og.label = cat;
+      ks.forEach(function (name) {
+        var o = document.createElement('option');
+        o.value = name;
+        o.textContent = name.length > 44 ? name.slice(0, 42) + '…' : name;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  }
+
   /* ---- Sync slider values from P to DOM ---------------------------- */
   function syncControls() {
     var map = { rspd: P.SPD, rrct: P.RCT, rwrp: P.WRP, rgain: P.GAIN * 100, rsmth: P.SMTH };
@@ -308,6 +329,51 @@
       }
     });
 
+    /* Nexus Engine — visual stack + Butterchurn */
+    var nxMode = document.getElementById('nx-visual-mode');
+    if (nxMode) {
+      nxMode.value = S.visualMode || 'shader';
+      nxMode.addEventListener('change', function () {
+        if (NX.SceneManager) NX.SceneManager.setMode(this.value, { crossfade: true });
+      });
+    }
+    var bcSel = document.getElementById('bc-preset-sel');
+    if (bcSel) bcSel.addEventListener('change', function () {
+      if (!this.value || !NX.PresetLibrary || !NX.VisualEngineManager) return;
+      var p = NX.PresetLibrary.getPreset(this.value);
+      var bb = document.getElementById('bc-blend');
+      var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
+      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+    });
+    var bcRnd = document.getElementById('bc-random');
+    if (bcRnd) bcRnd.addEventListener('click', function () {
+      var keys = NX.PresetLibrary && NX.PresetLibrary.getKeys();
+      if (!keys || !keys.length) return;
+      var p = NX.PresetLibrary.getPreset(keys[Math.floor(Math.random() * keys.length)]);
+      var bb = document.getElementById('bc-blend');
+      var bt = bb ? (parseInt(bb.value, 10) || 20) * 0.1 : 2;
+      if (p) NX.VisualEngineManager.loadPreset(p, bt);
+    });
+    var nxBloom = document.getElementById('nx-bloom');
+    if (nxBloom) {
+      nxBloom.checked = !!S.nexusPostBloom;
+      nxBloom.addEventListener('change', function () { S.nexusPostBloom = this.checked; });
+    }
+    var nxTr = document.getElementById('nx-trails');
+    if (nxTr) {
+      nxTr.value = Math.round((S.nexusPostTrails || 0) * 100);
+      nxTr.addEventListener('input', function () { S.nexusPostTrails = parseInt(this.value, 10) / 100; });
+    }
+    var nxPerf = document.getElementById('nx-perf');
+    if (nxPerf) {
+      nxPerf.checked = !!S.nexusPerfLock;
+      nxPerf.addEventListener('change', function () {
+        S.nexusPerfLock = this.checked;
+        if (this.checked && NX.setQualityPreset) NX.setQualityPreset('perf');
+        NX.resize();
+      });
+    }
+
     /* Demo sequence selector */
     var demoSel = document.getElementById('demosel');
     if (demoSel) demoSel.addEventListener('change', function () {
@@ -333,6 +399,7 @@
   function init() {
     buildPads();
     buildPresets();
+    buildButterchurnPresets();
     wireEvents();
     syncControls();
     setActiveScene(S.curS);
@@ -340,7 +407,7 @@
 
   NX.ui = {
     init: init, showName: showName, setActiveScene: setActiveScene, tickHud: tickHud,
-    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets,
+    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
     togglePresent: togglePresent, toggleRecording: toggleRecording
   };

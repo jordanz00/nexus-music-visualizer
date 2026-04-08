@@ -20,7 +20,21 @@
     warp: { set: function (v) { P.WRP = v * 10; var e = document.getElementById('rwrp'); if (e) e.value = P.WRP; } },
     gain: { set: function (v) { P.GAIN = v * 2; var e = document.getElementById('rgain'); if (e) e.value = P.GAIN * 100; } },
     morph: { set: function (v) { S.morphDurationSec = 0.55 + v * 3.65; } },
-    palette: { set: function (v) { P.PAL = Math.floor(v * 6); if (NX.ui && NX.ui.setPalette) NX.ui.setPalette(P.PAL); } }
+    palette: { set: function (v) { P.PAL = Math.floor(v * 6); if (NX.ui && NX.ui.setPalette) NX.ui.setPalette(P.PAL); } },
+    bloom: { set: function (v) { S.postBloomMul = v * 2.2; } },
+    colorShift: { set: function (v) { S.hueShift = v; } },
+    bcNext: { set: function () {
+      if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
+      var keys = NX.PresetLibrary.getKeys();
+      if (!keys || !keys.length) return;
+      var p = NX.PresetLibrary.getPreset(keys[Math.floor(Math.random() * keys.length)]);
+      if (p) NX.VisualEngineManager.loadPreset(p, 1.6);
+    } },
+    visualMode: { set: function (v) {
+      var modes = ['shader', 'butterchurn', 'hybrid'];
+      var i = Math.min(2, Math.floor(v * 3));
+      if (NX.SceneManager) NX.SceneManager.setMode(modes[i], { crossfade: true });
+    } }
   };
 
   function handleMessage(e) {
@@ -58,7 +72,8 @@
       var v01 = vel / 127;
       var m2 = mappings[mkey];
       if (m2 && m2.type === 'cc' && paramDefs[m2.param]) {
-        paramDefs[m2.param].set(v01);
+        if (m2.param === 'bcNext') paramDefs.bcNext.set();
+        else paramDefs[m2.param].set(v01);
         if (NX.ui && NX.ui.flashControl) NX.ui.flashControl(m2.param);
       }
     }
