@@ -3,7 +3,8 @@
 **Broadcast-grade, audio-reactive 3D visualizer for DJs, VJs, bands, and streamers.**
 20 raymarched WebGL scenes, Afterlife-aesthetic cinematic visuals, Hollywood color grading, WebMIDI control, canvas recording — zero dependencies, runs on GitHub Pages.
 
-> **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)
+> **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
+> **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)
 
 ---
 
@@ -20,6 +21,9 @@
 | **Presets** | Save/load engine state to localStorage; 4 built-in presets (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
 | **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
 | **Performance** | 3 GPU quality presets (Performance / Balanced / Ultra), adaptive FPS, `prefers-reduced-motion` support |
+| **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` |
+| **AI Director** | Energy + drop detection for automatic scene switches — **AI DIR** (turns off auto-morph while active) |
+| **Free / Pro** | Free tier shows a subtle corner watermark; Pro unlock in dev: `NX.watermark.unlock('NEXUS_MK4_PRO')` or `earlyaccess2026` (stored in `localStorage`) |
 
 ---
 

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="NEXUS MARK IV — real-time concert visuals engine. Afterlife-style audio-reactive 3D visuals in your browser. No VJ needed.">
+  <title>NEXUS MARK IV — Real-Time Concert Visuals Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:#0a0a0f;color:#d0d0d8;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:#00e5ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* -- Hero ------------------------------------------------------- */
+    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(0,229,255,.06) 0%,transparent 65%);pointer-events:none}
+    .hero-brand{font-family:'Orbitron',monospace;font-size:clamp(36px,8vw,72px);font-weight:700;letter-spacing:.18em;color:#00e5ff;text-shadow:0 0 48px rgba(0,229,255,.2);margin-bottom:4px}
+    .hero-brand span{color:rgba(0,229,255,.4);font-weight:500;font-size:.45em;display:block;letter-spacing:.24em;margin-top:-4px}
+    .hero-tagline{font-size:clamp(16px,2.5vw,22px);color:rgba(255,255,255,.55);letter-spacing:.06em;max-width:520px;margin:16px auto 0;line-height:1.55}
+    .hero-hook{font-size:clamp(14px,2vw,17px);color:rgba(0,229,255,.6);font-weight:500;margin-top:28px;letter-spacing:.08em}
+    .hero-cta{display:inline-block;margin-top:32px;padding:16px 48px;font-family:'Orbitron',monospace;font-size:16px;letter-spacing:.16em;color:#0a0a0f;background:#00e5ff;border:none;border-radius:6px;cursor:pointer;transition:all .25s;font-weight:700;text-transform:uppercase;box-shadow:0 0 32px rgba(0,229,255,.2)}
+    .hero-cta:hover{background:#fff;box-shadow:0 0 48px rgba(0,229,255,.35);text-decoration:none;transform:translateY(-2px)}
+    .hero-sub{font-size:12px;color:rgba(255,255,255,.25);margin-top:14px;letter-spacing:.06em}
+
+    /* -- Section ----------------------------------------------------- */
+    section{padding:80px 24px;max-width:960px;margin:0 auto}
+    .s-title{font-family:'Orbitron',monospace;font-size:clamp(20px,4vw,32px);font-weight:700;letter-spacing:.12em;color:#fff;text-align:center;margin-bottom:12px}
+    .s-sub{text-align:center;color:rgba(255,255,255,.45);font-size:15px;max-width:560px;margin:0 auto 48px;line-height:1.6}
+
+    /* -- Feature grid ------------------------------------------------ */
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+    .feat{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:28px 24px;transition:border-color .2s}
+    .feat:hover{border-color:rgba(0,229,255,.2)}
+    .feat-icon{font-size:28px;margin-bottom:12px}
+    .feat h3{font-size:15px;font-weight:600;color:#fff;margin-bottom:8px;letter-spacing:.04em}
+    .feat p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.55}
+
+    /* -- Demo videos ------------------------------------------------- */
+    .demos{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:32px}
+    .demo-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:20px;text-align:center}
+    .demo-card h4{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:.1em;color:#00e5ff;margin-bottom:8px}
+    .demo-card p{font-size:12px;color:rgba(255,255,255,.4);line-height:1.5}
+    .demo-card .demo-link{display:inline-block;margin-top:12px;font-size:11px;letter-spacing:.1em;color:#00e5ff;border:1px solid rgba(0,229,255,.25);padding:6px 16px;border-radius:4px;transition:all .2s}
+    .demo-card .demo-link:hover{background:rgba(0,229,255,.1);text-decoration:none}
+
+    /* -- Pricing ----------------------------------------------------- */
+    .pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-top:32px}
+    .plan{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:32px 24px;text-align:center;transition:border-color .2s}
+    .plan.featured{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.03)}
+    .plan h3{font-family:'Orbitron',monospace;font-size:14px;letter-spacing:.12em;color:#fff;margin-bottom:6px}
+    .plan .price{font-family:'Orbitron',monospace;font-size:32px;font-weight:700;color:#00e5ff;margin:16px 0 4px}
+    .plan .price span{font-size:14px;color:rgba(0,229,255,.5);font-weight:400}
+    .plan .period{font-size:12px;color:rgba(255,255,255,.3);margin-bottom:20px}
+    .plan ul{list-style:none;text-align:left;margin-bottom:24px}
+    .plan li{font-size:13px;color:rgba(255,255,255,.55);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .plan li::before{content:'✓ ';color:#00e5ff;font-weight:700}
+    .plan .plan-cta{display:inline-block;padding:10px 28px;font-size:13px;letter-spacing:.1em;border-radius:5px;transition:all .2s;font-weight:600}
+    .plan .plan-cta.primary{background:#00e5ff;color:#0a0a0f}
+    .plan .plan-cta.primary:hover{background:#fff;text-decoration:none}
+    .plan .plan-cta.secondary{border:1px solid rgba(0,229,255,.3);color:#00e5ff}
+    .plan .plan-cta.secondary:hover{background:rgba(0,229,255,.08);text-decoration:none}
+
+    /* -- Social proof ------------------------------------------------ */
+    .proof{text-align:center;padding:48px 24px;margin:0 auto;max-width:700px}
+    .proof-quote{font-size:18px;color:rgba(255,255,255,.6);font-style:italic;line-height:1.6;margin-bottom:12px}
+    .proof-attr{font-size:12px;color:rgba(0,229,255,.4);letter-spacing:.08em}
+
+    /* -- CTA bar ----------------------------------------------------- */
+    .cta-bar{text-align:center;padding:64px 24px;background:linear-gradient(180deg,transparent,rgba(0,229,255,.03))}
+    .cta-bar h2{font-family:'Orbitron',monospace;font-size:clamp(18px,4vw,28px);color:#fff;letter-spacing:.1em;margin-bottom:20px}
+    .cta-bar p{color:rgba(255,255,255,.4);font-size:14px;margin-bottom:28px}
+
+    /* -- Footer ------------------------------------------------------ */
+    footer{text-align:center;padding:32px 24px;font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.06em;border-top:1px solid rgba(255,255,255,.04)}
+
+    @media(max-width:640px){
+      .hero-cta{padding:14px 32px;font-size:14px}
+      section{padding:56px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-brand">NEXUS<span>MARK IV</span></div>
+  <p class="hero-tagline">Real-time concert visuals engine. Afterlife-style audio-reactive 3D — running in your browser. No VJ needed.</p>
+  <p class="hero-hook">20 raymarched scenes &middot; MIDI control &middot; drop detection &middot; WebM recording</p>
+  <a href="index.html" class="hero-cta">Launch Free</a>
+  <p class="hero-sub">No install. No account. Runs on any modern browser.</p>
+</div>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────── -->
+<section>
+  <h2 class="s-title">BUILT FOR LIVE</h2>
+  <p class="s-sub">Everything you need to add world-class visuals to your set — without Resolume, without a VJ, without spending a dime to start.</p>
+  <div class="features">
+    <div class="feat">
+      <div class="feat-icon">🎵</div>
+      <h3>Reacts to Any Song</h3>
+      <p>FFT frequency analysis, spectral flux, beat detection, BPM tracking. Plug in your audio and watch it move.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🌌</div>
+      <h3>20 Cinematic Scenes</h3>
+      <p>Raymarched 3D worlds: fractals, nebulae, geometry, tunnels, fluid, Afterlife-dark cathedrals. All GPU-accelerated.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🧠</div>
+      <h3>AI Director</h3>
+      <p>Drop detection switches scenes automatically. Calm passages get ambient visuals. Builds trigger energy scenes. Zero input needed.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🎛️</div>
+      <h3>MIDI Control</h3>
+      <p>Plug in your Launchpad or APC. Learn mode maps any knob to any parameter. Scene triggers from pads.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🎬</div>
+      <h3>Hollywood Grading</h3>
+      <p>Anamorphic streak, lift/gamma/gain, knee bloom, ACES tonemapping, beat flash. Every frame looks color-graded.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📹</div>
+      <h3>Record + Stream</h3>
+      <p>Built-in WebM recording. Present mode for OBS window capture. Auto-present URL for streaming setups.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── DEMO SEQUENCES ────────────────────────────────────────────── -->
+<section>
+  <h2 class="s-title">VIRAL DEMO MODES</h2>
+  <p class="s-sub">Pre-choreographed sequences designed for recording killer content. One click, hit record, post.</p>
+  <div class="demos">
+    <div class="demo-card">
+      <h4>THE DROP</h4>
+      <p>12 seconds of ambient buildup, then full chaos — laser grid, bloom explosion, rapid scene cuts.</p>
+      <a href="index.html?demo=drop&obs=1" class="demo-link">▶ PLAY</a>
+    </div>
+    <div class="demo-card">
+      <h4>$10M FESTIVAL</h4>
+      <p>Simulate being inside a massive stage. Bass hits pulse the environment. Camera sweeps through scenes.</p>
+      <a href="index.html?demo=festival&obs=1" class="demo-link">▶ PLAY</a>
+    </div>
+    <div class="demo-card">
+      <h4>ANY SONG</h4>
+      <p>Rapid genre cuts — EDM, hip-hop, rock. Shows the engine reacting differently to each style.</p>
+      <a href="index.html?demo=genres&obs=1" class="demo-link">▶ PLAY</a>
+    </div>
+    <div class="demo-card">
+      <h4>AI DIRECTOR</h4>
+      <p>Hands-off mode. The engine detects drops and builds, switches scenes automatically. No VJ needed.</p>
+      <a href="index.html?demo=ai&obs=1" class="demo-link">▶ PLAY</a>
+    </div>
+    <div class="demo-card">
+      <h4>RESOLUME KILLER</h4>
+      <p>Full UI showcase — scene pads, sliders, palette swaps, then clean present mode output.</p>
+      <a href="index.html?demo=resolume" class="demo-link">▶ PLAY</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── SOCIAL PROOF ──────────────────────────────────────────────── -->
+<div class="proof">
+  <p class="proof-quote">"This is running in a browser? What the hell."</p>
+  <p class="proof-attr">— EVERY DJ WHO SEES THIS</p>
+</div>
+
+<!-- ── PRICING ───────────────────────────────────────────────────── -->
+<section id="pricing">
+  <h2 class="s-title">PRICING</h2>
+  <p class="s-sub">Start free. Upgrade when you're ready to go pro.</p>
+  <div class="pricing">
+    <div class="plan">
+      <h3>FREE</h3>
+      <div class="price">$0</div>
+      <div class="period">forever</div>
+      <ul>
+        <li>All 20 scenes</li>
+        <li>Audio reactivity</li>
+        <li>Auto-morph</li>
+        <li>Demo sequences</li>
+        <li>NEXUS watermark</li>
+      </ul>
+      <a href="index.html" class="plan-cta secondary">Launch Free</a>
+    </div>
+    <div class="plan featured">
+      <h3>PRO</h3>
+      <div class="price">$19<span>/mo</span></div>
+      <div class="period">cancel anytime</div>
+      <ul>
+        <li>Everything in Free</li>
+        <li>No watermark</li>
+        <li>MIDI control</li>
+        <li>AI Director</li>
+        <li>WebM recording</li>
+        <li>Preset save/load</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#" class="plan-cta primary" onclick="alert('Coming soon — join the waitlist!');return false">Get Pro</a>
+    </div>
+    <div class="plan">
+      <h3>LIFETIME</h3>
+      <div class="price">$79</div>
+      <div class="period">one-time, early adopter</div>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>Lifetime updates</li>
+        <li>All future scenes</li>
+        <li>Early access to new features</li>
+        <li>Discord community</li>
+      </ul>
+      <a href="#" class="plan-cta secondary" onclick="alert('Coming soon — join the waitlist!');return false">Get Lifetime</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FINAL CTA ─────────────────────────────────────────────────── -->
+<div class="cta-bar">
+  <h2>STOP PAYING FOR VJS</h2>
+  <p>Afterlife-style visuals. Runs on a MacBook. Reacts to your music. For free.</p>
+  <a href="index.html" class="hero-cta" style="font-size:14px;padding:14px 40px">Launch NEXUS MARK IV</a>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────── -->
+<footer>
+  NEXUS MARK IV &middot; Real-Time Concert Visuals Engine &middot; <a href="https://github.com/jordanz00/nexus-music-visualizer">GitHub</a>
+</footer>
+
+</body>
+</html>

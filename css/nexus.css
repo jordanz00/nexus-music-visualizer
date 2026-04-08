@@ -103,6 +103,11 @@ body.nexus-present #fps-badge{top:10px;opacity:.25}
 /* -- Letterbox ------------------------------------------------------ */
 body.letterbox #c{top:50%;transform:translateY(-50%);height:calc(100vw / 2.39)}
 
+/* -- Pro badge ------------------------------------------------------ */
+.pro-badge{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:.14em;padding:2px 7px;border-radius:3px;margin-left:8px;flex-shrink:0}
+.pro-badge.free{color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.1);background:transparent}
+.pro-badge.pro{color:#00e676;border:1px solid rgba(0,230,118,.3);background:rgba(0,230,118,.06)}
+
 /* -- Responsive ----------------------------------------------------- */
 @media(max-width:640px){
   .scene-pad{width:54px;height:42px}

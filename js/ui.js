@@ -296,6 +296,27 @@
       if (e.key === '0') NX.goNext(9);
     });
 
+    /* AI Director button */
+    var dirBtn = document.getElementById('directorbtn');
+    if (dirBtn) dirBtn.addEventListener('click', function () {
+      if (NX.autoDirector) {
+        var on = NX.autoDirector.toggle();
+        this.classList.toggle('on', on);
+        S.autoMorph = !on;
+        var ab = document.getElementById('autobtn');
+        if (ab) ab.classList.toggle('on', S.autoMorph);
+      }
+    });
+
+    /* Demo sequence selector */
+    var demoSel = document.getElementById('demosel');
+    if (demoSel) demoSel.addEventListener('change', function () {
+      if (this.value && NX.demo) NX.demo.play(this.value);
+      this.value = '';
+    });
+
+    /* Pro unlock (hidden: type code in console or use NX.watermark.unlock) */
+
     /* OBS mode via URL param */
     if (location.search.indexOf('obs=1') !== -1) {
       setTimeout(function () {
@@ -303,6 +324,9 @@
         togglePresent();
       }, 200);
     }
+
+    /* Demo sequence via URL param */
+    if (NX.demo) NX.demo.checkURL();
   }
 
   /* ---- Init -------------------------------------------------------- */

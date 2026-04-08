@@ -262,6 +262,9 @@ window.NX = window.NX || {};
     if (!fbA[0] || !fbB[0]) return;
 
     if (NX.ui && NX.ui.tickHud) NX.ui.tickHud(S);
+    if (NX.demo && NX.demo.tick) NX.demo.tick();
+    if (NX.autoDirector && NX.autoDirector.tick) NX.autoDirector.tick(dt);
+    if (NX.watermark && NX.watermark.tick) NX.watermark.tick();
 
     if (S.autoMorph) {
       S.presTimer += dt;

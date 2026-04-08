@@ -15,6 +15,9 @@
 <div id="fps-badge" aria-hidden="true"></div>
 <div id="present-hint">P — exit present &middot; ` — FPS</div>
 
+<!-- ── WATERMARK (free tier) ──────────────────────────────────────── -->
+<div id="watermark" style="display:none;position:fixed;bottom:18px;right:18px;z-index:85;font-family:Orbitron,monospace;font-size:11px;letter-spacing:.22em;color:rgba(255,255,255,.12);pointer-events:none;text-shadow:0 0 6px rgba(0,0,0,.5)">NEXUS MARK IV</div>
+
 <!-- ── SPLASH ─────────────────────────────────────────────────────── -->
 <div id="splash">
   <h1>NEXUS MARK IV</h1>
@@ -26,6 +29,7 @@
 <!-- ── TOP BAR ────────────────────────────────────────────────────── -->
 <div id="topbar">
   <div class="brand">NEXUS<span>MK IV</span></div>
+  <span id="pro-badge" class="pro-badge free">FREE</span>
   <div class="spacer"></div>
   <div class="meta" id="scene-name">&mdash;</div>
   <div class="meta" id="bpm-val">--</div>
@@ -39,6 +43,15 @@
   <button class="top-btn" id="inputbtn" title="Audio input device">IN</button>
   <button class="top-btn rec" id="recbtn" title="Record WebM">REC</button>
   <button class="top-btn" id="adaptbtn" title="Adaptive GPU quality">AUTO Q</button>
+  <button class="top-btn" id="directorbtn" title="AI Director — smart scene switching">AI DIR</button>
+  <select class="top-btn" id="demosel" title="Play demo sequence for recording" style="background:#111;color:#00e5ff;border-color:rgba(0,229,255,.2);font-size:9px;padding:4px 6px">
+    <option value="">DEMO</option>
+    <option value="drop">The Drop</option>
+    <option value="festival">$10M Festival</option>
+    <option value="genres">Any Song</option>
+    <option value="ai">AI Visuals</option>
+    <option value="resolume">Resolume Killer</option>
+  </select>
   <button class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
   <button class="top-btn" id="presentbtn" title="Present mode (P)">PRESENT</button>
 </div>
@@ -131,6 +144,9 @@
 <script src="js/post.js"></script>
 <script src="js/midi.js"></script>
 <script src="js/presets.js"></script>
+<script src="js/watermark.js"></script>
+<script src="js/auto-director.js"></script>
+<script src="js/demo-director.js"></script>
 <script src="js/ui.js"></script>
 <script>
 /* ── Bootstrap: compile, wire, run ─────────────────────────────────── */
@@ -139,6 +155,8 @@
   console.log('Scenes compiled:', ok, '/', NX.scenes.length);
   NX.post.compile();
   NX.resize();
+  if (NX.watermark) NX.watermark.checkPro();
+  if (NX.autoDirector) NX.autoDirector.categorize();
   NX.ui.init();
   if (NX.midi) NX.midi.init();
   NX.showName(0);
