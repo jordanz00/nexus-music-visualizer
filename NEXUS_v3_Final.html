@@ -145,7 +145,7 @@ body.nexus-present:hover #presentHint{opacity:1}
   </div>
   <div>
     <div class="ipr"><label>Gain</label><input type="range" id="rgain" min="20" max="300" value="100"></div>
-    <div class="ipr" style="margin-top:7px"><label>Smooth</label><input type="range" id="rsmth" min="0" max="95" value="75"></div>
+    <div class="ipr" style="margin-top:7px"><label>Smooth</label><input type="range" id="rsmth" min="0" max="95" value="58" title="Lower = snappier to music"></div>
   </div>
   <div><div class="ipt">LEVEL</div><div class="lvl"><div class="lvlf" id="lvlf"></div></div></div>
 </div>
@@ -166,9 +166,11 @@ gl.getExtension('OES_texture_float');
 var W=0,H=0,FW=0,FH=0,GT=0,frame=0,hudTick=0;
 var mouseRaw=[0,0],mouseSmooth=[0,0];
 var SPD=5,RCT=7,WRP=5,PAL=0;
-var GAIN=1.0,SMTH=75;
+var GAIN=1.0,SMTH=58;
+(function(){var e=document.getElementById('rsmth');if(e)SMTH=+e.value;})();
 var sBass=0,sMid=0,sHigh=0,sSub=0,sVol=0;
-var prevBass=0,bpmList=[],lastBeat=0,bpm=0,beat=0,explode=0;
+var prevBass=0,prevMbRaw=0,bpmList=[],lastBeat=0,bpm=0,beat=0,explode=0;
+var _lastAudT=0;
 var micOn=false,analyser=null,waveArr,freqArr,bufLen=0;
 var audioCtx=null,micStream=null,gainNode=null,curDev='';
 
@@ -282,15 +284,17 @@ var abuf=new Uint8Array(512);
 // -- AUDIO ---------------------------------------------------------
 // DEMO MODE: synthetic 120BPM audio - never blank, always reacting
 function demoAudio(t){
-  var bph=t*2.0; // 120BPM = 2 beats/sec
-  var kick=Math.max(0,1.0-Math.abs(bph%1.0)*10); // sharp pulse
-  var hihat=0.5+0.4*Math.sin(t*7.3+0.9);
+  var bph=t*2.0;
+  var kick=Math.max(0,1.0-Math.abs(bph%1.0)*14);
+  var snare=Math.max(0,1.0-Math.abs((bph+0.5)%1.0)*11)*0.55;
+  var hihat=0.5+0.45*Math.sin(t*7.3+0.9);
+  var wobble=0.5+0.5*Math.sin(t*2.2)*Math.sin(t*5.1);
   return{
-    bass:0.3+0.4*Math.pow(Math.max(0,Math.sin(bph*Math.PI*2)),3)+kick*0.3,
-    mid:0.15+0.2*Math.abs(Math.sin(t*3.1)),
-    high:0.08+0.12*hihat,
-    vol:0.25+0.3*kick,
-    beat:kick
+    bass:0.22+0.55*Math.pow(Math.max(0,Math.sin(bph*Math.PI*2)),2.2)+kick*0.52+snare*0.12,
+    mid:0.12+0.38*Math.abs(Math.sin(t*3.1))+snare*0.35+wobble*0.12,
+    high:0.06+0.22*hihat+snare*0.2,
+    vol:0.2+0.48*kick+0.15*snare,
+    beat:Math.max(kick,snare*0.85)
   };
 }
 
@@ -344,56 +348,78 @@ async function enumDevices(){
   }catch(e){}
 }
 
+/** Map 0..1 energy into a punchy, show-visible drive (can exceed 1 in shaders). */
+function shapeDrive(x,gain){
+  x=Math.max(0,Math.min(1,x));
+  x=Math.pow(x,0.68);
+  return Math.min(2.05,x*gain);
+}
+
 function tickAudio(){
-  var s=(RCT/5)*GAIN;
+  var nowA=performance.now();
+  var adt=Math.min(0.055,_lastAudT?((nowA-_lastAudT)/1000):0.016);
+  _lastAudT=nowA;
+
+  var s=(RCT/5)*GAIN*1.12;
   var demo=demoAudio(GT*0.5);
 
   if(analyser){
     analyser.smoothingTimeConstant=SMTH/100;
     analyser.getByteFrequencyData(freqArr);
     analyser.getByteTimeDomainData(waveArr);
-    var i1=Math.floor(bufLen*.025),i2=Math.floor(bufLen*.06);
-    var i3=Math.floor(bufLen*.3),i4=Math.floor(bufLen*.65);
-    var sv=0,bv=0,mv=0,hv=0,vv=0;
+    var i1=Math.floor(bufLen*.02),i2=Math.floor(bufLen*.08);
+    var i2b=Math.floor(bufLen*.14);
+    var i3=Math.floor(bufLen*.32),i4=Math.floor(bufLen*.72);
+    var sv=0,bv=0,bv2=0,mv=0,hv=0,vv=0;
     for(var i=0;i<i1;i++)sv+=freqArr[i];
     for(var i=i1;i<i2;i++)bv+=freqArr[i];
+    for(var i=i2;i<i2b;i++)bv2+=freqArr[i];
     for(var i=i2;i<i3;i++)mv+=freqArr[i];
     for(var i=i3;i<i4;i++)hv+=freqArr[i];
     for(var i=0;i<i4;i++)vv+=freqArr[i];
-    var mb=Math.min(1,(bv/((i2-i1)*255))*s*2.8);
-    var mm=Math.min(1,(mv/((i3-i2)*255))*s*2.2);
-    var mh=Math.min(1,(hv/((i4-i3)*255))*s*2.0);
-    var mv2=Math.min(1,(vv/(i4*255))*s*1.8);
-    var blend=Math.min(1,mv2*3);
-    sBass+=(Math.max(demo.bass*(1-blend),mb)-sBass)*.15;
-    sMid +=(Math.max(demo.mid *(1-blend),mm)-sMid )*.12;
-    sHigh+=(Math.max(demo.high*(1-blend),mh)-sHigh)*.10;
-    sVol +=(Math.max(demo.vol *(1-blend),mv2)-sVol )*.11;
+    var mb=Math.min(1,(bv/((i2-i1)*255))*s*4.2);
+    mb=Math.max(mb,(bv2/((i2b-i2)*255||1))*s*2.6);
+    var mm=Math.min(1,(mv/((i3-i2)*255))*s*3.5);
+    var mh=Math.min(1,(hv/((i4-i3)*255))*s*3.25);
+    var mv2=Math.min(1,(vv/(i4*255))*s*2.85);
+    var blend=Math.min(1,mv2*2.4);
+    var atk=mb-prevMbRaw;
+    prevMbRaw=mb;
+    if(atk>0.14&&mb>0.18)beat=Math.max(beat,0.92);
+    if(atk>0.22&&mb>0.28)beat=Math.max(beat,1.12);
+    sBass+=(Math.max(demo.bass*(1-blend),mb)-sBass)*.4;
+    sMid +=(Math.max(demo.mid *(1-blend),mm)-sMid )*.36;
+    sHigh+=(Math.max(demo.high*(1-blend),mh)-sHigh)*.34;
+    sVol +=(Math.max(demo.vol *(1-blend),mv2)-sVol )*.32;
     var step=Math.floor(bufLen/256);
-    for(var i=0;i<256;i++)abuf[i]=freqArr[i*step]||0;
+    for(var i=0;i<256;i++){
+      var v=freqArr[i*step]||0;
+      abuf[i]=Math.min(255,Math.floor(v*(1+sBass*0.35+beat*0.25)));
+    }
     for(var i=0;i<256;i++)abuf[256+i]=waveArr[i*step]||128;
   } else {
-    sBass+=(demo.bass-sBass)*.18;sMid+=(demo.mid-sMid)*.14;
-    sHigh+=(demo.high-sHigh)*.12;sVol+=(demo.vol-sVol)*.13;
-    for(var i=0;i<256;i++)abuf[i]=Math.floor(sBass*200*Math.exp(-i/50));
-    for(var i=0;i<256;i++)abuf[256+i]=128+Math.floor(sMid*40*Math.sin(i*0.2+GT*3));
+    sBass+=(demo.bass-sBass)*.42;sMid+=(demo.mid-sMid)*.38;
+    sHigh+=(demo.high-sHigh)*.34;sVol+=(demo.vol-sVol)*.36;
+    if(demo.beat>0.65)beat=Math.max(beat,demo.beat*0.95);
+    for(var i=0;i<256;i++)abuf[i]=Math.floor(Math.min(255,sBass*240*Math.exp(-i/48)+beat*40));
+    for(var i=0;i<256;i++)abuf[256+i]=128+Math.floor(sMid*55*Math.sin(i*0.2+GT*3)+sHigh*35*Math.sin(i*0.37-GT*4));
   }
   gl.bindTexture(gl.TEXTURE_2D,atex);
   gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,512,1,gl.LUMINANCE,gl.UNSIGNED_BYTE,abuf);
 
-  // Beat detect
-  if(sBass>0.52&&prevBass<0.34){
+  if(sBass>0.38&&prevBass<0.26){
     var now=performance.now(),gap=now-lastBeat;
-    if(gap>250&&gap<2600){
+    if(gap>180&&gap<2800){
       bpmList.push(60000/gap);if(bpmList.length>8)bpmList.shift();
       var sum=0;for(var i=0;i<bpmList.length;i++)sum+=bpmList[i];
       bpm=Math.round(sum/bpmList.length);
     }
-    lastBeat=now;beat=1.0;
+    lastBeat=now;
+    beat=Math.max(beat,1.18);
   }
   prevBass=sBass;
-  if(beat>0)beat=Math.max(0,beat-.04);
-  if(explode>0)explode=Math.max(0,explode-.04);
+  if(beat>0)beat=Math.max(0,beat-adt*2.65);
+  if(explode>0)explode=Math.max(0,explode-adt*2.2);
 }
 
 // ===================================================================
@@ -416,15 +442,21 @@ var HEAD=[
 '#define sat(x) clamp(x,0.,1.)',
 '#define smin(a,b,k) (min(a,b)-k*(sat(.5+.5*(b-a)/k))*(1.-sat(.5+.5*(b-a)/k))*k*.25)',
 
-// --- Palette (6 options, float-safe for WebGL1)
+// --- Palette: hue walks with frequency bands; chroma + brightness punch on beats
 'vec3 pal(float t){',
-'  t=fract(t+T*0.0025*SP);',
-'  if(PAL<1.)return .5+.5*cos(TAU*(t*vec3(.8,.9,1.1)+vec3(.0,.08,.28)));',
-'  if(PAL<2.)return .5+.5*cos(TAU*(t*vec3(1.,.55,.25)+vec3(.04,.18,.32)));',
-'  if(PAL<3.)return .5+.5*cos(TAU*(t*vec3(.55,1.,.65)+vec3(.18,.0,.12)));',
-'  if(PAL<4.)return .5+.5*cos(TAU*(t*vec3(1.,.15,.85)+vec3(.0,.38,.08)));',
-'  if(PAL<5.)return .5+.5*cos(TAU*(t*vec3(.38,.38,.38)+vec3(.28,.28,.28)));',
-'  return .5+.5*cos(TAU*(t*vec3(1.,.75,.45)+vec3(.0,.08,.18)));',
+'  float hue=B*.22+M*.15+H*.12+BT*.32;',
+'  float tw=fract(t+T*0.003*SP+hue);',
+'  vec3 c;',
+'  if(PAL<1.)c=.5+.5*cos(TAU*(tw*vec3(.8,.9,1.1)+vec3(.0,.08,.28)));',
+'  else if(PAL<2.)c=.5+.5*cos(TAU*(tw*vec3(1.,.55,.25)+vec3(.04,.18,.32)));',
+'  else if(PAL<3.)c=.5+.5*cos(TAU*(tw*vec3(.55,1.,.65)+vec3(.18,.0,.12)));',
+'  else if(PAL<4.)c=.5+.5*cos(TAU*(tw*vec3(1.,.15,.85)+vec3(.0,.38,.08)));',
+'  else if(PAL<5.)c=.5+.5*cos(TAU*(tw*vec3(.38,.38,.38)+vec3(.28,.28,.28)));',
+'  else c=.5+.5*cos(TAU*(tw*vec3(1.,.75,.45)+vec3(.0,.08,.18)));',
+'  float chir=1.+M*1.05+H*1.1;',
+'  c=(c-.5)*chir+.5;',
+'  float punch=(.68+B*1.42+M*.92+H*.78+V*.58)*(1.+BT*2.45+EX*.55);',
+'  return c*punch;',
 '}',
 
 // --- Noise
@@ -1464,24 +1496,20 @@ var BLUR_FS=[
 // -- FINAL OUTPUT (ACES + CA + grain + vignette) --------------------
 var OUTPUT_FS=[
 'precision mediump float;varying vec2 uv;',
-'uniform sampler2D tex,bloom;uniform float BT,T,B;',
+'uniform sampler2D tex,bloom;uniform float BT,T,B,M,H;',
 'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
 'void main(){',
-'  // Chromatic aberration - subtle, beat-reactive',
-'  float ca=.0015+BT*.0022;',
+'  float ca=.003+BT*.006+B*.0032+H*.002;',
 '  float r=texture2D(tex,vec2(uv.x+ca,uv.y)).r;',
 '  float g=texture2D(tex,uv).g;',
 '  float b=texture2D(tex,vec2(uv.x-ca,uv.y)).b;',
 '  vec3 col=vec3(r,g,b);',
-'  // Add bloom',
-'  col+=texture2D(bloom,uv).rgb*1.6*(1.+BT*.4);',
-'  // ACES filmic tonemap',
+'  col+=texture2D(bloom,uv).rgb*2.4*(1.+BT*1.+B*.38+M*.15);',
+'  col*=1.+B*.32+BT*1.05+M*.14+H*.14;',
 '  col=ACES(col);',
-'  // Film grain',
-'  float grain=fract(sin(dot(uv+T*.1,vec2(12.99,78.23)))*43758.)-0.5;',
-'  col+=grain*.016;',
-'  // Vignette',
-'  vec2 v=uv*2.-1.;col*=1.-dot(v,v)*.38;',
+'  float grain=fract(sin(dot(uv+T*.12,vec2(12.99,78.23)))*43758.)-0.5;',
+'  col+=grain*(.02+BT*.018+H*.012);',
+'  vec2 v=uv*2.-1.;col*=1.-dot(v,v)*(.36-BT*.06);',
 '  gl_FragColor=vec4(clamp(col,0.,1.),1.);',
 '}'
 ].join('\n');
@@ -1529,7 +1557,7 @@ function u(prog,name){
   sceneProgs.forEach(function(prog){if(!prog)return;sn.forEach(function(n){u(prog,n);});});
   [bloomProg,blurProg,outProg,blendProg].forEach(function(prog){
     if(!prog)return;
-    ['tex','bloom','thresh','dir','BT','T','B','A','B2','mix2'].forEach(function(n){u(prog,n);});
+    ['tex','bloom','thresh','dir','BT','T','B','M','H','A','B2','mix2'].forEach(function(n){u(prog,n);});
   });
 })();
 
@@ -1574,10 +1602,14 @@ function bindQuad(prog){
 }
 function setCommonUniforms(prog){
   gl.uniform2f(u(prog,'R'),FW,FH);
-  gl.uniform1f(u(prog,'T'),GT);
-  gl.uniform1f(u(prog,'B'),sBass); gl.uniform1f(u(prog,'M'),sMid);
-  gl.uniform1f(u(prog,'H'),sHigh); gl.uniform1f(u(prog,'V'),sVol);
-  gl.uniform1f(u(prog,'BT'),beat); gl.uniform1f(u(prog,'EX'),explode);
+  gl.uniform1f(u(prog,'T'),GT*(1+sBass*0.072+beat*0.048));
+  var Bd=shapeDrive(sBass,1.84)+beat*0.48;
+  gl.uniform1f(u(prog,'B'),Bd);
+  gl.uniform1f(u(prog,'M'),shapeDrive(sMid,1.72));
+  gl.uniform1f(u(prog,'H'),shapeDrive(sHigh,1.78));
+  gl.uniform1f(u(prog,'V'),shapeDrive(sVol,1.55));
+  gl.uniform1f(u(prog,'BT'),Math.min(1.48,beat*1.24));
+  gl.uniform1f(u(prog,'EX'),explode);
   gl.uniform1f(u(prog,'SP'),SPD/5);gl.uniform1f(u(prog,'WP'),WRP/5);
   gl.uniform1f(u(prog,'PAL'),PAL);
 }
@@ -1697,7 +1729,7 @@ function loop(now){
   gl.useProgram(bloomProg);bindQuad(bloomProg);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,finalTex);
   gl.uniform1i(u(bloomProg,'tex'),0);
-  gl.uniform1f(u(bloomProg,'thresh'),0.62-beat*0.14);
+  gl.uniform1f(u(bloomProg,'thresh'),Math.max(0.26,0.46-beat*0.26-Math.min(0.2,sBass*0.28)-Math.min(0.08,sHigh*0.06)));
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER,fbBloomBlur.f);
@@ -1722,9 +1754,11 @@ function loop(now){
   gl.uniform1i(u(outProg,'tex'),0);
   gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,fbBloom.t);
   gl.uniform1i(u(outProg,'bloom'),1);
-  gl.uniform1f(u(outProg,'BT'),beat);
+  gl.uniform1f(u(outProg,'BT'),Math.min(1.48,beat*1.24));
   gl.uniform1f(u(outProg,'T'),GT);
-  gl.uniform1f(u(outProg,'B'),sBass);
+  gl.uniform1f(u(outProg,'B'),shapeDrive(sBass,1.84)+beat*0.48);
+  gl.uniform1f(u(outProg,'M'),shapeDrive(sMid,1.72));
+  gl.uniform1f(u(outProg,'H'),shapeDrive(sHigh,1.78));
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
 
   // HUD (every 6 frames)
