@@ -16,8 +16,12 @@
 <!-- ── CANVAS (Aurora Field back layer / WebGL front) ─────────────── -->
 <canvas id="c-bc" aria-hidden="true"></canvas>
 <canvas id="c"></canvas>
+<!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
+<div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
+<div id="nx-clip-under" class="nx-clip-stack nx-clip-under" aria-hidden="true"></div>
+<div id="nx-clip-over" class="nx-clip-stack nx-clip-over" aria-hidden="true"></div>
 <div id="fps-badge" aria-hidden="true"></div>
-<div id="present-hint">P — exit present &middot; ` — FPS</div>
+<div id="present-hint">Tap <strong>Hide controls</strong> (bottom) or press H &middot; P — present &middot; ` — FPS</div>
 
 <!-- ── WATERMARK (free tier) ──────────────────────────────────────── -->
 <div id="watermark" style="display:none;position:fixed;bottom:18px;right:18px;z-index:85;font-family:Orbitron,monospace;font-size:11px;letter-spacing:.22em;color:rgba(255,255,255,.12);pointer-events:none;text-shadow:0 0 6px rgba(0,0,0,.5)">NEXUS ENGINE</div>
@@ -27,7 +31,7 @@
   <h1>NEXUS ENGINE</h1>
   <p class="sub">PRO · LIVE DJ / VJ · AURORA FIELD SPECTRUM</p>
   <button class="start-btn" id="start-btn" type="button">LAUNCH</button>
-  <p class="hint">Microphone drives meters and spectrum visuals &middot; tap Launch, then allow mic when prompted</p>
+      <p class="hint">Microphone drives meters and spectrum visuals &middot; tap anywhere here or Launch (browsers need a tap before audio). Visuals run behind this screen.</p>
 </div>
 
 <!-- ── TOP BAR (two rows on phone: brand + scrollable transport) ─── -->
@@ -40,9 +44,10 @@
   </div>
   <div class="topbar-row topbar-toolbar" role="toolbar" aria-label="Transport and recording">
     <div class="meta meta-compact" id="bpm-val">--</div>
+    <div class="meta meta-compact nx-show-tc" id="show-timecode" title="Show clock (SMPTE-style)">00:00:00:00</div>
     <div class="meta meta-compact" id="auto-timer">-</div>
-    <button type="button" class="top-btn" id="autobtn" title="Auto-morph (A)">AUTO</button>
-    <button type="button" class="top-btn" id="rndbtn" title="Random scene (R)">RND</button>
+    <button type="button" class="top-btn top-btn-cycle" id="autobtn" title="Every few seconds, advance to the next scene in order (keyboard A)"><span class="top-btn-long">Cycle</span><span class="top-btn-short" aria-hidden="true">Cyc</span></button>
+    <button type="button" class="top-btn top-btn-random" id="rndbtn" title="Jump to a random scene now (keyboard R)"><span class="top-btn-long">Random</span><span class="top-btn-short" aria-hidden="true">Rnd</span></button>
     <button type="button" class="top-btn" id="prevbtn" title="Previous (←)">◀</button>
     <button type="button" class="top-btn" id="nextbtn" title="Next (→ / Space)">▶</button>
     <button type="button" class="top-btn" id="xbtn" title="Explode (X)">⚡</button>
@@ -61,6 +66,7 @@
     </select>
     <button type="button" class="top-btn rec" id="recbtn" title="Record WebM">REC</button>
     <button type="button" class="top-btn" id="perfbtn" title="Performance lock (stable FPS)">PERF</button>
+    <button type="button" class="top-btn" id="vizperfbtn" title="Visual performance: cap effects for stable live FPS">VIZ PERF</button>
     <button type="button" class="top-btn" id="midimapbtn" title="MIDI mapping overlay">MAP</button>
     <button type="button" class="top-btn" id="adaptbtn" title="Adaptive GPU quality">AUTO Q</button>
     <button type="button" class="top-btn" id="directorbtn" title="AI Director — smart scene switching">AI DIR</button>
@@ -107,6 +113,8 @@
 
     <section id="nx-tab-live" class="nx-tab-panel nx-tab-active" role="tabpanel" aria-hidden="false">
       <p class="nx-tab-lead">Live perform — mic drives WebGL and Aurora. Use <strong>Punchy</strong> for maximum snap; <strong>Smooth</strong> for calmer rooms.</p>
+      <p class="nx-transport-hint"><strong>Cycle</strong> (top bar) = timed <em>next</em> scene in order. <strong>Random</strong> = one <em>jump</em> to any scene now. Use the <strong>Hide controls</strong> button at the bottom of the screen anytime (or press H).</p>
+      <button type="button" class="nx-panel-hide-inline" id="panel-hide-inline">Hide controls</button>
       <div class="live-react-row">
         <span class="nx-field-label">Reactivity</span>
         <div class="nx-pill-group" role="group" aria-label="Reactivity preset">
@@ -210,6 +218,8 @@
           <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
           <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
           <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
+          <label class="nx-inline">Kaleido <input type="range" id="nx-kaleido" min="0" max="100" value="0" title="Post kaleidoscope mix"></label>
+          <label class="nx-inline">Glitch <input type="range" id="nx-glitch" min="0" max="100" value="0" title="Transient-driven glitch (base amount)"></label>
         </div>
         <div class="ctrl-group nexus-group flex-grow">
           <span class="g-label">Spectra</span>
@@ -225,6 +235,105 @@
           <select id="bc-pro-sel" class="preset-select wide-select" style="min-width:220px" title="Pro hybrid looks"><option value="">— Pro (hybrid) —</option></select>
           <select id="bc-preset-sel" class="preset-select wide-select" title="All pack presets"><option value="">— All presets —</option></select>
           <button type="button" class="sm-btn nx-touch-btn" id="bc-random" title="Random spectrum preset from library">Random</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="nx-tab-show" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <h3 class="nx-section-title">Composition</h3>
+      <p class="nx-tab-lead">Everything lives in this app: clip layers, effect bypass chain, timecode cues, DMX, and clock. WebGL + Aurora keep rendering — load clips with <strong>Load &amp; play</strong> (tap first on iOS/Android).</p>
+      <div class="nx-compose-map" role="navigation" aria-label="Jump to composition sections">
+        <button type="button" class="nx-compose-node" data-nx-compose="clips">Clips</button>
+        <span class="nx-compose-arrow" aria-hidden="true">→</span>
+        <button type="button" class="nx-compose-node nx-compose-node-main" data-nx-compose="fx">Effects</button>
+        <span class="nx-compose-arrow" aria-hidden="true">→</span>
+        <button type="button" class="nx-compose-node" data-nx-compose="cues">Cues</button>
+        <span class="nx-compose-arrow" aria-hidden="true">→</span>
+        <button type="button" class="nx-compose-node" data-nx-compose="dmx">DMX</button>
+        <span class="nx-compose-arrow" aria-hidden="true">→</span>
+        <button type="button" class="nx-compose-node" data-nx-compose="clock">Clock</button>
+      </div>
+      <h3 class="nx-section-title" id="nx-compose-fx">Effect chain</h3>
+      <p class="nx-show-status">Resolume-style bypass: disable passes without stopping the engine. Trails amount still uses the Aurora <strong>Trails</strong> slider.</p>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-bloom" checked> Bloom pass</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-streak" checked> Anamorphic streak</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-grade" checked> ACES grade</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-trails-chain" checked> Trails mix</label>
+      </div>
+      <h3 class="nx-section-title" id="nx-compose-clips">Clip layers</h3>
+      <p class="nx-show-status">Up to 4 slots each for <strong>under</strong> (plate under WebGL) and <strong>over</strong> (overlay). Uses <code class="nx-code-inline">playsInline</code> + muted for mobile autoplay after your tap.</p>
+      <div class="panel-row nx-show-row">
+        <input type="file" id="nx-clip-file" accept="video/*,image/*" class="nx-clip-file">
+        <label class="nx-inline">Slot <select id="nx-clip-slot" class="preset-select" title="Clip slot 0–3"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+        <label class="nx-inline"><input type="checkbox" id="nx-clip-below" checked> Under WebGL</label>
+        <button type="button" class="sm-btn" id="nx-clip-load">Load &amp; play</button>
+      </div>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Opacity <input type="range" id="nx-clip-opacity" min="0" max="100" value="100" title="Clip opacity %"></label>
+        <button type="button" class="sm-btn" id="nx-clip-opacity-set">Apply opacity</button>
+      </div>
+      <h3 class="nx-section-title" id="nx-compose-cues">Cues &amp; executors</h3>
+      <p class="nx-show-status">Cue time = seconds on the master clock. <strong>Re-arm all</strong> clears fired flags so repeats can run.</p>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Time (s) <input type="number" id="nx-cue-tsec" class="nx-dmx-num" step="0.25" value="5" min="0"></label>
+        <label class="nx-inline">Scene # <input type="number" id="nx-cue-scene" class="nx-dmx-num" value="0" min="0" title="WebGL scene index"></label>
+        <button type="button" class="sm-btn" id="nx-cue-add">Add cue</button>
+        <button type="button" class="sm-btn" id="nx-cue-arm">Re-arm all</button>
+      </div>
+      <ul id="nx-cue-list" class="nx-cue-list" aria-label="Saved cues"></ul>
+      <div class="nx-exec-grid" aria-label="Executor buttons">
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-0">A</button><select id="nx-exec-sel-0" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-1">B</button><select id="nx-exec-sel-1" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-2">C</button><select id="nx-exec-sel-2" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-3">D</button><select id="nx-exec-sel-3" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-4">E</button><select id="nx-exec-sel-4" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+        <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-5">F</button><select id="nx-exec-sel-5" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
+      </div>
+      <h3 class="nx-section-title" id="nx-compose-clock">Show clock &amp; lighting</h3>
+      <p class="nx-tab-lead">Master time + DMX to <strong>Open Lighting Architecture</strong> (olad). For Safari/Chrome, run the local CORS proxy next to this app: <code class="nx-code-inline">node tools/ola-cors-proxy.mjs</code>. Optional SMPTE LTC: add <code class="nx-code-inline">vendor/ltc/ltc_decoder.wasm</code> per <code class="nx-code-inline">vendor/ltc/README.txt</code>.</p>
+      <div class="panel-row nx-show-row">
+        <span class="g-label">Clock</span>
+        <select id="nx-show-mode" class="preset-select" title="Time source" aria-label="Show clock mode">
+          <option value="internal" selected>Internal</option>
+          <option value="bpm">Session (wall)</option>
+          <option value="mtc">MTC (Web MIDI)</option>
+          <option value="ltc">LTC line-in (RMS gate)</option>
+        </select>
+        <button type="button" class="sm-btn" id="nx-show-reset" title="Reset internal/session timer">Reset</button>
+        <button type="button" class="sm-btn" id="nx-show-mtc">Enable MTC</button>
+        <button type="button" class="sm-btn" id="nx-show-ltc">Arm LTC input</button>
+        <button type="button" class="sm-btn" id="nx-show-stop-midi">Stop MIDI</button>
+      </div>
+      <p class="nx-show-status" id="nx-show-clock-status">—</p>
+      <h3 class="nx-section-title">OLA</h3>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Proxy URL <input type="url" id="nx-ola-url" class="nx-ola-url" value="http://127.0.0.1:9393" spellcheck="false"></label>
+        <button type="button" class="sm-btn" id="nx-ola-test">Test DMX</button>
+        <span class="nx-show-status" id="nx-ola-status">—</span>
+      </div>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Universe <input type="number" id="nx-dmx-universe" class="nx-dmx-num" min="0" max="32" value="0"></label>
+        <label class="nx-inline">Start ch <input type="number" id="nx-dmx-start" class="nx-dmx-num" min="1" max="496" value="1"></label>
+      </div>
+      <div id="nx-lighting-deck" class="nx-lighting-deck" aria-label="DMX faders">
+        <div class="nx-dmx-grid">
+          <div class="nx-dmx-fader" data-fader="0"><span class="nx-dmx-ch">1</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 1"><button type="button" class="nx-dmx-flash" data-fader="0" aria-label="Flash channel 1">F</button></div>
+          <div class="nx-dmx-fader" data-fader="1"><span class="nx-dmx-ch">2</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 2"><button type="button" class="nx-dmx-flash" data-fader="1" aria-label="Flash channel 2">F</button></div>
+          <div class="nx-dmx-fader" data-fader="2"><span class="nx-dmx-ch">3</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 3"><button type="button" class="nx-dmx-flash" data-fader="2" aria-label="Flash channel 3">F</button></div>
+          <div class="nx-dmx-fader" data-fader="3"><span class="nx-dmx-ch">4</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 4"><button type="button" class="nx-dmx-flash" data-fader="3" aria-label="Flash channel 4">F</button></div>
+          <div class="nx-dmx-fader" data-fader="4"><span class="nx-dmx-ch">5</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 5"><button type="button" class="nx-dmx-flash" data-fader="4" aria-label="Flash channel 5">F</button></div>
+          <div class="nx-dmx-fader" data-fader="5"><span class="nx-dmx-ch">6</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 6"><button type="button" class="nx-dmx-flash" data-fader="5" aria-label="Flash channel 6">F</button></div>
+          <div class="nx-dmx-fader" data-fader="6"><span class="nx-dmx-ch">7</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 7"><button type="button" class="nx-dmx-flash" data-fader="6" aria-label="Flash channel 7">F</button></div>
+          <div class="nx-dmx-fader" data-fader="7"><span class="nx-dmx-ch">8</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 8"><button type="button" class="nx-dmx-flash" data-fader="7" aria-label="Flash channel 8">F</button></div>
+          <div class="nx-dmx-fader" data-fader="8"><span class="nx-dmx-ch">9</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 9"><button type="button" class="nx-dmx-flash" data-fader="8" aria-label="Flash channel 9">F</button></div>
+          <div class="nx-dmx-fader" data-fader="9"><span class="nx-dmx-ch">10</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 10"><button type="button" class="nx-dmx-flash" data-fader="9" aria-label="Flash channel 10">F</button></div>
+          <div class="nx-dmx-fader" data-fader="10"><span class="nx-dmx-ch">11</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 11"><button type="button" class="nx-dmx-flash" data-fader="10" aria-label="Flash channel 11">F</button></div>
+          <div class="nx-dmx-fader" data-fader="11"><span class="nx-dmx-ch">12</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 12"><button type="button" class="nx-dmx-flash" data-fader="11" aria-label="Flash channel 12">F</button></div>
+          <div class="nx-dmx-fader" data-fader="12"><span class="nx-dmx-ch">13</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 13"><button type="button" class="nx-dmx-flash" data-fader="12" aria-label="Flash channel 13">F</button></div>
+          <div class="nx-dmx-fader" data-fader="13"><span class="nx-dmx-ch">14</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 14"><button type="button" class="nx-dmx-flash" data-fader="13" aria-label="Flash channel 14">F</button></div>
+          <div class="nx-dmx-fader" data-fader="14"><span class="nx-dmx-ch">15</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 15"><button type="button" class="nx-dmx-flash" data-fader="14" aria-label="Flash channel 15">F</button></div>
+          <div class="nx-dmx-fader" data-fader="15"><span class="nx-dmx-ch">16</span><input type="range" min="0" max="255" value="0" aria-label="DMX channel 16"><button type="button" class="nx-dmx-flash" data-fader="15" aria-label="Flash channel 16">F</button></div>
         </div>
       </div>
     </section>
@@ -256,6 +365,13 @@
           <option value="edm">EDM</option>
           <option value="glitch">Glitch</option>
         </select>
+        <span class="g-label" style="width:auto;margin-left:8px">Show</span>
+        <select id="nx-show-macro" class="preset-select" style="min-width:120px" title="Biases random scene picks + saved presets">
+          <option value="" selected>— Show —</option>
+          <option value="club">Club</option>
+          <option value="ambient_show">Ambient</option>
+          <option value="psychedelic">Psychedelic</option>
+        </select>
       </div>
       <details class="nx-acc nx-acc-credits nx-acc-inline">
         <summary class="nx-acc-sum">Credits &amp; open source</summary>
@@ -265,6 +381,7 @@
           <ul class="nx-credits-list">
             <li><a href="https://github.com/jberg/butterchurn" target="_blank" rel="noopener noreferrer">Butterchurn</a> — WebGL MilkDrop preset player</li>
             <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
+            <li>WebGL scenes use common SDF / raymarch patterns (e.g. <a href="https://iquilezles.org/articles/distfunctions/" target="_blank" rel="noopener noreferrer">Inigo Quilez</a> articles) as engineering references.</li>
           </ul>
           <p class="nx-credits-note">Internal mode values may still read <code>butterchurn</code> for compatibility.</p>
         </div>
@@ -278,9 +395,13 @@
     <button type="button" class="nx-tab-btn" role="tab" data-tab="audio" aria-selected="false">Audio</button>
     <button type="button" class="nx-tab-btn" role="tab" data-tab="scenes" aria-selected="false">Scenes</button>
     <button type="button" class="nx-tab-btn" role="tab" data-tab="aurora" aria-selected="false">Aurora</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="show" aria-selected="false">Show</button>
     <button type="button" class="nx-tab-btn" role="tab" data-tab="more" aria-selected="false">More</button>
   </nav>
 </div>
+
+<!-- Floating show/hide bottom panel (always reachable on touch; keyboard H) -->
+<button type="button" id="panel-fab" class="panel-fab" aria-controls="panel" aria-expanded="true" aria-label="Hide controls" hidden>Hide controls</button>
 
 <!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
 <script src="js/nexus-brand.js"></script>
@@ -288,6 +409,7 @@
 <script src="vendor/butterchurnPresets.min.js"></script>
 <!-- More MilkDrop packs: run vendor/fetch-extra-presets.sh, add sibling <script src=…> lines before engine.js (see README). -->
 <script src="js/engine.js"></script>
+<script src="js/nexus-engine/modern-visual-stack.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/scenes/cosmic.js"></script>
@@ -295,6 +417,8 @@
 <script src="js/scenes/fluid.js"></script>
 <script src="js/scenes/environment.js"></script>
 <script src="js/scenes/afterlife.js"></script>
+<script src="js/scenes/unique.js"></script>
+<script src="js/scenes/vision.js"></script>
 <script src="js/camera.js"></script>
 <script src="js/post.js"></script>
 <script src="js/nexus-engine/audio-engine.js"></script>
@@ -308,6 +432,16 @@
 <script src="js/nexus-engine/scene-manager.js"></script>
 <script src="js/nexus-engine/ui-manager.js"></script>
 <script src="js/nexus-engine/midi-manager.js"></script>
+<script src="js/show/ltc-js-decoder.js"></script>
+<script src="js/show/ltc-wasm.js"></script>
+<script src="js/show/show-clock.js"></script>
+<script src="js/show/ola-client.js"></script>
+<script src="js/show/clip-layers.js"></script>
+<script src="js/show/cue-engine.js"></script>
+<script src="js/show/fx-chain.js"></script>
+<script src="js/show/composition-ui.js"></script>
+<script src="js/show/lighting-deck.js"></script>
+<script src="js/show/show-workbench.js"></script>
 <script src="js/nexus-engine/engine-host.js"></script>
 <script src="js/midi.js"></script>
 <script src="js/presets.js"></script>
@@ -323,10 +457,16 @@
   console.log('Scenes compiled:', ok, '/', NX.scenes.length);
   NX.post.compile();
   NX.resize();
+  if (NX.ModernVisualStack && NX.ModernVisualStack.init) NX.ModernVisualStack.init();
   if (window.NexusEngine) NexusEngine.init();
   if (NX.watermark) NX.watermark.checkPro();
   if (NX.autoDirector) NX.autoDirector.categorize();
   NX.ui.init();
+  if (NX.ClipLayers && NX.ClipLayers.init) NX.ClipLayers.init();
+  if (NX.FxChain && NX.FxChain.init) NX.FxChain.init();
+  if (NX.CompositionUI && NX.CompositionUI.init) NX.CompositionUI.init();
+  if (NX.LightingDeck && NX.LightingDeck.init) NX.LightingDeck.init();
+  if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
   if (NX.midi) NX.midi.init();
   NX.showName(0);
   NX.loop();

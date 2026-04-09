@@ -145,6 +145,17 @@
     if (nxTr) nxTr.value = String(Math.round((S.nexusPostTrails == null ? 0 : S.nexusPostTrails) * 100));
     var nxMode = document.getElementById('nx-visual-mode');
     if (nxMode) nxMode.value = S.visualMode || 'hybrid';
+    var nk = document.getElementById('nx-kaleido');
+    if (nk) nk.value = String(Math.round((S.postFxKaleido == null ? 0 : S.postFxKaleido) * 100));
+    var ng = document.getElementById('nx-glitch');
+    if (ng) ng.value = String(Math.round((S.postFxGlitch == null ? 0 : S.postFxGlitch) * 100));
+    var nsm = document.getElementById('nx-show-macro');
+    if (nsm) {
+      var vm = S.visualMacro || '';
+      nsm.value = vm === 'club' ? 'club' : (vm === 'ambient' ? 'ambient_show' : (vm === 'psychedelic' ? 'psychedelic' : ''));
+    }
+    var vpb = document.getElementById('vizperfbtn');
+    if (vpb) vpb.classList.toggle('on', !!S.nexusVizPerformance);
   }
 
   function setPalette(idx) {
@@ -163,6 +174,9 @@
 
     var bpmEl = document.getElementById('bpm-val');
     if (bpmEl) bpmEl.textContent = st.bpm || '--';
+
+    var tcEl = document.getElementById('show-timecode');
+    if (tcEl && NX.ShowClock && NX.ShowClock.getDisplayString) tcEl.textContent = NX.ShowClock.getDisplayString();
 
     var bcHud = document.getElementById('bc-preset-hud');
     if (bcHud) {
@@ -272,10 +286,21 @@
         S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
         br = 22000000;
-      } else if (prof === '4k') {
+      } else       if (prof === '4k') {
         S.recCompositeDims = { w: 3840, h: 2160, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
         br = 32000000;
+        S._recPrevPerfLock = !!S.nexusPerfLock;
+        S._recHadPerfAssist = true;
+        if (!S.nexusPerfLock) {
+          S.nexusPerfLock = true;
+          if (NX.resize) NX.resize();
+          var nxPerf4k = document.getElementById('nx-perf');
+          if (nxPerf4k) nxPerf4k.checked = true;
+          var pb4k = document.getElementById('perfbtn');
+          if (pb4k) pb4k.classList.add('on');
+          document.body.classList.add('nexus-perf-top');
+        }
       } else {
         S.recCompositeDims = null;
         stream = NX.C.captureStream(fps);
@@ -286,6 +311,16 @@
       mediaRec.ondataavailable = function (e) { if (e.data.size > 0) recChunks.push(e.data); };
       mediaRec.onstop = function () {
         S.recCompositeDims = null;
+        if (S._recHadPerfAssist) {
+          S.nexusPerfLock = S._recPrevPerfLock;
+          S._recHadPerfAssist = false;
+          if (NX.resize) NX.resize();
+          var nxPerfEl = document.getElementById('nx-perf');
+          if (nxPerfEl) nxPerfEl.checked = !!S.nexusPerfLock;
+          var perfTop = document.getElementById('perfbtn');
+          if (perfTop) perfTop.classList.toggle('on', !!S.nexusPerfLock);
+          document.body.classList.toggle('nexus-perf-top', !!S.nexusPerfLock);
+        }
         var blob = new Blob(recChunks, { type: 'video/webm' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -358,6 +393,26 @@
     }
   }
 
+  /** Toggle bottom control panel visibility (touch FAB, inline button, or H). Keeps S.uiHide in sync. */
+  function togglePanelVisibility() {
+    S.uiHide = !S.uiHide;
+    var p = document.getElementById('panel');
+    if (p) p.classList.toggle('hide', S.uiHide);
+    document.body.classList.toggle('nexus-panel-hidden', S.uiHide);
+    updatePanelFab();
+  }
+
+  /** Sync floating panel FAB label and aria state (skipped while splash keeps FAB hidden). */
+  function updatePanelFab() {
+    var fab = document.getElementById('panel-fab');
+    if (!fab || fab.hidden) return;
+    var expanded = !S.uiHide;
+    fab.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    var label = expanded ? 'Hide controls' : 'Show controls';
+    fab.textContent = label;
+    fab.setAttribute('aria-label', label);
+  }
+
   function openMidiMapPanel() {
     var p = document.getElementById('midi-map-panel');
     if (!p) return;
@@ -379,13 +434,18 @@
     document.body.classList.toggle('nexus-present', S.presentMode);
     var b = document.getElementById('presentbtn');
     if (b) { b.textContent = S.presentMode ? 'EXIT' : 'PRESENT'; b.classList.toggle('on', S.presentMode); }
+    updatePanelFab();
   }
 
   /* ---- Wire events ------------------------------------------------- */
   function wireEvents() {
-    /* Splash start */
+    /* Splash start — tap Launch or anywhere on splash (one gesture unlocks audio context). */
     var startBtn = document.getElementById('start-btn');
-    if (startBtn) startBtn.addEventListener('click', async function () {
+    var splashEl = document.getElementById('splash');
+    var _splashLaunchDone = false;
+    async function doLaunchFromSplash() {
+      if (_splashLaunchDone) return;
+      _splashLaunchDone = true;
       try { await NX.audio.startMic(); } catch (e) { }
       if (!S.audioCtx && NX.audio.ensureButterchurnAudioGraph) {
         try { await NX.audio.ensureButterchurnAudioGraph(); } catch (e2) { }
@@ -393,12 +453,29 @@
         try { await NX.audio.resumeAudioContext(); } catch (e3) { }
       }
       var sp = document.getElementById('splash');
-      sp.classList.add('out');
-      setTimeout(function () { sp.style.display = 'none'; }, 900);
-      document.getElementById('panel').classList.remove('hide');
-      if (window.NXShell && NXShell.setTab) NXShell.setTab('live');
-      syncLiveMicUI();
-    });
+      function revealApp() {
+        if (sp) sp.classList.add('out');
+        var p = document.getElementById('panel');
+        if (p) p.classList.toggle('hide', !!S.uiHide);
+        var fab = document.getElementById('panel-fab');
+        if (fab) fab.hidden = false;
+        if (window.NXShell && NXShell.setTab) NXShell.setTab('live');
+        syncLiveMicUI();
+        updatePanelFab();
+      }
+      if (NX.ModernVisualStack && NX.ModernVisualStack.wrapUiTransition) {
+        NX.ModernVisualStack.wrapUiTransition(revealApp);
+      } else {
+        revealApp();
+      }
+      setTimeout(function () { if (sp) sp.style.display = 'none'; }, 900);
+    }
+    if (startBtn) {
+      startBtn.addEventListener('click', function (e) { e.stopPropagation(); doLaunchFromSplash(); });
+    }
+    if (splashEl) {
+      splashEl.addEventListener('click', function () { doLaunchFromSplash(); });
+    }
 
     /* Sliders */
     function wireSlider(id, fn) {
@@ -442,6 +519,11 @@
 
     var rndBtn = document.getElementById('rndbtn');
     if (rndBtn) rndBtn.addEventListener('click', NX.goRandom);
+
+    var panelFab = document.getElementById('panel-fab');
+    if (panelFab) panelFab.addEventListener('click', function () { togglePanelVisibility(); });
+    var panelHideInline = document.getElementById('panel-hide-inline');
+    if (panelHideInline) panelHideInline.addEventListener('click', function () { togglePanelVisibility(); });
 
     var xBtn = document.getElementById('xbtn');
     if (xBtn) xBtn.addEventListener('click', function () { S.explode = 0.95; S.beat = 0.72; });
@@ -531,8 +613,7 @@
       else if (e.key === 'r' || e.key === 'R') NX.goRandom();
       else if (e.key === 'f' || e.key === 'F') { if (fullBtn) fullBtn.click(); }
       else if (e.key === 'h' || e.key === 'H') {
-        S.uiHide = !S.uiHide;
-        document.getElementById('panel').classList.toggle('hide', S.uiHide);
+        togglePanelVisibility();
       }
       else if (e.key === 'p' || e.key === 'P') togglePresent();
       else if (e.code === 'Backquote') { S.showFpsOverlay = !S.showFpsOverlay; document.getElementById('fps-badge').classList.toggle('on', S.showFpsOverlay); }
@@ -666,6 +747,24 @@
       NX.resize();
     });
 
+    var vizPerfBtn = document.getElementById('vizperfbtn');
+    if (vizPerfBtn) vizPerfBtn.addEventListener('click', function () {
+      var on = !S.nexusVizPerformance;
+      if (NX.setVizPerformanceMode) NX.setVizPerformanceMode(on);
+      this.classList.toggle('on', on);
+      syncControls();
+    });
+
+    var nxKal = document.getElementById('nx-kaleido');
+    if (nxKal) nxKal.addEventListener('input', function () { S.postFxKaleido = parseInt(this.value, 10) / 100; });
+    var nxGli = document.getElementById('nx-glitch');
+    if (nxGli) nxGli.addEventListener('input', function () { S.postFxGlitch = parseInt(this.value, 10) / 100; });
+    var nxShow = document.getElementById('nx-show-macro');
+    if (nxShow) nxShow.addEventListener('change', function () {
+      if (!this.value) { S.visualMacro = ''; syncControls(); return; }
+      if (window.NXProPresets && NXProPresets.applyShowMacro) NXProPresets.applyShowMacro(this.value);
+    });
+
     var padComp = document.getElementById('pad-compact');
     if (padComp) padComp.addEventListener('change', function () { buildPads(); setActiveScene(S.curS); });
 
@@ -697,6 +796,18 @@
 
     /* Demo sequence via URL param */
     if (NX.demo) NX.demo.checkURL();
+
+    try {
+      var ps = new URLSearchParams(window.location.search);
+      if (ps.get('director') === '1' && NX.autoDirector) {
+        NX.autoDirector.enable();
+        var dbtn = document.getElementById('directorbtn');
+        if (dbtn) dbtn.classList.add('on');
+        S.autoMorph = false;
+        var autob = document.getElementById('autobtn');
+        if (autob) autob.classList.remove('on');
+      }
+    } catch (eDir) { /* ignore */ }
   }
 
   /* ---- Init -------------------------------------------------------- */
@@ -713,6 +824,7 @@
     syncControls();
     setActiveScene(S.curS);
     syncLiveMicUI();
+    updatePanelFab();
   }
 
   NX.ui = {
@@ -720,6 +832,7 @@
     syncControls: syncControls, setPalette: setPalette, syncLiveMicUI: syncLiveMicUI, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildProSelect: buildProSelect,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
     togglePresent: togglePresent, toggleRecording: toggleRecording,
+    togglePanelVisibility: togglePanelVisibility, updatePanelFab: updatePanelFab,
     refreshMidiMapPanel: refreshMidiMapPanel, openMidiMapPanel: openMidiMapPanel, closeMidiMapPanel: closeMidiMapPanel
   };
 })();
