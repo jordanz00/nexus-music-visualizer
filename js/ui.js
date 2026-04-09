@@ -95,7 +95,11 @@
     if (!sel || !NX.PresetLibrary) return;
     while (sel.childNodes.length > 1) sel.removeChild(sel.lastChild);
     var n = NX.PresetLibrary.getKeys().length;
-    if (!n) { console.warn('No Butterchurn presets — check vendor/butterchurnPresetsMinimal.min.js'); return; }
+    if (!n) {
+      var nb = window.NexusBrand && window.NexusBrand.spectrumProductName ? window.NexusBrand.spectrumProductName : 'Aurora Field';
+      console.warn('No ' + nb + ' presets loaded — add vendor butterchurn preset bundles (see README).');
+      return;
+    }
     ['ambient', 'heavy', 'psychedelic', 'glitch', 'other'].forEach(function (cat) {
       var ks = NX.PresetLibrary.byCategory[cat];
       if (!ks || !ks.length) return;
@@ -503,7 +507,7 @@
       }
     });
 
-    /* Nexus Engine — visual stack + Butterchurn */
+    /* Nexus Engine — visual stack + Aurora Field (Butterchurn-backed) */
     var nxMode = document.getElementById('nx-visual-mode');
     if (nxMode) {
       nxMode.value = S.visualMode || 'shader';
@@ -647,6 +651,16 @@
   }
 
   /* ---- Init -------------------------------------------------------- */
+  function collapseNonPriorityAccordionsOnNarrow() {
+    try {
+      if (typeof window.matchMedia !== 'function') return;
+      if (!window.matchMedia('(max-width: 768px)').matches) return;
+      document.querySelectorAll('details.nx-acc.nx-collapsible-sm').forEach(function (d) {
+        d.removeAttribute('open');
+      });
+    } catch (e) { /* ignore */ }
+  }
+
   function init() {
     buildPads();
     buildPresets();
@@ -657,6 +671,7 @@
     wireEvents();
     syncControls();
     setActiveScene(S.curS);
+    collapseNonPriorityAccordionsOnNarrow();
   }
 
   NX.ui = {

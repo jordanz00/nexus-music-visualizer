@@ -49,7 +49,9 @@ window.NX = window.NX || {};
     /** When set, main loop composites layers into #c-rec for export resolution */
     recCompositeDims: null,
     /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
-    bcLastPresetKey: ''
+    bcLastPresetKey: '',
+    /** True on iPhone/iPad: coarser pointer smoothing + GPU-friendly caps */
+    _iosCoarsePointer: false
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -60,6 +62,17 @@ window.NX = window.NX || {};
 
   /* ---- canvas / resize --------------------------------------------- */
   var rawW = 0, rawH = 0, maxDpr = 2, renderScale = 0.78, pendingRenderScale = null;
+
+  (function nexusIOSProfile() {
+    var ua = navigator.userAgent || '';
+    var iOS = /iP(ad|hone|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    S._iosCoarsePointer = !!iOS;
+    if (iOS) {
+      maxDpr = Math.min(maxDpr, 1.75);
+      renderScale = Math.min(renderScale, 0.66);
+      document.documentElement.classList.add('nexus-ios');
+    }
+  })();
 
   function resize() {
     var capDpr = S.nexusPerfLock ? Math.min(maxDpr, 1) : maxDpr;
@@ -77,6 +90,10 @@ window.NX = window.NX || {};
     if (NX.VisualEngineManager && NX.VisualEngineManager.resize) NX.VisualEngineManager.resize();
   }
   addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 300); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+  }
 
   function applyRenderScaleOnly(next) {
     next = Math.max(0.42, Math.min(1, next));
@@ -84,9 +101,10 @@ window.NX = window.NX || {};
     renderScale = next; rebuildFBOs();
   }
   function setQualityPreset(mode) {
+    var cap = S._iosCoarsePointer ? 1.75 : 2;
     if (mode === 'perf') { maxDpr = 1.25; pendingRenderScale = 0.52; }
-    else if (mode === 'ultra') { maxDpr = 2; pendingRenderScale = 1; }
-    else { maxDpr = 2; pendingRenderScale = 0.78; }
+    else if (mode === 'ultra') { maxDpr = cap; pendingRenderScale = S._iosCoarsePointer ? 0.74 : 1; }
+    else { maxDpr = cap; pendingRenderScale = S._iosCoarsePointer ? 0.66 : 0.78; }
     resize();
   }
   function getRenderScale() { return renderScale; }
@@ -294,8 +312,9 @@ window.NX = window.NX || {};
     S._emaFps += 0.15 * (instFps - S._emaFps);
     tickAdaptiveFps(dt);
     if (NX.audio && NX.audio.tick) NX.audio.tick();
-    S.mouseSmooth[0] += (S.mouseRaw[0] - S.mouseSmooth[0]) * 0.05;
-    S.mouseSmooth[1] += (S.mouseRaw[1] - S.mouseSmooth[1]) * 0.05;
+    var mxAlpha = S._iosCoarsePointer ? 0.11 : 0.05;
+    S.mouseSmooth[0] += (S.mouseRaw[0] - S.mouseSmooth[0]) * mxAlpha;
+    S.mouseSmooth[1] += (S.mouseRaw[1] - S.mouseSmooth[1]) * mxAlpha;
     if (!fbA[0] || !fbB[0]) return;
 
     if (NX.ui && NX.ui.tickHud) NX.ui.tickHud(S);
@@ -365,9 +384,52 @@ window.NX = window.NX || {};
     }
   }
 
-  /* ---- Mouse / touch ----------------------------------------------- */
-  document.addEventListener('mousemove', function (e) { S.mouseRaw[0] = e.clientX / innerWidth * 2 - 1; S.mouseRaw[1] = -(e.clientY / innerHeight * 2 - 1); });
-  document.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.touches[0]; S.mouseRaw[0] = t.clientX / innerWidth * 2 - 1; S.mouseRaw[1] = -(t.clientY / innerHeight * 2 - 1); }, { passive: false });
+  /* ---- Pointer / touch → MX (canvas bounds; no document touchmove — keeps panel scroll on iOS) */
+  function pointerToNorm(clientX, clientY, el) {
+    var rect = el.getBoundingClientRect();
+    var rw = rect.width;
+    var rh = rect.height;
+    if (rw < 4 || rh < 4) return;
+    var nx = (clientX - rect.left) / rw * 2 - 1;
+    var ny = -((clientY - rect.top) / rh * 2 - 1);
+    S.mouseRaw[0] = nx < -1 ? -1 : (nx > 1 ? 1 : nx);
+    S.mouseRaw[1] = ny < -1 ? -1 : (ny > 1 ? 1 : ny);
+  }
+
+  document.addEventListener('mousemove', function (e) {
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
+    pointerToNorm(e.clientX, e.clientY, C);
+  }, { passive: true });
+
+  if (window.PointerEvent) {
+    C.addEventListener('pointerdown', function (e) {
+      pointerToNorm(e.clientX, e.clientY, C);
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        try { C.setPointerCapture(e.pointerId); } catch (err) { }
+      }
+    }, { passive: true });
+    C.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'mouse') return;
+      pointerToNorm(e.clientX, e.clientY, C);
+    }, { passive: true });
+    C.addEventListener('pointerup', function (e) {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        try { C.releasePointerCapture(e.pointerId); } catch (err2) { }
+      }
+    }, { passive: true });
+    C.addEventListener('pointercancel', function (e) {
+      try { C.releasePointerCapture(e.pointerId); } catch (err3) { }
+    }, { passive: true });
+  } else {
+    function legacyCanvasTouch(ev) {
+      if (!ev.touches || ev.touches.length !== 1) return;
+      var t = ev.touches[0];
+      pointerToNorm(t.clientX, t.clientY, C);
+      if (ev.type === 'touchmove') ev.preventDefault();
+    }
+    C.addEventListener('touchstart', legacyCanvasTouch, { passive: true });
+    C.addEventListener('touchmove', legacyCanvasTouch, { passive: false });
+  }
 
   /* ---- Public API -------------------------------------------------- */
   NX.gl = gl;

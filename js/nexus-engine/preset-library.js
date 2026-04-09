@@ -76,7 +76,8 @@
     if (window.NXBcShowcase && typeof NXBcShowcase.resolve === 'function') {
       showcase = NXBcShowcase.resolve(keys);
     }
-    console.log('PresetLibrary: ' + keys.length + ' MilkDrop presets (Butterchurn)');
+    var label = (typeof window !== 'undefined' && window.NexusBrand && window.NexusBrand.spectrumShortName) ? window.NexusBrand.spectrumShortName : 'Aurora';
+    console.log('PresetLibrary: ' + keys.length + ' MilkDrop-format presets (' + label + ' / Butterchurn)');
     return true;
   }
 

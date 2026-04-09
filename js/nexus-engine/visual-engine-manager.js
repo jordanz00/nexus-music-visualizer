@@ -43,7 +43,7 @@
     try {
       viz.connectAudio(feed);
       connectedNode = feed;
-    } catch (e) { console.warn('Butterchurn connectAudio:', e.message); }
+    } catch (e) { console.warn('Aurora Field connectAudio:', e.message); }
   }
 
   function initVisualizer() {
@@ -51,7 +51,7 @@
     var BC = getBC();
     canvas = document.getElementById('c-bc');
     if (!BC || !canvas || !BC.createVisualizer) {
-      console.warn('Butterchurn not loaded or unsupported');
+      console.warn('Aurora Field engine not loaded (Butterchurn missing or unsupported)');
       return false;
     }
     if (!S.audioCtx) return false;
@@ -68,7 +68,7 @@
       connectAudio();
       return true;
     } catch (e) {
-      console.warn('Butterchurn init failed:', e.message);
+      console.warn('Aurora Field init failed:', e.message);
       viz = null;
       return false;
     }

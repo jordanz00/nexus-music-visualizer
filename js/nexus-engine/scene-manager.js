@@ -77,7 +77,7 @@
       }
       if (NX.audio && NX.audio.primeForButterchurn) {
         NX.audio.primeForButterchurn().then(primeBC).catch(function (err) {
-          console.warn('Butterchurn audio:', err && err.message);
+          console.warn('Aurora Field audio graph:', err && err.message);
         });
       }
     }
