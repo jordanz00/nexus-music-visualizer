@@ -159,7 +159,11 @@
       if (!S.prevFreqFlux || S.prevFreqFlux.length !== S.bufLen) S.prevFreqFlux = new Uint8Array(S.bufLen);
       var fluxRaw = 0;
       for (var fi = 2; fi < S.bufLen; fi++) { var d = S.freqArr[fi] - S.prevFreqFlux[fi]; if (d > 0) fluxRaw += d; S.prevFreqFlux[fi] = S.freqArr[fi]; }
-      S.sFlux += (Math.min(1, fluxRaw / (S.bufLen * 0.42)) - S.sFlux) * 0.52;
+      if (S.micOn) {
+        S.sFlux += (Math.min(1, fluxRaw / (S.bufLen * 0.42)) - S.sFlux) * 0.52;
+      } else {
+        S.sFlux += (0 - S.sFlux) * 0.32;
+      }
       var i1 = Math.floor(S.bufLen * .02), i2 = Math.floor(S.bufLen * .08), i2b = Math.floor(S.bufLen * .14);
       var i3 = Math.floor(S.bufLen * .32), i4 = Math.floor(S.bufLen * .72);
       var iLm1 = Math.floor((i2 + i3) * 0.5);
@@ -172,38 +176,64 @@
       for (var i = 0; i < i4; i++) vv += S.freqArr[i];
       var cNum = 0, cDen = 1;
       for (var ci = i2; ci < i4; ci++) { cNum += S.freqArr[ci] * ci; cDen += S.freqArr[ci]; }
-      S.sCent += (((cNum / Math.max(1, cDen)) / S.bufLen) - S.sCent) * 0.28;
+      if (S.micOn) {
+        S.sCent += (((cNum / Math.max(1, cDen)) / S.bufLen) - S.sCent) * 0.28;
+      } else {
+        S.sCent += (0.35 - S.sCent) * 0.12;
+      }
       var mb = Math.min(1, (bv / ((i2 - i1) * 255)) * s * 4.2);
       mb = Math.max(mb, (bv2 / ((i2b - i2) * 255 || 1)) * s * 2.6);
       var mm = Math.min(1, (mv / ((i3 - i2) * 255)) * s * 3.5);
       var mlm = Math.min(1, (lmv / (Math.max(1, (iLm1 - i2b)) * 255)) * s * 3.35);
       var mh = Math.min(1, (hv / ((i4 - i3) * 255)) * s * 3.25);
       var mv2 = Math.min(1, (vv / (i4 * 255)) * s * 2.85);
-      var blend = Math.min(1, mv2 * 2.4);
       var atk = mb - S.prevMbRaw; S.prevMbRaw = mb;
-      if (atk > 0.14 && mb > 0.18) S.beat = Math.max(S.beat, 0.92);
-      if (atk > 0.22 && mb > 0.28) S.beat = Math.max(S.beat, 1.12);
-      S.sBass += (Math.max(demo.bass * (1 - blend), mb) - S.sBass) * .4;
-      S.sLowMid += (mlm - S.sLowMid) * 0.38;
-      S.sMid += (Math.max(demo.mid * (1 - blend), mm) - S.sMid) * .36;
-      S.sHigh += (Math.max(demo.high * (1 - blend), mh) - S.sHigh) * .34;
-      S.sVol += (Math.max(demo.vol * (1 - blend), mv2) - S.sVol) * .32;
+      /* Beat triggers only from real input (not demo / silent graph noise). */
+      if (S.micOn) {
+        if (atk > 0.14 && mb > 0.18) S.beat = Math.max(S.beat, 0.92);
+        if (atk > 0.22 && mb > 0.28) S.beat = Math.max(S.beat, 1.12);
+      }
+      /*
+       * Meters + shader texture: never mix demo synth when an analyser exists.
+       * Demo ran whenever mv2 was low → fake “music” on meters with no mic/silence.
+       * With mic off (Butterchurn-only silent graph), damp meters to zero — FFT floor is not “audio”.
+       */
+      var dampIdle = 0.32;
+      if (S.micOn) {
+        S.sBass += (mb - S.sBass) * .4;
+        S.sLowMid += (mlm - S.sLowMid) * 0.38;
+        S.sMid += (mm - S.sMid) * .36;
+        S.sHigh += (mh - S.sHigh) * .34;
+        S.sVol += (mv2 - S.sVol) * .32;
+      } else {
+        S.sBass += (0 - S.sBass) * dampIdle;
+        S.sLowMid += (0 - S.sLowMid) * dampIdle;
+        S.sMid += (0 - S.sMid) * dampIdle;
+        S.sHigh += (0 - S.sHigh) * dampIdle;
+        S.sVol += (0 - S.sVol) * dampIdle;
+      }
       var step = Math.floor(S.bufLen / 256);
       var bvA = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.5;
       for (var i = 0; i < 256; i++) abuf[i] = Math.min(255, Math.floor((S.freqArr[i * step] || 0) * (1 + S.sBass * 0.32 + bvA * 0.1)));
       for (var i = 0; i < 256; i++) abuf[256 + i] = S.waveArr[i * step] || 128;
-      /* Real-input-only metrics for Butterchurn (shader still uses demo blend above when quiet). */
-      S.micEnergy = Math.min(1, mb * 0.5 + mm * 0.24 + mh * 0.11 + mv2 * 0.36);
-      var rmsW = rmsWave8(S.waveArr);
-      var rFloor = 0.0055, rSpan = 0.07;
-      var linG = (rmsW - rFloor) / rSpan;
-      if (linG < 0) linG = 0; else if (linG > 1) linG = 1;
-      var tgtGate = Math.pow(linG, 0.72);
-      var go = typeof S._bcGateOpen === 'number' ? S._bcGateOpen : 0;
-      if (tgtGate > go) go += (tgtGate - go) * 0.42;
-      else go += (tgtGate - go) * 0.065;
-      S._bcGateOpen = go;
-      if (S.bcGateNode) S.bcGateNode.gain.value = go;
+      /* Butterchurn gate + micEnergy only when mic is live. */
+      if (S.micOn) {
+        S.micEnergy = Math.min(1, mb * 0.5 + mm * 0.24 + mh * 0.11 + mv2 * 0.36);
+        var rmsW = rmsWave8(S.waveArr);
+        var rFloor = 0.0055, rSpan = 0.07;
+        var linG = (rmsW - rFloor) / rSpan;
+        if (linG < 0) linG = 0; else if (linG > 1) linG = 1;
+        var tgtGate = Math.pow(linG, 0.72);
+        var go = typeof S._bcGateOpen === 'number' ? S._bcGateOpen : 0;
+        if (tgtGate > go) go += (tgtGate - go) * 0.42;
+        else go += (tgtGate - go) * 0.065;
+        S._bcGateOpen = go;
+        if (S.bcGateNode) S.bcGateNode.gain.value = go;
+      } else {
+        S.micEnergy = 0;
+        S._bcGateOpen = 0;
+        if (S.bcGateNode) S.bcGateNode.gain.value = 0;
+      }
     } else {
       S.micEnergy = 0;
       S._bcGateOpen = 0;
@@ -223,7 +253,7 @@
     gl.bindTexture(gl.TEXTURE_2D, atex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 512, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, abuf);
 
-    if (S.sBass > 0.38 && S.prevBass < 0.26) {
+    if (S.micOn && S.sBass > 0.38 && S.prevBass < 0.26) {
       var now = performance.now(), gap = now - S.lastBeat;
       if (gap > 180 && gap < 2800) {
         S.bpmList.push(60000 / gap); if (S.bpmList.length > 8) S.bpmList.shift();
