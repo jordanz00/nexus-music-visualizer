@@ -7,7 +7,7 @@
 var H = NX.HEAD;
 
 /* 1. VORTEX ENGINE — spinning stacked torus rings + central sphere */
-NX.registerScene({n:'VORTEX ENGINE',c:'#ff6d00',fs:H+[
+NX.registerScene({n:'VORTEX ENGINE',rx:2,c:'#ff6d00',fs:H+[
 'float map(vec3 p){',
 '  float d=sdSph(p,.6+B*.2);',
 '  for(int i=0;i<6;i++){',
@@ -43,7 +43,7 @@ NX.registerScene({n:'VORTEX ENGINE',c:'#ff6d00',fs:H+[
 ].join('\n')});
 
 /* 3. PLASMA SPHERE — nested shells with surface ripples, energy arcs */
-NX.registerScene({n:'PLASMA SPHERE',c:'#1de9b6',fs:H+[
+NX.registerScene({n:'PLASMA SPHERE',rx:2,c:'#1de9b6',fs:H+[
 'float map(vec3 p){',
 '  float r=length(p);',
 '  float d=abs(r-2.-.3*sin(r*6.-T*3.)*B)-.05;',
@@ -82,7 +82,7 @@ NX.registerScene({n:'PLASMA SPHERE',c:'#1de9b6',fs:H+[
 ].join('\n')});
 
 /* 4. ALIEN MONOLITH — tall obelisk with carved surface + orbiting orbs */
-NX.registerScene({n:'ALIEN MONOLITH',c:'#d500f9',fs:H+[
+NX.registerScene({n:'ALIEN MONOLITH',rx:2,c:'#d500f9',fs:H+[
 'float map(vec3 p){',
 '  vec3 q=p;q.y-=3.;float taper=1.-.06*q.y;',
 '  float ob=sdBox(q,vec3(.7*taper,4.,.35*taper));',

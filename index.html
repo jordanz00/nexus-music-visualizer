@@ -101,165 +101,185 @@
   <ul id="midi-map-list" class="midi-map-list"></ul>
 </div>
 
-<!-- ── BOTTOM PANEL ───────────────────────────────────────────────── -->
-<div id="panel" class="hide">
+<!-- ── BOTTOM PANEL (tabbed: iOS-first) ───────────────────────────── -->
+<div id="panel" class="hide nx-app-panel">
+  <div class="nx-panel-scroll">
 
-  <details class="nx-acc nx-collapsible-sm" open>
-    <summary class="nx-acc-sum">Scenes <span class="nx-acc-tag">WebGL</span></summary>
-    <div class="nx-acc-body">
+    <section id="nx-tab-live" class="nx-tab-panel nx-tab-active" role="tabpanel" aria-hidden="false">
+      <p class="nx-tab-lead">Live perform — mic drives WebGL and Aurora. Use <strong>Punchy</strong> for maximum snap; <strong>Smooth</strong> for calmer rooms.</p>
+      <div class="live-react-row">
+        <span class="nx-field-label">Reactivity</span>
+        <div class="nx-pill-group" role="group" aria-label="Reactivity preset">
+          <button type="button" class="nx-react-pill nx-react-pill-on" data-profile="punchy">Punchy</button>
+          <button type="button" class="nx-react-pill" data-profile="balanced">Balanced</button>
+          <button type="button" class="nx-react-pill" data-profile="smooth">Smooth</button>
+        </div>
+      </div>
+      <button type="button" class="live-mic-big" id="live-mic-big">Microphone on</button>
+      <p class="live-mic-status" id="live-mic-status">Mic off — tap to enable</p>
+      <div class="live-peak-label">Input level</div>
+      <div class="live-peak-wrap" aria-hidden="true"><div class="live-peak-fill" id="live-peak-fill"></div></div>
+      <p class="nx-tab-hint safari-hint">Safari iOS: allow microphone when prompted. If levels stay flat, open the <strong>Audio</strong> tab and raise Gain or Trim.</p>
+    </section>
+
+    <section id="nx-tab-audio" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <h3 class="nx-section-title">Engine</h3>
+      <div class="panel-row">
+        <div class="ctrl-group">
+          <span class="g-label">Motion</span>
+          <div class="ctrl-slider"><label>Speed</label><input type="range" id="rspd" min="0" max="10" value="5"><span class="val">5</span></div>
+          <div class="ctrl-slider"><label>React</label><input type="range" id="rrct" min="0" max="10" value="7"><span class="val">7</span></div>
+          <div class="ctrl-slider"><label>Warp</label><input type="range" id="rwrp" min="0" max="10" value="5"><span class="val">5</span></div>
+          <div class="ctrl-slider"><label>Morph</label><input type="range" id="rmorph" min="6" max="42" value="14"><span class="val">14</span></div>
+        </div>
+      </div>
+      <h3 class="nx-section-title">Input</h3>
+      <div class="panel-row">
+        <div class="ctrl-group">
+          <span class="g-label">Audio</span>
+          <div class="ctrl-slider"><label>Gain</label><input type="range" id="rgain" min="20" max="300" value="100"><span class="val">100</span></div>
+          <div class="ctrl-slider"><label>Trim</label><input type="range" id="rtrim" min="50" max="200" value="100" title="Extra sensitivity for quiet sources (×0.5–2)"><span class="val">100</span></div>
+          <div class="ctrl-slider"><label>Smooth</label><input type="range" id="rsmth" min="10" max="95" value="58"><span class="val">58</span></div>
+          <label class="nx-inline nx-profile-inline">Profile <select id="nx-react-profile" class="preset-select" title="Mic reactivity preset" aria-label="Reactivity profile">
+            <option value="punchy" selected>Punchy</option>
+            <option value="balanced">Balanced</option>
+            <option value="smooth">Smooth</option>
+          </select></label>
+        </div>
+      </div>
+      <div class="panel-row">
+        <div id="meters">
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-bass"></div></div><span class="meter-label">B</span></div>
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-lowmid"></div></div><span class="meter-label">LM</span></div>
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-mid"></div></div><span class="meter-label">M</span></div>
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-high"></div></div><span class="meter-label">H</span></div>
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-flux"></div></div><span class="meter-label">Fx</span></div>
+          <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-vol"></div></div><span class="meter-label">V</span></div>
+        </div>
+      </div>
+      <div class="panel-row">
+        <div class="pal-row">
+          <span class="g-label" style="width:auto">Palette</span>
+          <div class="pal-sw on" data-p="0" style="background:linear-gradient(135deg,#2196f3,#e91e63)" title="Spectrum"></div>
+          <div class="pal-sw" data-p="1" style="background:linear-gradient(135deg,#ff9100,#f44336)" title="Fire"></div>
+          <div class="pal-sw" data-p="2" style="background:linear-gradient(135deg,#00e676,#00bcd4)" title="Matrix"></div>
+          <div class="pal-sw" data-p="3" style="background:linear-gradient(135deg,#e040fb,#651fff)" title="Neon"></div>
+          <div class="pal-sw" data-p="4" style="background:linear-gradient(135deg,#78909c,#37474f)" title="Mono"></div>
+          <div class="pal-sw" data-p="5" style="background:linear-gradient(135deg,#ffd600,#ff6d00)" title="Gold"></div>
+        </div>
+        <div class="ctrl-slider"><label>Hue</label><input type="range" id="r-hue" min="-100" max="100" value="0" title="Global hue shift (post)"><span class="val">0</span></div>
+      </div>
+    </section>
+
+    <section id="nx-tab-scenes" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <h3 class="nx-section-title">WebGL scenes</h3>
       <div class="panel-row pad-toolbar">
-        <label class="nx-inline"><input type="checkbox" id="pad-compact"> Show first 16 only</label>
+        <label class="nx-inline"><input type="checkbox" id="pad-compact"> First 16 only</label>
       </div>
       <div id="scene-grid" class="scene-grid-wrap"></div>
-    </div>
-  </details>
+    </section>
 
-  <details class="nx-acc nx-collapsible-sm" open>
-    <summary class="nx-acc-sum">Engine &amp; audio</summary>
-    <div class="nx-acc-body">
-  <!-- Controls row 1: Engine -->
-  <div class="panel-row">
-    <div class="ctrl-group">
-      <span class="g-label">Engine</span>
-      <div class="ctrl-slider"><label>Speed</label><input type="range" id="rspd" min="0" max="10" value="5"><span class="val">5</span></div>
-      <div class="ctrl-slider"><label>React</label><input type="range" id="rrct" min="0" max="10" value="7"><span class="val">7</span></div>
-      <div class="ctrl-slider"><label>Warp</label><input type="range" id="rwrp" min="0" max="10" value="5"><span class="val">5</span></div>
-      <div class="ctrl-slider"><label>Morph</label><input type="range" id="rmorph" min="6" max="42" value="14"><span class="val">14</span></div>
-    </div>
+    <section id="nx-tab-aurora" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <h3 class="nx-section-title">Aurora Field <span class="nx-acc-tag">Hybrid</span></h3>
+      <div class="panel-row nexus-row">
+        <div class="ctrl-group nexus-group">
+          <span class="g-label">Stack</span>
+          <label class="nx-inline">Visual <select id="nx-visual-mode" class="preset-select" title="Output stack: WebGL, Aurora Field, or both">
+            <option value="shader">Shader (WebGL)</option>
+            <option value="butterchurn">Aurora Field</option>
+            <option value="hybrid" selected>Hybrid (WebGL + Aurora)</option>
+          </select></label>
+          <label class="nx-inline">Aurora blend <input type="range" id="bc-blend" min="5" max="50" value="20" title="Spectrum preset crossfade duration (×0.1s)"></label>
+          <label class="nx-inline" title="BPM-aware spectrum morph (Aurora Field or Hybrid)"><input type="checkbox" id="bc-auto-morph"> Auto morph</label>
+          <select id="bc-morph-pool" class="preset-select" style="min-width:108px" title="Preset pool for auto morph">
+            <option value="all" selected>Pool: All</option>
+            <option value="psychedelic">Psychedelic</option>
+            <option value="heavy">Heavy</option>
+            <option value="ambient">Ambient</option>
+            <option value="glitch">Glitch</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="bc-morph-beats" class="preset-select" style="min-width:92px" title="Beats between morphs (4/4)">
+            <option value="16">16 beats</option>
+            <option value="24">24 beats</option>
+            <option value="32" selected>32 beats</option>
+            <option value="48">48 beats</option>
+            <option value="64">64 beats</option>
+            <option value="96">96 beats</option>
+          </select>
+          <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
+          <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
+          <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
+        </div>
+        <div class="ctrl-group nexus-group flex-grow">
+          <span class="g-label">Spectra</span>
+          <select id="bc-showcase-sel" class="preset-select" style="min-width:160px" title="Curated Aurora showcase"><option value="">— Showcase —</option></select>
+          <select id="pro-genre-filter" class="preset-select" style="min-width:100px" title="Filter hybrid presets by genre">
+            <option value="all" selected>All</option>
+            <option value="Trance">Trance</option>
+            <option value="Techno">Techno</option>
+            <option value="Ambient">Ambient</option>
+            <option value="EDM">EDM</option>
+            <option value="Glitch">Glitch</option>
+          </select>
+          <select id="bc-pro-sel" class="preset-select wide-select" style="min-width:220px" title="Pro hybrid looks"><option value="">— Pro (hybrid) —</option></select>
+          <select id="bc-preset-sel" class="preset-select wide-select" title="All pack presets"><option value="">— All presets —</option></select>
+          <button type="button" class="sm-btn nx-touch-btn" id="bc-random" title="Random spectrum preset from library">Random</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="nx-tab-more" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <h3 class="nx-section-title">Output &amp; presets</h3>
+      <div class="panel-row">
+        <div class="ctrl-group">
+          <span class="g-label">Output</span>
+          <select id="qsel" class="preset-select" style="min-width:90px">
+            <option value="perf">Performance</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </div>
+        <div class="preset-row">
+          <span class="g-label" style="width:auto">Preset</span>
+          <select id="preset-sel" class="preset-select"></select>
+          <button type="button" class="sm-btn" id="save-preset">Save</button>
+        </div>
+      </div>
+      <div class="panel-row">
+        <span class="g-label" style="width:auto">DJ style</span>
+        <select id="nx-visual-style" class="preset-select" style="min-width:140px" title="Macro: speed, react, morph, stack mode">
+          <option value="" selected>— Style —</option>
+          <option value="trance">Trance</option>
+          <option value="techno">Techno</option>
+          <option value="ambient">Ambient</option>
+          <option value="edm">EDM</option>
+          <option value="glitch">Glitch</option>
+        </select>
+      </div>
+      <details class="nx-acc nx-acc-credits nx-acc-inline">
+        <summary class="nx-acc-sum">Credits &amp; open source</summary>
+        <div class="nx-acc-body nx-credits-body">
+          <p class="nx-credits-lead">NEXUS Engine Pro pairs real-time WebGL scenes with a full <strong>MilkDrop</strong>-class spectrum library under the product name <strong>Aurora Field</strong>.</p>
+          <p><strong>Aurora Field</strong> is implemented with the open-source <strong>Butterchurn</strong> engine (MIT License). Preset authorship belongs to original MilkDrop artists and community pack maintainers.</p>
+          <ul class="nx-credits-list">
+            <li><a href="https://github.com/jberg/butterchurn" target="_blank" rel="noopener noreferrer">Butterchurn</a> — WebGL MilkDrop preset player</li>
+            <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
+          </ul>
+          <p class="nx-credits-note">Internal mode values may still read <code>butterchurn</code> for compatibility.</p>
+        </div>
+      </details>
+    </section>
+
   </div>
 
-  <!-- Controls row 2: Audio -->
-  <div class="panel-row">
-    <div class="ctrl-group">
-      <span class="g-label">Audio</span>
-      <div class="ctrl-slider"><label>Gain</label><input type="range" id="rgain" min="20" max="300" value="100"><span class="val">100</span></div>
-      <div class="ctrl-slider"><label>Smooth</label><input type="range" id="rsmth" min="10" max="95" value="58"><span class="val">58</span></div>
-    </div>
-
-    <!-- Audio meters -->
-    <div id="meters">
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-bass"></div></div><span class="meter-label">B</span></div>
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-lowmid"></div></div><span class="meter-label">LM</span></div>
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-mid"></div></div><span class="meter-label">M</span></div>
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-high"></div></div><span class="meter-label">H</span></div>
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-flux"></div></div><span class="meter-label">Fx</span></div>
-      <div class="meter"><div class="meter-bar"><div class="meter-fill" id="m-vol"></div></div><span class="meter-label">V</span></div>
-    </div>
-
-    <!-- Palette -->
-    <div class="pal-row">
-      <span class="g-label" style="width:auto">Palette</span>
-      <div class="pal-sw on" data-p="0" style="background:linear-gradient(135deg,#2196f3,#e91e63)" title="Spectrum"></div>
-      <div class="pal-sw" data-p="1" style="background:linear-gradient(135deg,#ff9100,#f44336)" title="Fire"></div>
-      <div class="pal-sw" data-p="2" style="background:linear-gradient(135deg,#00e676,#00bcd4)" title="Matrix"></div>
-      <div class="pal-sw" data-p="3" style="background:linear-gradient(135deg,#e040fb,#651fff)" title="Neon"></div>
-      <div class="pal-sw" data-p="4" style="background:linear-gradient(135deg,#78909c,#37474f)" title="Mono"></div>
-      <div class="pal-sw" data-p="5" style="background:linear-gradient(135deg,#ffd600,#ff6d00)" title="Gold"></div>
-    </div>
-    <div class="ctrl-slider"><label>Hue</label><input type="range" id="r-hue" min="-100" max="100" value="0" title="Global hue shift (post)"><span class="val">0</span></div>
-  </div>
-    </div>
-  </details>
-
-  <details class="nx-acc nx-collapsible-sm" open>
-    <summary class="nx-acc-sum">Output &amp; presets</summary>
-    <div class="nx-acc-body">
-  <!-- Controls row 3: Output + Presets -->
-  <div class="panel-row">
-    <div class="ctrl-group">
-      <span class="g-label">Output</span>
-      <span style="font-size:9px;letter-spacing:.08em;color:rgba(0,229,255,.4)">GPU</span>
-      <select id="qsel" class="preset-select" style="min-width:90px">
-        <option value="perf">Performance</option>
-        <option value="balanced" selected>Balanced</option>
-        <option value="ultra">Ultra</option>
-      </select>
-    </div>
-    <div class="preset-row">
-      <span class="g-label" style="width:auto">Preset</span>
-      <select id="preset-sel" class="preset-select"></select>
-      <button class="sm-btn" id="save-preset">Save</button>
-    </div>
-    <div class="preset-row" style="margin-top:8px;flex-wrap:wrap;gap:8px">
-      <span class="g-label" style="width:auto">DJ style</span>
-      <select id="nx-visual-style" class="preset-select" style="min-width:140px" title="Macro: speed, react, morph, stack mode">
-        <option value="" selected>— Style —</option>
-        <option value="trance">Trance</option>
-        <option value="techno">Techno</option>
-        <option value="ambient">Ambient</option>
-        <option value="edm">EDM</option>
-        <option value="glitch">Glitch</option>
-      </select>
-    </div>
-  </div>
-    </div>
-  </details>
-
-  <details class="nx-acc nx-acc-aurora" open>
-    <summary class="nx-acc-sum">Hybrid stack <span class="nx-acc-tag">Aurora Field</span></summary>
-    <div class="nx-acc-body">
-  <!-- Nexus Engine: visual stack + post FX -->
-  <div class="panel-row nexus-row">
-    <div class="ctrl-group nexus-group">
-      <span class="g-label">Nexus</span>
-      <label class="nx-inline">Visual <select id="nx-visual-mode" class="preset-select" title="Output stack: WebGL, Aurora Field, or both">
-        <option value="shader" selected>Shader (WebGL)</option>
-        <option value="butterchurn">Aurora Field</option>
-        <option value="hybrid">Hybrid (WebGL + Aurora)</option>
-      </select></label>
-      <label class="nx-inline">Aurora blend <input type="range" id="bc-blend" min="5" max="50" value="20" title="Spectrum preset crossfade duration (×0.1s)"></label>
-      <label class="nx-inline" title="BPM-aware spectrum morph (Aurora Field or Hybrid)"><input type="checkbox" id="bc-auto-morph"> Auto morph</label>
-      <select id="bc-morph-pool" class="preset-select" style="min-width:108px" title="Preset pool for auto morph">
-        <option value="all" selected>Pool: All</option>
-        <option value="psychedelic">Psychedelic</option>
-        <option value="heavy">Heavy</option>
-        <option value="ambient">Ambient</option>
-        <option value="glitch">Glitch</option>
-        <option value="other">Other</option>
-      </select>
-      <select id="bc-morph-beats" class="preset-select" style="min-width:92px" title="Beats between morphs (4/4)">
-        <option value="16">16 beats</option>
-        <option value="24">24 beats</option>
-        <option value="32" selected>32 beats</option>
-        <option value="48">48 beats</option>
-        <option value="64">64 beats</option>
-        <option value="96">96 beats</option>
-      </select>
-      <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
-      <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
-      <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
-    </div>
-    <div class="ctrl-group nexus-group flex-grow">
-      <span class="g-label">Spectra</span>
-      <select id="bc-showcase-sel" class="preset-select" style="min-width:160px" title="Curated Aurora showcase (e.g. Castle in the Air when the full pack is loaded)"><option value="">— Showcase —</option></select>
-      <select id="pro-genre-filter" class="preset-select" style="min-width:100px" title="Filter hybrid presets by genre">
-        <option value="all" selected>All</option>
-        <option value="Trance">Trance</option>
-        <option value="Techno">Techno</option>
-        <option value="Ambient">Ambient</option>
-        <option value="EDM">EDM</option>
-        <option value="Glitch">Glitch</option>
-      </select>
-      <select id="bc-pro-sel" class="preset-select wide-select" style="min-width:220px" title="Pro hybrid looks: curated Aurora × shader variants by genre"><option value="">— Pro (hybrid) —</option></select>
-      <select id="bc-preset-sel" class="preset-select wide-select" title="All pack presets"><option value="">— All presets —</option></select>
-      <button type="button" class="sm-btn nx-touch-btn" id="bc-random" title="Random spectrum preset from library">Random</button>
-    </div>
-  </div>
-    </div>
-  </details>
-
-  <details class="nx-acc nx-acc-credits">
-    <summary class="nx-acc-sum">Credits &amp; open source</summary>
-    <div class="nx-acc-body nx-credits-body">
-      <p class="nx-credits-lead">NEXUS Engine Pro pairs real-time WebGL scenes with a full <strong>MilkDrop</strong>-class spectrum library under the product name <strong>Aurora Field</strong>.</p>
-      <p><strong>Aurora Field</strong> is implemented with the open-source <strong>Butterchurn</strong> engine (MIT License). Preset authorship belongs to original MilkDrop artists and community pack maintainers. NEXUS does not claim ownership of third-party presets.</p>
-      <ul class="nx-credits-list">
-        <li><a href="https://github.com/jberg/butterchurn" target="_blank" rel="noopener noreferrer">Butterchurn</a> — WebGL MilkDrop preset player</li>
-        <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
-      </ul>
-      <p class="nx-credits-note">Internal mode values and vendor filenames may still read <code>butterchurn</code> for compatibility; the in-app label is Aurora Field.</p>
-    </div>
-  </details>
+  <nav class="nx-tabbar" role="tablist" aria-label="Main sections">
+    <button type="button" class="nx-tab-btn nx-tab-on" role="tab" data-tab="live" aria-selected="true">Live</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="audio" aria-selected="false">Audio</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="scenes" aria-selected="false">Scenes</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="aurora" aria-selected="false">Aurora</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="more" aria-selected="false">More</button>
+  </nav>
 </div>
 
 <!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
@@ -294,6 +314,7 @@
 <script src="js/watermark.js"></script>
 <script src="js/auto-director.js"></script>
 <script src="js/demo-director.js"></script>
+<script src="js/nexus-shell.js"></script>
 <script src="js/ui.js"></script>
 <script>
 /* ── Bootstrap: compile, wire, run ─────────────────────────────────── */

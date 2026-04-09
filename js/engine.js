@@ -29,6 +29,14 @@ window.NX = window.NX || {};
     _bcGateOpen: 0,
     /** 0–1 energy from real FFT (mic); BC intensity / morph. */
     micEnergy: 0,
+    /** 0–1 crest / transient follower (time-domain vs slow RMS). */
+    sTransient: 0,
+    /** Slow RMS for transient detection (internal). */
+    _rmsSlow: 0,
+    /** 0–1 visual Aurora drive — not gated like raw BC audio tap. */
+    _visualBcDrive: 0,
+    /** punchy | balanced | smooth — mic reactivity preset. */
+    reactivityProfile: 'punchy',
     /** 0–1 smoothed: how much motion/post follows live input (calm when silent / no mic). */
     _visualDrive: 0,
     curDev: '',
@@ -38,7 +46,7 @@ window.NX = window.NX || {};
     morphDurationSec: 1.4, showFpsOverlay: false, presentMode: false,
     adaptiveGpu: false, uiHide: false, recording: false,
     /* Nexus Engine — hybrid Butterchurn + shader */
-    visualMode: 'shader',
+    visualMode: 'hybrid',
     nexusPerfLock: false,
     nexusPostBloom: true,
     nexusPostTrails: 0,
@@ -58,7 +66,7 @@ window.NX = window.NX || {};
     S.presInterval = Math.max(S.presInterval, 38);
   }
 
-  var P = { SPD: 5, RCT: 7, WRP: 5, PAL: 0, GAIN: 1.0, SMTH: 58 };
+  var P = { SPD: 5, RCT: 7, WRP: 5, PAL: 0, GAIN: 1.0, SMTH: 58, TRIM: 100 };
 
   /* ---- canvas / resize --------------------------------------------- */
   var rawW = 0, rawH = 0, maxDpr = 2, renderScale = 0.78, pendingRenderScale = null;
@@ -207,7 +215,8 @@ window.NX = window.NX || {};
     var tSlow = 0.36 + 0.64 * vd;
     gl.uniform2f(u(prog, 'R'), S.FW, S.FH);
     var bv = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
-    var wig = (S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032) * (0.18 + 0.82 * vd);
+    var tr = typeof S.sTransient === 'number' ? S.sTransient : 0;
+    var wig = (S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032 + tr * 0.065) * (0.18 + 0.82 * vd);
     gl.uniform1f(u(prog, 'T'), S.GT * tSlow * (1 + wig));
     var Bd = shapeDrive(S.sBass, 1.84) * audW + bv * 0.28 * audW;
     gl.uniform1f(u(prog, 'B'), Bd);
@@ -219,7 +228,7 @@ window.NX = window.NX || {};
     gl.uniform1f(u(prog, 'SP'), (P.SPD / 5) * (0.34 + 0.66 * vd));
     gl.uniform1f(u(prog, 'WP'), (P.WRP / 5) * (0.4 + 0.6 * vd));
     gl.uniform1f(u(prog, 'PAL'), P.PAL);
-    gl.uniform1f(u(prog, 'FL'), Math.min(1.22, (S.sFlux * 1.08 + bv * 0.16) * audW));
+    gl.uniform1f(u(prog, 'FL'), Math.min(1.35, (S.sFlux * 1.12 + bv * 0.16 + tr * 0.48) * audW));
     gl.uniform1f(u(prog, 'SC'), S.sCent);
   }
 
@@ -292,8 +301,28 @@ window.NX = window.NX || {};
   }
   function goPrev() { goNext((S.curS - 1 + NX.scenes.length) % NX.scenes.length); }
   function goRandom() {
-    var r = Math.floor(Math.random() * NX.scenes.length);
-    while (r === S.curS) r = Math.floor(Math.random() * NX.scenes.length);
+    var n = NX.scenes.length;
+    if (n < 2) return;
+    var driveHot = S.micOn && (typeof S._visualDrive === 'number' ? S._visualDrive : 0) > 0.42;
+    var weights = [];
+    var tw = 0;
+    for (var i = 0; i < n; i++) {
+      var sc = NX.scenes[i];
+      var rx = sc && typeof sc.rx === 'number' ? sc.rx : 0;
+      var w = 1 + (driveHot && rx > 0 ? rx * 0.85 : 0);
+      weights.push(w);
+      tw += w;
+    }
+    var r = S.curS;
+    for (var attempt = 0; attempt < 24 && r === S.curS; attempt++) {
+      var pick = Math.random() * tw;
+      var acc = 0;
+      for (var j = 0; j < n; j++) {
+        acc += weights[j];
+        if (pick < acc) { r = j; break; }
+      }
+    }
+    if (r === S.curS) r = (S.curS + 1) % n;
     goNext(r);
   }
 

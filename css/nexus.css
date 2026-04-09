@@ -71,9 +71,41 @@ body.nexus-mode-bc #c{pointer-events:none}
   .top-select{min-height:32px;min-width:56px;padding:4px 6px;font-size:9px}
 }
 
-/* -- Bottom panel --------------------------------------------------- */
-#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;padding-bottom:max(12px,env(safe-area-inset-bottom));background:var(--panel-bg);border-top:1px solid var(--border-subtle);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:min(56vh,680px);overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 -8px 40px rgba(0,0,0,.45)}
+/* -- Bottom panel (tabbed app shell) -------------------------------- */
+#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--panel-bg);border-top:1px solid var(--border-subtle);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:min(58vh,720px);box-shadow:0 -8px 40px rgba(0,0,0,.45);padding:0;overflow:hidden}
 #panel.hide{transform:translateY(100%)}
+#panel.nx-app-panel .nx-panel-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.nx-tab-panel{display:none;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.nx-tab-panel.nx-tab-active{display:block}
+.nx-tab-lead{margin:10px 14px 12px;font-size:12px;line-height:1.5;color:rgba(255,255,255,.55)}
+.nx-tab-hint.safari-hint{margin:8px 14px 0;font-size:10px;line-height:1.4;color:rgba(255,255,255,.35)}
+.nx-section-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:.14em;color:var(--accent-dim);margin:12px 14px 6px;text-transform:uppercase}
+.live-react-row{display:flex;flex-direction:column;gap:8px;padding:0 14px 12px}
+.nx-field-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,229,255,.45)}
+.nx-pill-group{display:flex;flex-wrap:wrap;gap:8px}
+.nx-react-pill{padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(255,255,255,.65);font-size:11px;font-family:'Inter',sans-serif;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:border-color .2s,background .2s,color .2s}
+.nx-react-pill-on{border-color:rgba(0,255,213,.55);color:var(--accent-color);background:rgba(0,255,213,.1)}
+.nx-profile-inline{margin-left:8px!important}
+.live-mic-big{display:block;width:calc(100% - 28px);margin:4px 14px 8px;padding:16px 20px;border-radius:10px;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:.1em;background:rgba(0,255,213,.07);border:1px solid var(--border-subtle);color:var(--accent-color);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background .2s,border-color .2s}
+.live-mic-big.live-mic-on{background:rgba(0,255,213,.16);border-color:rgba(0,255,213,.45);color:#fff}
+.live-mic-status{margin:0 14px 8px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.4}
+.live-peak-label{margin:0 14px 2px;font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,.3);text-transform:uppercase}
+.live-peak-wrap{height:10px;margin:0 14px 16px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
+.live-peak-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent-color),#00bcd4);transition:width .05s linear;border-radius:6px}
+.nx-tabbar{display:flex;flex-direction:row;justify-content:stretch;gap:3px;padding:6px 8px;padding-bottom:max(6px,env(safe-area-inset-bottom));background:rgba(6,8,12,.97);border-top:1px solid rgba(0,229,255,.1);flex-shrink:0}
+.nx-tab-btn{flex:1;min-height:48px;padding:6px 4px;border:1px solid transparent;border-radius:8px;background:transparent;color:rgba(255,255,255,.45);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;letter-spacing:.04em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .2s,background .2s,border-color .2s}
+.nx-tab-btn.nx-tab-on{color:var(--accent-color);background:rgba(0,255,213,.08);border-color:rgba(0,255,213,.25)}
+.nx-acc-inline{border-bottom:none;margin-top:8px}
+@media (min-width:900px){
+  #panel.nx-app-panel{flex-direction:row;align-items:stretch;max-height:min(72vh,820px);border-right:1px solid rgba(0,229,255,.08)}
+  #panel.nx-app-panel .nx-panel-scroll{order:2;max-width:calc(100% - 92px)}
+  #panel.nx-app-panel .nx-tabbar{flex-direction:column;width:88px;order:1;justify-content:flex-start;gap:6px;padding:12px 8px;border-top:none;border-right:1px solid rgba(0,229,255,.1)}
+  #panel.nx-app-panel .nx-tab-btn{flex:0 0 auto;min-height:52px;width:100%}
+  .scene-grid-wrap{max-height:min(280px,36vh)}
+}
+@media (prefers-reduced-motion:reduce){
+  .live-peak-fill{transition:none}
+}
 .panel-row{display:flex;align-items:center;padding:6px 10px;gap:8px;flex-wrap:wrap}
 
 /* -- Scene grid (pads) ---------------------------------------------- */

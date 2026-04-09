@@ -117,10 +117,18 @@
 
   /* ---- Sync slider values from P to DOM ---------------------------- */
   function syncControls() {
-    var map = { rspd: P.SPD, rrct: P.RCT, rwrp: P.WRP, rgain: P.GAIN * 100, rsmth: P.SMTH };
+    var trimV = typeof P.TRIM === 'number' ? P.TRIM : 100;
+    var map = { rspd: P.SPD, rrct: P.RCT, rwrp: P.WRP, rgain: P.GAIN * 100, rsmth: P.SMTH, rtrim: trimV };
     Object.keys(map).forEach(function (id) {
       var el = document.getElementById(id);
       if (el) { el.value = map[id]; var v = el.closest('.ctrl-slider'); if (v) { var vd = v.querySelector('.val'); if (vd) vd.textContent = Math.round(map[id]); } }
+    });
+    var rp = document.getElementById('nx-react-profile');
+    if (rp && (S.reactivityProfile === 'punchy' || S.reactivityProfile === 'balanced' || S.reactivityProfile === 'smooth')) {
+      rp.value = S.reactivityProfile;
+    }
+    document.querySelectorAll('.nx-react-pill').forEach(function (b) {
+      b.classList.toggle('nx-react-pill-on', b.getAttribute('data-profile') === S.reactivityProfile);
     });
     var rmorph = document.getElementById('rmorph');
     if (rmorph) rmorph.value = Math.round(S.morphDurationSec * 10);
@@ -136,7 +144,7 @@
     var nxTr = document.getElementById('nx-trails');
     if (nxTr) nxTr.value = String(Math.round((S.nexusPostTrails == null ? 0 : S.nexusPostTrails) * 100));
     var nxMode = document.getElementById('nx-visual-mode');
-    if (nxMode) nxMode.value = S.visualMode || 'shader';
+    if (nxMode) nxMode.value = S.visualMode || 'hybrid';
   }
 
   function setPalette(idx) {
@@ -158,7 +166,7 @@
 
     var bcHud = document.getElementById('bc-preset-hud');
     if (bcHud) {
-      var vm = st.visualMode || 'shader';
+      var vm = st.visualMode || 'hybrid';
       if ((vm === 'butterchurn' || vm === 'hybrid') && st.bcLastPresetKey) {
         var nm = st.bcLastPresetKey;
         bcHud.textContent = nm.length > 36 ? nm.slice(0, 34) + '…' : nm;
@@ -180,7 +188,28 @@
       if (fe) fe.textContent = 'FPS ' + Math.round(st._emaFps) + ' · ' + Math.round(NX.getRenderScale() * 100) + '% · ' + st.FW + '×' + st.FH;
     }
 
+    var pk = document.getElementById('live-peak-fill');
+    if (pk) {
+      var pkv = Math.min(100, Math.round(100 * Math.max(st.sBass || 0, st.sMid || 0, st.sHigh || 0, st.sVol || 0, (st.sTransient || 0) * 0.85)));
+      pk.style.width = pkv + '%';
+    }
+
     pulsePads();
+  }
+
+  function syncLiveMicUI() {
+    var on = !!S.micOn;
+    var big = document.getElementById('live-mic-big');
+    if (big) {
+      big.textContent = on ? 'Microphone on' : 'Microphone off — tap to enable';
+      big.classList.toggle('live-mic-on', on);
+    }
+    var st = document.getElementById('live-mic-status');
+    if (st) {
+      st.textContent = on ? 'Listening — sing, clap, or play music near the mic.' : 'Mic off — tap the button above or MIC in the top bar.';
+    }
+    var micTop = document.getElementById('micbtn');
+    if (micTop) micTop.classList.toggle('on', on);
   }
 
   function setMeter(id, pct) {
@@ -367,6 +396,8 @@
       sp.classList.add('out');
       setTimeout(function () { sp.style.display = 'none'; }, 900);
       document.getElementById('panel').classList.remove('hide');
+      if (window.NXShell && NXShell.setTab) NXShell.setTab('live');
+      syncLiveMicUI();
     });
 
     /* Sliders */
@@ -382,6 +413,7 @@
     wireSlider('rrct', function (e) { P.RCT = +e.target.value; });
     wireSlider('rwrp', function (e) { P.WRP = +e.target.value; });
     wireSlider('rgain', function (e) { P.GAIN = e.target.value / 100; if (S.gainNode) S.gainNode.gain.value = P.GAIN; });
+    wireSlider('rtrim', function (e) { P.TRIM = +e.target.value; });
     wireSlider('rsmth', function (e) { P.SMTH = +e.target.value; if (S.analyser) S.analyser.smoothingTimeConstant = P.SMTH / 100; });
     wireSlider('rmorph', function (e) { S.morphDurationSec = Math.max(0.55, Math.min(4.2, e.target.value * 0.1)); });
     wireSlider('r-hue', function (e) {
@@ -420,8 +452,25 @@
     var prevBtn = document.getElementById('prevbtn');
     if (prevBtn) prevBtn.addEventListener('click', NX.goPrev);
 
+    function toggleMicUi() {
+      NX.audio.toggleMic();
+      setTimeout(syncLiveMicUI, 80);
+    }
     var micBtn = document.getElementById('micbtn');
-    if (micBtn) micBtn.addEventListener('click', NX.audio.toggleMic);
+    if (micBtn) micBtn.addEventListener('click', toggleMicUi);
+    var liveMic = document.getElementById('live-mic-big');
+    if (liveMic) liveMic.addEventListener('click', toggleMicUi);
+
+    document.querySelectorAll('.nx-react-pill').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = btn.getAttribute('data-profile');
+        if (p && NX.audio.applyReactivityProfile) NX.audio.applyReactivityProfile(p);
+      });
+    });
+    var reactSel = document.getElementById('nx-react-profile');
+    if (reactSel) reactSel.addEventListener('change', function () {
+      if (NX.audio.applyReactivityProfile) NX.audio.applyReactivityProfile(this.value);
+    });
 
     var recBtn = document.getElementById('recbtn');
     if (recBtn) recBtn.addEventListener('click', toggleRecording);
@@ -488,7 +537,7 @@
       else if (e.key === 'p' || e.key === 'P') togglePresent();
       else if (e.code === 'Backquote') { S.showFpsOverlay = !S.showFpsOverlay; document.getElementById('fps-badge').classList.toggle('on', S.showFpsOverlay); }
       else if (e.key === 'a' || e.key === 'A') { if (autoBtn) autoBtn.click(); }
-      else if (e.key === 'm' || e.key === 'M') NX.audio.toggleMic();
+      else if (e.key === 'm' || e.key === 'M') { NX.audio.toggleMic(); setTimeout(syncLiveMicUI, 80); }
       else if (e.key === 'x' || e.key === 'X') { S.explode = 0.95; S.beat = 0.72; }
       var n = parseInt(e.key);
       if (!isNaN(n) && n >= 1 && n <= 9) NX.goNext(n - 1);
@@ -510,7 +559,7 @@
     /* Nexus Engine — visual stack + Aurora Field (Butterchurn-backed) */
     var nxMode = document.getElementById('nx-visual-mode');
     if (nxMode) {
-      nxMode.value = S.visualMode || 'shader';
+      nxMode.value = S.visualMode || 'hybrid';
       nxMode.addEventListener('change', function () {
         if (NX.SceneManager) NX.SceneManager.setMode(this.value, { crossfade: true });
       });
@@ -651,17 +700,8 @@
   }
 
   /* ---- Init -------------------------------------------------------- */
-  function collapseNonPriorityAccordionsOnNarrow() {
-    try {
-      if (typeof window.matchMedia !== 'function') return;
-      if (!window.matchMedia('(max-width: 768px)').matches) return;
-      document.querySelectorAll('details.nx-acc.nx-collapsible-sm').forEach(function (d) {
-        d.removeAttribute('open');
-      });
-    } catch (e) { /* ignore */ }
-  }
-
   function init() {
+    if (NX.audio.applyReactivityProfile) NX.audio.applyReactivityProfile(S.reactivityProfile || 'punchy');
     buildPads();
     buildPresets();
     buildButterchurnPresets();
@@ -669,14 +709,15 @@
     buildShowcaseSelect();
     buildProSelect();
     wireEvents();
+    if (window.NXShell && NXShell.init) NXShell.init();
     syncControls();
     setActiveScene(S.curS);
-    collapseNonPriorityAccordionsOnNarrow();
+    syncLiveMicUI();
   }
 
   NX.ui = {
     init: init, showName: showName, setActiveScene: setActiveScene, tickHud: tickHud,
-    syncControls: syncControls, setPalette: setPalette, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildProSelect: buildProSelect,
+    syncControls: syncControls, setPalette: setPalette, syncLiveMicUI: syncLiveMicUI, buildPads: buildPads, buildPresets: buildPresets, buildButterchurnPresets: buildButterchurnPresets, buildShowcaseSelect: buildShowcaseSelect, buildProSelect: buildProSelect,
     setMidiStatus: setMidiStatus, flashControl: flashControl,
     togglePresent: togglePresent, toggleRecording: toggleRecording,
     refreshMidiMapPanel: refreshMidiMapPanel, openMidiMapPanel: openMidiMapPanel, closeMidiMapPanel: closeMidiMapPanel

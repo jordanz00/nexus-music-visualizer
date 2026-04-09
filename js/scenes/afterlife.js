@@ -100,7 +100,7 @@ NX.registerScene({n:'SACRED GEOMETRY',c:'#e040fb',fs:H+[
 ].join('\n')});
 
 /* 3. NEURAL SWARM — connected particles forming/dissolving, glow lines */
-NX.registerScene({n:'NEURAL SWARM',c:'#00e5ff',fs:H+[
+NX.registerScene({n:'NEURAL SWARM',rx:2,c:'#00e5ff',fs:H+[
 'void main(){',
 '  vec2 sc=(uv-.5)*vec2(R.x/R.y,1.)*2.;',
 '  vec3 col=vec3(.004,.006,.012);',
@@ -179,7 +179,7 @@ NX.registerScene({n:'DARK MONOLITH',c:'#263238',fs:H+[
 ].join('\n')});
 
 /* 5. LASER CATHEDRAL — volumetric laser beams through haze */
-NX.registerScene({n:'LASER CATHEDRAL',c:'#ff1744',fs:H+[
+NX.registerScene({n:'LASER CATHEDRAL',rx:2,c:'#ff1744',fs:H+[
 'void main(){',
 '  vec2 sc=(uv-.5)*vec2(R.x/R.y,1.)*2.;',
 '  float az=T*.12+MX.x*2.,el=.2+MX.y*.6;',

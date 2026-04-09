@@ -10,7 +10,7 @@
     if (NX.PresetLibrary) NX.PresetLibrary.loadFromGlobal();
     if (NX.BcMorphConductor && NX.BcMorphConductor.rebuildPool) NX.BcMorphConductor.rebuildPool();
     if (NX.SceneManager) {
-      NX.SceneManager.setMode(S.visualMode || 'shader', { crossfade: false, force: true });
+      NX.SceneManager.setMode(S.visualMode || 'hybrid', { crossfade: false, force: true });
       NX.SceneManager.syncDOM();
     }
   }
@@ -28,8 +28,9 @@
       var d = snap.bcDrive != null ? snap.bcDrive : 0;
       var bv = snap.beatVisual || 0;
       var g = snap.bcGate != null ? snap.bcGate : 0;
-      var eMix = (d * 0.68 + bv * 0.22 * (0.35 + 0.65 * g)) * vd;
-      NX.VisualEngineManager.setIntensity(0.2 + Math.min(0.88, eMix) * 0.52);
+      var tr = typeof S.sTransient === 'number' ? S.sTransient : 0;
+      var eMix = (d * 0.82 + bv * 0.28 * (0.28 + 0.72 * g) + tr * 0.18) * vd;
+      NX.VisualEngineManager.setIntensity(0.1 + Math.min(1.15, eMix) * 0.95);
     }
     if (NX.BcMorphConductor && NX.BcMorphConductor.tick) NX.BcMorphConductor.tick(dt);
   }

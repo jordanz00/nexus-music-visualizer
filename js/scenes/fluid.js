@@ -12,7 +12,7 @@
      Feedback persistence via feedUV advection.
   --------------------------------------------------------------- */
   NX.registerScene({
-    n: 'INK & OIL', c: '#d500f9',
+    n: 'INK & OIL', rx: 2, c: '#d500f9',
     fs: H + [
       'void main(){',
       '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',

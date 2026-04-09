@@ -3,7 +3,7 @@
 var H = NX.HEAD;
 
 /* ── Scene 1: HYPERSPACE ─ infinite spiral tunnel corridor ──────────── */
-NX.registerScene({n:'HYPERSPACE',c:'#00e5ff',fs: H+[
+NX.registerScene({n:'HYPERSPACE',rx:2,c:'#00e5ff',fs: H+[
 'float tunnelSDF(vec3 p){',
 '  float twist=T*SP*.5+B*1.5;p.xy=rot2(twist+p.z*.35)*p.xy;',
 '  float r=length(p.xy);',
@@ -107,7 +107,7 @@ NX.registerScene({n:'BLACK HOLE',c:'#7c4dff',fs: H+[
 ].join('\n')});
 
 /* ── Scene 3: MANDELBULB ─ power-8 fractal ─────────────────────────── */
-NX.registerScene({n:'MANDELBULB',c:'#ff9100',fs: H+[
+NX.registerScene({n:'MANDELBULB',rx:2,c:'#ff9100',fs: H+[
 'float mandelbulb(vec3 p){',
 '  vec3 z=p;float dr=1.,r=0.;',
 '  float pw=8.+sin(T*SP*.15)*1.5+B*.8;',

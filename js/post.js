@@ -16,7 +16,8 @@
   /** Raw beat 0–1+ before calm scaling. */
   function beatForPostRaw() {
     var bv = typeof S.beatVisual === 'number' ? S.beatVisual : Math.min(1, S.beat * 0.55);
-    return Math.min(1.35, bv * 1.04 + S.sBass * 0.05);
+    var tr = typeof S.sTransient === 'number' ? S.sTransient : 0;
+    return Math.min(1.35, bv * 1.04 + S.sBass * 0.05 + tr * 0.1);
   }
 
   /** Smoothed beat for post, scaled down when there is no / quiet input. */

@@ -10,6 +10,8 @@
   var connectedNode = null;
   var intensity = 1;
   var speed = 1;
+  var _fpsAdjTick = 0;
+  var _lastAdjFps = 0;
 
   function getBC() {
     var g = typeof globalThis !== 'undefined' ? globalThis : window;
@@ -90,6 +92,14 @@
   function render() {
     if (!viz) return;
     try {
+      if (typeof viz.adjustRateToFPS === 'function' && typeof S._emaFps === 'number' && S._emaFps > 1) {
+        _fpsAdjTick++;
+        var fps = Math.round(S._emaFps);
+        if (_fpsAdjTick % 15 === 0 || Math.abs(fps - _lastAdjFps) >= 3) {
+          _lastAdjFps = fps;
+          viz.adjustRateToFPS(fps);
+        }
+      }
       viz.render();
     } catch (e) { /* swallow frame errors */ }
   }

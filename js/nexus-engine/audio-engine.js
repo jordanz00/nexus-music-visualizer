@@ -9,8 +9,10 @@
   function getSnapshot() {
     var micE = typeof S.micEnergy === 'number' ? S.micEnergy : 0;
     var gate = typeof S._bcGateOpen === 'number' ? S._bcGateOpen : 0;
-      /* Butterchurn / morph: mic-only energy + gate (see audio.js). */
-    var bcDrive = Math.min(1, micE * (0.12 + 0.88 * gate));
+    /* Aurora UI intensity: visual envelope (see audio.js _visualBcDrive). */
+    var bcDrive = typeof S._visualBcDrive === 'number' && S.micOn
+      ? Math.min(1, S._visualBcDrive)
+      : Math.min(1, micE * (0.12 + 0.88 * gate));
     return {
       bass: S.sBass,
       lowMid: S.sLowMid,

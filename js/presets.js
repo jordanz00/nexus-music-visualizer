@@ -25,6 +25,8 @@
     return {
       SPD: P.SPD, RCT: P.RCT, WRP: P.WRP, PAL: P.PAL,
       GAIN: P.GAIN, SMTH: P.SMTH,
+      TRIM: typeof P.TRIM === 'number' ? P.TRIM : 100,
+      reactivityProfile: S.reactivityProfile || 'balanced',
       morphDur: S.morphDurationSec,
       scene: S.curS,
       quality: (function () { var q = document.getElementById('qsel'); return q ? q.value : 'balanced'; })(),
@@ -32,7 +34,7 @@
       postBloomMul: S.postBloomMul,
       nexusPostBloom: S.nexusPostBloom,
       nexusPostTrails: S.nexusPostTrails,
-      visualMode: S.visualMode || 'shader'
+      visualMode: S.visualMode || 'hybrid'
     };
   }
 
@@ -43,6 +45,10 @@
     P.PAL = preset.PAL != null ? preset.PAL : P.PAL;
     P.GAIN = preset.GAIN != null ? preset.GAIN : P.GAIN;
     P.SMTH = preset.SMTH != null ? preset.SMTH : P.SMTH;
+    if (preset.TRIM != null) P.TRIM = Math.max(50, Math.min(200, preset.TRIM));
+    if (preset.reactivityProfile === 'punchy' || preset.reactivityProfile === 'balanced' || preset.reactivityProfile === 'smooth') {
+      S.reactivityProfile = preset.reactivityProfile;
+    }
     if (preset.morphDur != null) S.morphDurationSec = preset.morphDur;
     if (preset.quality) NX.setQualityPreset(preset.quality);
     if (preset.scene != null && preset.scene < NX.scenes.length) NX.goNext(preset.scene);
