@@ -9,7 +9,7 @@
   function getSnapshot() {
     var micE = typeof S.micEnergy === 'number' ? S.micEnergy : 0;
     var gate = typeof S._bcGateOpen === 'number' ? S._bcGateOpen : 0;
-    /* Butterchurn / morph: real mic + gate only — no demo synth (see audio.js tick). */
+      /* Butterchurn / morph: mic-only energy + gate (see audio.js). */
     var bcDrive = Math.min(1, micE * (0.12 + 0.88 * gate));
     return {
       bass: S.sBass,
@@ -27,6 +27,7 @@
       micEnergy: micE,
       bcGate: gate,
       bcDrive: bcDrive,
+      visualDrive: typeof S._visualDrive === 'number' ? S._visualDrive : 0,
       micOn: !!S.micOn
     };
   }

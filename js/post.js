@@ -6,10 +6,22 @@
   var gl = NX.gl, S = NX.S, P = NX.P;
   var u = NX.u, bindQuad = NX.bindQuad, shapeDrive = NX.shapeDrive;
 
-  /** Smoothed beat for post (matches engine `beatVisual`). */
-  function beatForPost() {
+  function postAudioWeight() {
+    var vd = typeof S._visualDrive === 'number' ? S._visualDrive : 0;
+    if (vd < 0) vd = 0;
+    if (vd > 1) vd = 1;
+    return 0.11 + 0.89 * vd;
+  }
+
+  /** Raw beat 0–1+ before calm scaling. */
+  function beatForPostRaw() {
     var bv = typeof S.beatVisual === 'number' ? S.beatVisual : Math.min(1, S.beat * 0.55);
-    return Math.min(1.32, bv * 1.04 + S.sBass * 0.05);
+    return Math.min(1.35, bv * 1.04 + S.sBass * 0.05);
+  }
+
+  /** Smoothed beat for post, scaled down when there is no / quiet input. */
+  function beatForPost() {
+    return beatForPostRaw() * postAudioWeight();
   }
 
   var SAT = '#define sat(x) clamp(x,0.,1.)\n';
@@ -203,13 +215,15 @@
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomSam); gl.uniform1i(u(outProg, 'bloom'), 1);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, streakSam); gl.uniform1i(u(outProg, 'streak'), 2);
-    var bPost = beatForPost();
+    var pa = postAudioWeight();
+    var bRaw = beatForPostRaw();
+    var bPost = bRaw * pa;
     gl.uniform1f(u(outProg, 'BT'), bPost);
-    gl.uniform1f(u(outProg, 'T'), S.GT);
-    gl.uniform1f(u(outProg, 'B'), shapeDrive(S.sBass, 1.84) + bPost * 0.3);
-    gl.uniform1f(u(outProg, 'M'), shapeDrive(S.sMid, 1.72));
-    gl.uniform1f(u(outProg, 'H'), shapeDrive(S.sHigh, 1.78));
-    gl.uniform1f(u(outProg, 'FL'), Math.min(1.2, S.sFlux * 1.05 + bPost * 0.14));
+    gl.uniform1f(u(outProg, 'T'), S.GT * (0.38 + 0.62 * pa));
+    gl.uniform1f(u(outProg, 'B'), (shapeDrive(S.sBass, 1.84) + bRaw * 0.3) * pa);
+    gl.uniform1f(u(outProg, 'M'), shapeDrive(S.sMid, 1.72) * pa);
+    gl.uniform1f(u(outProg, 'H'), shapeDrive(S.sHigh, 1.78) * pa);
+    gl.uniform1f(u(outProg, 'FL'), Math.min(1.2, (S.sFlux * 1.05 + bRaw * 0.14) * pa));
     gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
     gl.uniform1f(u(outProg, 'BM'), bm);
     gl.uniform1f(u(outProg, 'HS'), Math.max(-0.5, Math.min(0.5, S.hueShift || 0)));
@@ -220,7 +234,8 @@
   function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
     ensureBlackTex();
     var bloomOn = !!S.nexusPostBloom;
-    var bm = bloomOn ? Math.max(0, Math.min(2.2, S.postBloomMul == null ? 1 : S.postBloomMul)) : 0;
+    var paBloom = postAudioWeight();
+    var bm = bloomOn ? Math.max(0, Math.min(2.2, (S.postBloomMul == null ? 1 : S.postBloomMul) * (0.42 + 0.58 * paBloom))) : 0;
     var bloomSam = blackTex;
     var streakSam = blackTex;
 
@@ -229,13 +244,15 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloom.f); gl.viewport(0, 0, hw, hh);
       gl.useProgram(bloomProg); bindQuad(bloomProg);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(bloomProg, 'tex'), 0);
-      var bBl = beatForPost();
-      gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.26, 0.41 - bBl * 0.14 - Math.min(0.2, S.sBass * 0.28) - Math.min(0.09, S.sHigh * 0.06) - S.sFlux * 0.07));
+      var paB = postAudioWeight();
+      var bR = beatForPostRaw();
+      var bBl = bR * paB;
+      gl.uniform1f(u(bloomProg, 'thresh'), Math.max(0.26, 0.41 - bBl * 0.14 - Math.min(0.2, S.sBass * 0.28 * paB) - Math.min(0.09, S.sHigh * 0.06 * paB) - S.sFlux * 0.07 * paB));
       gl.uniform1f(u(bloomProg, 'BT'), bBl);
-      gl.uniform1f(u(bloomProg, 'B'), shapeDrive(S.sBass, 1.84) + bBl * 0.3);
-      gl.uniform1f(u(bloomProg, 'H'), shapeDrive(S.sHigh, 1.78));
-      gl.uniform1f(u(bloomProg, 'FL'), Math.min(1.2, S.sFlux * 1.12));
-      gl.uniform1f(u(bloomProg, 'M'), shapeDrive(S.sMid, 1.72));
+      gl.uniform1f(u(bloomProg, 'B'), (shapeDrive(S.sBass, 1.84) + bR * 0.3) * paB);
+      gl.uniform1f(u(bloomProg, 'H'), shapeDrive(S.sHigh, 1.78) * paB);
+      gl.uniform1f(u(bloomProg, 'FL'), Math.min(1.2, S.sFlux * 1.12 * paB));
+      gl.uniform1f(u(bloomProg, 'M'), shapeDrive(S.sMid, 1.72) * paB);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbBloomBlur.f);
@@ -255,8 +272,9 @@
         gl.useProgram(streakProg); bindQuad(streakProg);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbBloom.t); gl.uniform1i(u(streakProg, 'tex'), 0);
         gl.uniform1f(u(streakProg, 'str'), 0.004);
-        gl.uniform1f(u(streakProg, 'BT'), beatForPost());
-        gl.uniform1f(u(streakProg, 'B'), shapeDrive(S.sBass, 1.84));
+        var paS = postAudioWeight();
+        gl.uniform1f(u(streakProg, 'BT'), beatForPostRaw() * paS);
+        gl.uniform1f(u(streakProg, 'B'), shapeDrive(S.sBass, 1.84) * paS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       bloomSam = fbBloom.t;

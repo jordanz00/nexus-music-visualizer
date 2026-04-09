@@ -25,10 +25,12 @@ window.NX = window.NX || {};
     audioCtx: null, micStream: null, gainNode: null,
     /** Gain node Butterchurn taps (after P.GAIN); gated by RMS so silence stays calm */
     bcGateNode: null,
-    /** 0–1 smoothed open amount for BC audio feed (no demo synth). */
+    /** 0–1 smoothed open amount for BC audio feed. */
     _bcGateOpen: 0,
-    /** 0–1 energy from real FFT only (for BC intensity / morph; excludes demo fallback). */
+    /** 0–1 energy from real FFT (mic); BC intensity / morph. */
     micEnergy: 0,
+    /** 0–1 smoothed: how much motion/post follows live input (calm when silent / no mic). */
+    _visualDrive: 0,
     curDev: '',
     _emaFps: 60, _adaptiveTick: 0,
     curS: 0, nxtS: 1, morphing: false, morphBlend: 0,
@@ -180,19 +182,26 @@ window.NX = window.NX || {};
   }
 
   function setCommonUniforms(prog) {
+    var vd = typeof S._visualDrive === 'number' ? S._visualDrive : 0;
+    if (vd < 0) vd = 0;
+    if (vd > 1) vd = 1;
+    var audW = 0.12 + 0.88 * vd;
+    var tSlow = 0.36 + 0.64 * vd;
     gl.uniform2f(u(prog, 'R'), S.FW, S.FH);
     var bv = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
-    gl.uniform1f(u(prog, 'T'), S.GT * (1 + S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032));
-    var Bd = shapeDrive(S.sBass, 1.84) + bv * 0.28;
+    var wig = (S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032) * (0.18 + 0.82 * vd);
+    gl.uniform1f(u(prog, 'T'), S.GT * tSlow * (1 + wig));
+    var Bd = shapeDrive(S.sBass, 1.84) * audW + bv * 0.28 * audW;
     gl.uniform1f(u(prog, 'B'), Bd);
-    gl.uniform1f(u(prog, 'M'), shapeDrive(S.sMid, 1.72));
-    gl.uniform1f(u(prog, 'H'), shapeDrive(S.sHigh, 1.78));
-    gl.uniform1f(u(prog, 'V'), shapeDrive(S.sVol, 1.55));
-    gl.uniform1f(u(prog, 'BT'), Math.min(1.22, bv * 1.02 + S.sBass * 0.06));
+    gl.uniform1f(u(prog, 'M'), shapeDrive(S.sMid, 1.72) * audW);
+    gl.uniform1f(u(prog, 'H'), shapeDrive(S.sHigh, 1.78) * audW);
+    gl.uniform1f(u(prog, 'V'), shapeDrive(S.sVol, 1.55) * audW);
+    gl.uniform1f(u(prog, 'BT'), Math.min(1.22, (bv * 1.02 + S.sBass * 0.06) * audW));
     gl.uniform1f(u(prog, 'EX'), S.explode);
-    gl.uniform1f(u(prog, 'SP'), P.SPD / 5); gl.uniform1f(u(prog, 'WP'), P.WRP / 5);
+    gl.uniform1f(u(prog, 'SP'), (P.SPD / 5) * (0.34 + 0.66 * vd));
+    gl.uniform1f(u(prog, 'WP'), (P.WRP / 5) * (0.4 + 0.6 * vd));
     gl.uniform1f(u(prog, 'PAL'), P.PAL);
-    gl.uniform1f(u(prog, 'FL'), Math.min(1.22, S.sFlux * 1.08 + bv * 0.16));
+    gl.uniform1f(u(prog, 'FL'), Math.min(1.22, (S.sFlux * 1.08 + bv * 0.16) * audW));
     gl.uniform1f(u(prog, 'SC'), S.sCent);
   }
 

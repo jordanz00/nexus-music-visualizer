@@ -22,11 +22,14 @@
     }
     var snap = NX.AudioEngine ? NX.AudioEngine.getSnapshot() : {};
     if ((S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') && NX.VisualEngineManager && NX.VisualEngineManager.isReady()) {
+      var vd = typeof S._visualDrive === 'number' ? S._visualDrive : 0;
+      if (vd < 0) vd = 0;
+      if (vd > 1) vd = 1;
       var d = snap.bcDrive != null ? snap.bcDrive : 0;
       var bv = snap.beatVisual || 0;
       var g = snap.bcGate != null ? snap.bcGate : 0;
-      var eMix = d * 0.68 + bv * 0.22 * (0.35 + 0.65 * g);
-      NX.VisualEngineManager.setIntensity(0.34 + Math.min(0.92, eMix) * 0.5);
+      var eMix = (d * 0.68 + bv * 0.22 * (0.35 + 0.65 * g)) * vd;
+      NX.VisualEngineManager.setIntensity(0.2 + Math.min(0.88, eMix) * 0.52);
     }
     if (NX.BcMorphConductor && NX.BcMorphConductor.tick) NX.BcMorphConductor.tick(dt);
   }
@@ -60,7 +63,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '3.2.1-pro'
+    version: '3.2.2-pro'
   };
 
   NX.NexusEngine = window.NexusEngine;
