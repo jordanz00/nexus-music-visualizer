@@ -21,8 +21,21 @@
   }
 
   /**
-   * Minimal Web Audio graph so Butterchurn can connectAudio + analyze (no mic).
-   * Used when getUserMedia fails or before the user grants mic.
+   * RMS of time-domain analyser buffer (0–1, ~0 when silent).
+   */
+  function rmsWave8(w) {
+    if (!w || !w.length) return 0;
+    var acc = 0;
+    for (var i = 0; i < w.length; i++) {
+      var v = (w[i] - 128) / 128;
+      acc += v * v;
+    }
+    return Math.sqrt(acc / w.length);
+  }
+
+  /**
+   * Minimal Web Audio graph so Butterchurn can connectAudio (no fake oscillator).
+   * With no mic, gainNode has no input → silence → MilkDrop stays calm.
    */
   async function ensureButterchurnAudioGraph() {
     if (S.audioCtx && S.gainNode && S.analyser) {
@@ -33,6 +46,8 @@
     if (S.audioCtx.state === 'suspended') { try { await S.audioCtx.resume(); } catch (e) { } }
     S.gainNode = S.audioCtx.createGain();
     S.gainNode.gain.value = P.GAIN;
+    S.bcGateNode = S.audioCtx.createGain();
+    S.bcGateNode.gain.value = 0;
     S.analyser = S.audioCtx.createAnalyser();
     S.analyser.fftSize = 2048;
     S.analyser.smoothingTimeConstant = P.SMTH / 100;
@@ -42,18 +57,11 @@
     S.waveArr = new Uint8Array(S.bufLen);
     S.freqArr = new Uint8Array(S.bufLen);
     S.prevFreqFlux = new Uint8Array(S.bufLen);
-    var bridge = S.audioCtx.createGain();
-    bridge.gain.value = 1e-5;
-    var osc = S.audioCtx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(55, S.audioCtx.currentTime);
-    osc.connect(bridge);
-    bridge.connect(S.gainNode);
     S.gainNode.connect(S.analyser);
-    osc.start(0);
-    S._bcSilentOsc = osc;
-    S._bcSilentBridge = bridge;
+    S.gainNode.connect(S.bcGateNode);
     S.micOn = false;
+    S._bcGateOpen = 0;
+    S.micEnergy = 0;
     if (NX.VisualEngineManager && NX.VisualEngineManager.isReady()) NX.VisualEngineManager.connectAudio();
   }
 
@@ -85,8 +93,6 @@
   async function startMic(devId) {
     try {
       if (S.micStream) S.micStream.getTracks().forEach(function (t) { t.stop(); });
-      S._bcSilentOsc = null;
-      S._bcSilentBridge = null;
       if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } }
       S.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100, latencyHint: 'interactive' });
       if (S.audioCtx.state === 'suspended') await S.audioCtx.resume();
@@ -95,14 +101,18 @@
       S.micStream = await navigator.mediaDevices.getUserMedia(c);
       var src = S.audioCtx.createMediaStreamSource(S.micStream);
       S.gainNode = S.audioCtx.createGain(); S.gainNode.gain.value = P.GAIN;
+      S.bcGateNode = S.audioCtx.createGain(); S.bcGateNode.gain.value = 0;
       S.analyser = S.audioCtx.createAnalyser();
       S.analyser.fftSize = 2048; S.analyser.smoothingTimeConstant = P.SMTH / 100;
       S.analyser.minDecibels = -88; S.analyser.maxDecibels = -28;
       S.bufLen = S.analyser.frequencyBinCount;
       S.waveArr = new Uint8Array(S.bufLen); S.freqArr = new Uint8Array(S.bufLen);
       S.prevFreqFlux = new Uint8Array(S.bufLen);
-      src.connect(S.gainNode); S.gainNode.connect(S.analyser);
+      src.connect(S.gainNode);
+      S.gainNode.connect(S.analyser);
+      S.gainNode.connect(S.bcGateNode);
       S.micOn = true; S.curDev = devId || '';
+      S._bcGateOpen = 0;
       var db = document.getElementById('db'); if (db) db.classList.add('h');
       await enumDevices();
       if (NX.VisualEngineManager && NX.VisualEngineManager.isReady()) NX.VisualEngineManager.connectAudio();
@@ -113,10 +123,9 @@
 
   async function stopMic() {
     if (S.micStream) { S.micStream.getTracks().forEach(function (t) { t.stop(); }); S.micStream = null; }
-    S._bcSilentOsc = null;
-    S._bcSilentBridge = null;
     if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } S.audioCtx = null; }
-    S.analyser = null; S.micOn = false; S.prevFreqFlux = null;
+    S.analyser = null; S.gainNode = null; S.bcGateNode = null; S.micOn = false; S.prevFreqFlux = null;
+    S._bcGateOpen = 0; S.micEnergy = 0;
     if (NX.VisualEngineManager) NX.VisualEngineManager.disconnectAudio();
     var db = document.getElementById('db'); if (db) db.classList.remove('h');
   }
@@ -183,7 +192,22 @@
       var bvA = typeof S.beatVisual === 'number' ? S.beatVisual : S.beat * 0.5;
       for (var i = 0; i < 256; i++) abuf[i] = Math.min(255, Math.floor((S.freqArr[i * step] || 0) * (1 + S.sBass * 0.32 + bvA * 0.1)));
       for (var i = 0; i < 256; i++) abuf[256 + i] = S.waveArr[i * step] || 128;
+      /* Real-input-only metrics for Butterchurn (shader still uses demo blend above when quiet). */
+      S.micEnergy = Math.min(1, mb * 0.5 + mm * 0.24 + mh * 0.11 + mv2 * 0.36);
+      var rmsW = rmsWave8(S.waveArr);
+      var rFloor = 0.0055, rSpan = 0.07;
+      var linG = (rmsW - rFloor) / rSpan;
+      if (linG < 0) linG = 0; else if (linG > 1) linG = 1;
+      var tgtGate = Math.pow(linG, 0.72);
+      var go = typeof S._bcGateOpen === 'number' ? S._bcGateOpen : 0;
+      if (tgtGate > go) go += (tgtGate - go) * 0.42;
+      else go += (tgtGate - go) * 0.065;
+      S._bcGateOpen = go;
+      if (S.bcGateNode) S.bcGateNode.gain.value = go;
     } else {
+      S.micEnergy = 0;
+      S._bcGateOpen = 0;
+      if (S.bcGateNode) S.bcGateNode.gain.value = 0;
       S.sBass += (demo.bass - S.sBass) * .42;
       S.sLowMid += (demo.mid * 0.85 + demo.bass * 0.12 - S.sLowMid) * 0.36;
       S.sMid += (demo.mid - S.sMid) * .38;

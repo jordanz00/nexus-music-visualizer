@@ -49,10 +49,10 @@
 
   function blendSeconds() {
     var snap = NX.AudioEngine && NX.AudioEngine.getSnapshot ? NX.AudioEngine.getSnapshot() : {};
-    var en = Math.min(1, snap.energy != null ? snap.energy : 0);
+    var en = Math.min(1, snap.bcDrive != null ? snap.bcDrive : (snap.energy != null ? snap.energy : 0));
     var bv = Math.min(1, snap.beatVisual != null ? snap.beatVisual : S.beatVisual || 0);
     /* Longer blends when calm; still ≥1.5s for pro crossfades */
-    var base = 2.35 + en * 1.15 + bv * 0.45 + (S.sBass || 0) * 0.35;
+    var base = 2.35 + en * 1.43 + bv * 0.45;
     return Math.max(1.5, Math.min(4.5, base));
   }
 
@@ -76,7 +76,7 @@
     if (!NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
 
     var snap = NX.AudioEngine && NX.AudioEngine.getSnapshot ? NX.AudioEngine.getSnapshot() : {};
-    var en = Math.min(1, snap.energy != null ? snap.energy : 0);
+    var en = Math.min(1, snap.bcDrive != null ? snap.bcDrive : (snap.energy != null ? snap.energy : 0));
     /* Slightly faster rotation when room is loud; floor keeps concerts readable */
     var beat = beatLengthSec();
     var period = beat * beatsInterval;

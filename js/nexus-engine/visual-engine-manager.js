@@ -25,6 +25,10 @@
     return false;
   }
 
+  function bcAudioFeedNode() {
+    return S.bcGateNode || S.gainNode;
+  }
+
   function disconnectAudio() {
     if (viz && connectedNode && viz.disconnectAudio) {
       try { viz.disconnectAudio(connectedNode); } catch (e) { }
@@ -33,11 +37,12 @@
   }
 
   function connectAudio() {
-    if (!viz || !S.gainNode) return;
+    var feed = bcAudioFeedNode();
+    if (!viz || !feed) return;
     disconnectAudio();
     try {
-      viz.connectAudio(S.gainNode);
-      connectedNode = S.gainNode;
+      viz.connectAudio(feed);
+      connectedNode = feed;
     } catch (e) { console.warn('Butterchurn connectAudio:', e.message); }
   }
 

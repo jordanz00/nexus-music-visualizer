@@ -22,7 +22,14 @@ window.NX = window.NX || {};
     explode: 0,
     _lastAudT: 0, prevFreqFlux: null,
     micOn: false, analyser: null, waveArr: null, freqArr: null, bufLen: 0,
-    audioCtx: null, micStream: null, gainNode: null, curDev: '',
+    audioCtx: null, micStream: null, gainNode: null,
+    /** Gain node Butterchurn taps (after P.GAIN); gated by RMS so silence stays calm */
+    bcGateNode: null,
+    /** 0–1 smoothed open amount for BC audio feed (no demo synth). */
+    _bcGateOpen: 0,
+    /** 0–1 energy from real FFT only (for BC intensity / morph; excludes demo fallback). */
+    micEnergy: 0,
+    curDev: '',
     _emaFps: 60, _adaptiveTick: 0,
     curS: 0, nxtS: 1, morphing: false, morphBlend: 0,
     autoMorph: true, presTimer: 0, presInterval: 20, _morphFrame: 0,

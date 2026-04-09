@@ -12,6 +12,7 @@
 
   function categorize(name) {
     var n = String(name).toLowerCase();
+    if (/castle in the air|martin - castle/.test(n)) return 'ambient';
     if (/glitch|noise|static|tv|error|corrupt/.test(n)) return 'glitch';
     if (/bass|kick|storm|war|metal|hard|chaos|rage|pulse/.test(n)) return 'heavy';
     if (/ambient|cloud|dream|slow|space|void|calm|soft|mist/.test(n)) return 'ambient';

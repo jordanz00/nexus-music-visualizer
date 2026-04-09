@@ -2,7 +2,7 @@
 /**
  * NEXUS Engine Pro — hybrid preset library + DJ visual-style composer.
  * Each row = real Butterchurn key (from showcase) + seed → palette/warp/hue/bloom/scene.
- * Genres tag rows for filtering (Trance, Techno, Ambient, EDM, Glitch).
+ * Row count = showcase.length × 3 (VARIANTS). Genres tag rows for filtering.
  */
 (function () {
   var VARIANTS = ['Apex', 'Flux', 'Nova'];

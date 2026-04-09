@@ -46,12 +46,17 @@
     document.body.classList.toggle('nexus-mode-bc', mode === 'butterchurn');
     document.body.classList.toggle('nexus-mode-hybrid', mode === 'hybrid');
     if (mode === 'butterchurn' || mode === 'hybrid') {
+      function pickSeedBcKey(ks) {
+        var pin = typeof window !== 'undefined' && window.NXBcShowcase && window.NXBcShowcase.defaultButterchurnKey;
+        if (pin && NX.PresetLibrary.getPreset(pin)) return pin;
+        return ks[Math.floor(Math.random() * ks.length)];
+      }
       function seedFirstPreset() {
         setTimeout(function () {
           if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
           var ks = NX.PresetLibrary.getKeys();
           if (!ks || !ks.length) return;
-          var k = ks[Math.floor(Math.random() * ks.length)];
+          var k = pickSeedBcKey(ks);
           var pr = NX.PresetLibrary.getPreset(k);
           if (pr) NX.VisualEngineManager.loadPreset(pr, 2.4, k, { fromConductor: true });
         }, 120);
@@ -59,7 +64,7 @@
           if (S.bcLastPresetKey || !NX.PresetLibrary || !NX.VisualEngineManager || !NX.VisualEngineManager.isReady()) return;
           var ks = NX.PresetLibrary.getKeys();
           if (!ks || !ks.length) return;
-          var k = ks[Math.floor(Math.random() * ks.length)];
+          var k = pickSeedBcKey(ks);
           var pr = NX.PresetLibrary.getPreset(k);
           if (pr) NX.VisualEngineManager.loadPreset(pr, 2.2, k, { fromConductor: true });
         }, 900);
