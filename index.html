@@ -515,29 +515,48 @@
 <script>
 /* ── Bootstrap: compile, wire, run ─────────────────────────────────── */
 (function () {
-  var ok = NX.compileScenes();
-  console.log('Scenes compiled:', ok, '/', NX.scenes.length);
-  NX.post.compile();
-  NX.resize();
-  /* iOS WebKit: first layout pass sometimes reports 0×0 until after first paint */
-  if (NX.S && NX.S._iosCoarsePointer) {
-    requestAnimationFrame(function () { NX.resize(); });
-    setTimeout(function () { NX.resize(); }, 320);
+  if (NX._fatalNoWebGL) return;
+  try {
+    var ok = NX.compileScenes();
+    console.log('Scenes compiled:', ok, '/', NX.scenes.length);
+    NX.post.compile();
+    NX.resize();
+    /* iOS WebKit: first layout pass sometimes reports 0×0 until after first paint */
+    if (NX.S && NX.S._iosCoarsePointer) {
+      requestAnimationFrame(function () { NX.resize(); });
+      setTimeout(function () { NX.resize(); }, 320);
+    }
+    requestAnimationFrame(function () {
+      try { NX.resize(); } catch (e1) { }
+    });
+    setTimeout(function () {
+      try { NX.resize(); } catch (e2) { }
+    }, 50);
+    if (NX.ModernVisualStack && NX.ModernVisualStack.init) NX.ModernVisualStack.init();
+    if (window.NexusEngine) NexusEngine.init();
+    if (NX.watermark) NX.watermark.checkPro();
+    if (NX.autoDirector) NX.autoDirector.categorize();
+    NX.ui.init();
+    if (NX.ClipLayers && NX.ClipLayers.init) NX.ClipLayers.init();
+    if (NX.FxChain && NX.FxChain.init) NX.FxChain.init();
+    if (NX.CompositionUI && NX.CompositionUI.init) NX.CompositionUI.init();
+    if (NX.LightingDeck && NX.LightingDeck.init) NX.LightingDeck.init();
+    if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
+    if (NX.WgslGraph && NX.WgslGraph.tryInit) NX.WgslGraph.tryInit().catch(function () { });
+    if (NX.midi) NX.midi.init();
+    NX.showName(0);
+    NX.loop();
+  } catch (err) {
+    console.error('NEXUS bootstrap failed:', err);
+    var sp = document.getElementById('splash');
+    if (sp) {
+      var msg = document.createElement('p');
+      msg.style.cssText = 'color:#ff8a80;font-size:12px;margin-top:12px;max-width:28em;line-height:1.4';
+      msg.textContent = 'Startup error — check console (F12). Try a hard refresh or serve over http://localhost (not file://).';
+      var card = sp.querySelector('.nx-splash-card');
+      if (card) card.appendChild(msg);
+    }
   }
-  if (NX.ModernVisualStack && NX.ModernVisualStack.init) NX.ModernVisualStack.init();
-  if (window.NexusEngine) NexusEngine.init();
-  if (NX.watermark) NX.watermark.checkPro();
-  if (NX.autoDirector) NX.autoDirector.categorize();
-  NX.ui.init();
-  if (NX.ClipLayers && NX.ClipLayers.init) NX.ClipLayers.init();
-  if (NX.FxChain && NX.FxChain.init) NX.FxChain.init();
-  if (NX.CompositionUI && NX.CompositionUI.init) NX.CompositionUI.init();
-  if (NX.LightingDeck && NX.LightingDeck.init) NX.LightingDeck.init();
-  if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
-  if (NX.WgslGraph && NX.WgslGraph.tryInit) NX.WgslGraph.tryInit().catch(function () { });
-  if (NX.midi) NX.midi.init();
-  NX.showName(0);
-  NX.loop();
 })();
 </script>
 </body>

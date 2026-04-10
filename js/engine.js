@@ -6,9 +6,29 @@ window.NX = window.NX || {};
 
 (function () {
   var C = document.getElementById('c');
-  var gl = C.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' })
-    || C.getContext('experimental-webgl', { antialias: false, alpha: false });
-  if (!gl) { alert('WebGL required — use Chrome, Edge, or Safari.'); throw 0; }
+  var gl = null;
+  if (C) {
+    /* Try high-performance first; fall back for drivers that reject options or return null. */
+    gl = C.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' })
+      || C.getContext('experimental-webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' })
+      || C.getContext('webgl', { antialias: false, alpha: false })
+      || C.getContext('experimental-webgl', { antialias: false, alpha: false });
+  }
+  if (!gl) {
+    document.documentElement.classList.add('nx-fatal-no-webgl');
+    var splashEl = document.getElementById('splash');
+    if (splashEl) splashEl.style.display = 'none';
+    var fatalEl = document.getElementById('nx-fatal');
+    if (fatalEl) {
+      fatalEl.hidden = false;
+      fatalEl.setAttribute('aria-hidden', 'false');
+    }
+    NX._fatalNoWebGL = true;
+    NX.scenes = [];
+    NX.sceneProgs = [];
+    NX.postProgs = {};
+    return;
+  }
   gl.getExtension('OES_texture_float');
 
   /* ---- shared state ------------------------------------------------ */
@@ -109,20 +129,41 @@ window.NX = window.NX || {};
   function resize() {
     var capDpr = S.nexusPerfLock ? Math.min(maxDpr, 1) : maxDpr;
     var dpr = Math.min(window.devicePixelRatio || 1, capDpr);
-    S.W = innerWidth; S.H = innerHeight;
-    C.width = Math.floor(S.W * dpr); C.height = Math.floor(S.H * dpr);
+    /* Some WebKit passes report 0×0 briefly; without a floor, FBOs never build → black forever. */
+    var iw = typeof innerWidth === 'number' ? innerWidth : 0;
+    var ih = typeof innerHeight === 'number' ? innerHeight : 0;
+    var docEl = document.documentElement;
+    var cwDoc = docEl && docEl.clientWidth ? docEl.clientWidth : 0;
+    var chDoc = docEl && docEl.clientHeight ? docEl.clientHeight : 0;
+    /* Avoid screen.width/height fallback — can be huge and create incomplete FBOs on some GPUs. */
+    S.W = Math.max(1, iw > 2 ? iw : (cwDoc > 2 ? cwDoc : 800));
+    S.H = Math.max(1, ih > 2 ? ih : (chDoc > 2 ? chDoc : 600));
+    var rw0 = Math.floor(S.W * dpr), rh0 = Math.floor(S.H * dpr);
+    var maxTex = 8192;
+    try {
+      var mt = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      if (typeof mt === 'number' && mt > 0) maxTex = mt;
+    } catch (eMt) { /* ignore */ }
+    if (rw0 > maxTex || rh0 > maxTex) {
+      var scale = Math.min(maxTex / rw0, maxTex / rh0, 1);
+      rw0 = Math.max(1, Math.floor(rw0 * scale));
+      rh0 = Math.max(1, Math.floor(rh0 * scale));
+    }
+    C.width = rw0; C.height = rh0;
     C.style.width = S.W + 'px'; C.style.height = S.H + 'px';
     rawW = C.width; rawH = C.height;
     if (pendingRenderScale != null) { renderScale = pendingRenderScale; pendingRenderScale = null; }
     var effScale = S.nexusPerfLock ? Math.min(renderScale, 0.56) : renderScale;
     S.FW = Math.max(1, Math.floor(rawW * effScale));
     S.FH = Math.max(1, Math.floor(rawH * effScale));
-    gl.viewport(0, 0, S.FW, S.FH);
+    /* Default framebuffer is full canvas; scene passes use their own FBO viewports. */
+    gl.viewport(0, 0, Math.max(1, rawW | 0), Math.max(1, rawH | 0));
     rebuildFBOs();
     if (NX.VisualEngineManager && NX.VisualEngineManager.resize) NX.VisualEngineManager.resize();
     if (NX.WgslGraph && NX.WgslGraph.resize) NX.WgslGraph.resize();
   }
   addEventListener('resize', resize);
+  window.addEventListener('load', function () { resize(); });
   window.addEventListener('orientationchange', function () { setTimeout(resize, 300); });
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', resize);
@@ -345,6 +386,22 @@ window.NX = window.NX || {};
   }
 
   /* ---- Render one scene into FBO ----------------------------------- */
+  /** If the active scene failed to compile, use the first successful program so the loop still composites. */
+  function resolveSceneIndex() {
+    var progs = NX.sceneProgs;
+    if (!progs || !progs.length) return -1;
+    var idx = S.curS | 0;
+    if (idx >= 0 && idx < progs.length && progs[idx]) return idx;
+    for (var i = 0; i < progs.length; i++) {
+      if (progs[i]) {
+        if (i !== idx) console.warn('NEXUS: no program for scene', idx, '— using scene', i);
+        S.curS = i;
+        return i;
+      }
+    }
+    return -1;
+  }
+
   function renderScene(idx, targetFBO, prevTex, w, h) {
     var prog = NX.sceneProgs[idx]; if (!prog) return;
     var rw = w || S.FW, rh = h || S.FH;
@@ -460,7 +517,19 @@ window.NX = window.NX || {};
     var mxAlpha = S._iosCoarsePointer ? 0.11 : 0.05;
     S.mouseSmooth[0] += (S.mouseRaw[0] - S.mouseSmooth[0]) * mxAlpha;
     S.mouseSmooth[1] += (S.mouseRaw[1] - S.mouseSmooth[1]) * mxAlpha;
-    if (!fbA[0] || !fbB[0]) return;
+    /* FBOs are created in resize(); recover even when innerWidth is 0 (iframe / devtools) — resize() uses clientWidth fallbacks. */
+    if (!fbA[0] || !fbB[0]) {
+      try { resize(); } catch (eFb) { /* ignore */ }
+      if (!fbA[0] || !fbB[0]) return;
+    }
+
+    /* Other modules share no GL state with us, but reset common pitfalls so fullscreen passes always draw. */
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.STENCIL_TEST);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.disable(gl.BLEND);
+    gl.colorMask(true, true, true, true);
 
     if (NX.ui && NX.ui.tickHud) NX.ui.tickHud(S);
     if (NX.demo && NX.demo.tick) NX.demo.tick();
@@ -484,8 +553,11 @@ window.NX = window.NX || {};
 
     var drawShader = !NX.SceneManager || NX.SceneManager.shouldRenderShader();
     if (drawShader) {
-      renderScene(S.curS, fbA[1 - pingA].f, fbA[pingA].t);
-      pingA = 1 - pingA;
+      var sceneIdx = resolveSceneIndex();
+      if (sceneIdx >= 0) {
+        renderScene(sceneIdx, fbA[1 - pingA].f, fbA[pingA].t);
+        pingA = 1 - pingA;
+      }
     }
     var curOut = fbA[pingA] ? fbA[pingA].t : null;
     var finalTex = curOut;
@@ -502,7 +574,16 @@ window.NX = window.NX || {};
     }
 
     if (drawShader && NX.post && NX.post.render) {
-      NX.post.render(finalTex, fbBloom, fbBloomBlur, hw, hh);
+      try {
+        NX.post.render(finalTex, fbBloom, fbBloomBlur, hw, hh);
+      } catch (ePost) {
+        console.warn('NEXUS post.render failed', ePost);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        var cwE = Math.max(1, C.width | 0), chE = Math.max(1, C.height | 0);
+        gl.viewport(0, 0, cwE, chE);
+        gl.clearColor(0.04, 0.04, 0.12, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
     } else if (!drawShader) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, C.width, C.height);
@@ -659,4 +740,14 @@ window.NX = window.NX || {};
   }
 
   NX.setVizPerformanceMode = setVizPerformanceMode;
+
+  /* First paint: window "resize" does not always fire on load; without this, fbA stays null → black canvas. */
+  try {
+    resize();
+  } catch (eInit) {
+    console.warn('NEXUS: initial resize failed', eInit);
+  }
+  requestAnimationFrame(function () {
+    try { resize(); } catch (eRaf) { }
+  });
 })();

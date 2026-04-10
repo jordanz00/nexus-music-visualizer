@@ -229,6 +229,7 @@
   }
 
   function drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm) {
+    if (!outProg || !finalTex) return;
     var pc = S.postChain;
     gl.useProgram(outProg); bindQuad(outProg);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
@@ -243,7 +244,8 @@
     gl.uniform1f(u(outProg, 'M'), shapeDrive(S.sMid, 1.72) * pa);
     gl.uniform1f(u(outProg, 'H'), shapeDrive(S.sHigh, 1.78) * pa);
     gl.uniform1f(u(outProg, 'FL'), Math.min(1.2, (S.sFlux * 1.05 + bRaw * 0.14) * pa));
-    gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
+    /* Must match finalTex (scene / morph FBO) resolution — not the canvas backing store. */
+    gl.uniform2f(u(outProg, 'R'), S.FW, S.FH);
     gl.uniform1f(u(outProg, 'BM'), bm);
     gl.uniform1f(u(outProg, 'HS'), Math.max(-0.5, Math.min(0.5, S.hueShift || 0)));
     var kaBase = S.postFxKaleido == null ? 0 : Math.max(0, Math.min(1, S.postFxKaleido));
@@ -266,8 +268,17 @@
   /* ---- Render post chain ------------------------------------------- */
   function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
     ensureBlackTex();
+    var screenW = Math.max(1, NX.C.width | 0), screenH = Math.max(1, NX.C.height | 0);
+    if (!outProg || !copyProg || !finalTex) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, screenW, screenH);
+      gl.clearColor(0.03, 0.04, 0.09, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      return;
+    }
     var pc0 = S.postChain;
     var bloomOn = !!S.nexusPostBloom && (!pc0 || pc0.bloom !== false);
+    if (bloomOn && (!bloomProg || !blurProg)) bloomOn = false;
     var paBloom = postAudioWeight();
     var bm = bloomOn ? Math.max(0, Math.min(2.2, (S.postBloomMul == null ? 1 : S.postBloomMul) * (0.42 + 0.58 * paBloom))) : 0;
     var bloomSam = blackTex;
@@ -316,7 +327,7 @@
     }
 
     if (!ensureAuxTargets()) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, NX.C.width, NX.C.height);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, screenW, screenH);
       drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm);
       return;
     }
@@ -326,7 +337,7 @@
 
     var trBase = S.nexusPostTrails == null ? 0 : Math.max(0, Math.min(1, S.nexusPostTrails));
     var tr = (!pc0 || pc0.trails !== false) ? trBase : 0;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, _auxW, _auxH);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, screenW, screenH);
 
     if (tr > 0.004 && trailProg) {
       var prevRT = trailWhich === 0 ? fbTr0 : fbTr1;
@@ -338,7 +349,7 @@
       gl.uniform1f(u(trailProg, 'tr'), tr * 0.88);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, _auxW, _auxH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, screenW, screenH);
       gl.useProgram(copyProg); bindQuad(copyProg);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, nextRT.t); gl.uniform1i(u(copyProg, 'tex'), 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
