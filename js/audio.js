@@ -288,6 +288,9 @@
       var alpha0 = 1 - Math.exp(-Math.min(adt * 2.5, 0.35) / tau0);
       S.beatVisual = bv0 + (Math.min(0.92, S.beat * 0.52 + S.sBass * 0.1) - bv0) * alpha0;
       S.prevBass = S.sBass;
+      S.bpmConfidence = 0;
+      S.beatPhase = ((S.beatVisual || 0) * 0.9 + Math.sin(S.GT * 0.55) * 0.05);
+      S.beatPhase = S.beatPhase - Math.floor(S.beatPhase);
       syncVisualDrive(pr);
       gl.bindTexture(gl.TEXTURE_2D, atex);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 512, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, abuf);
@@ -401,14 +404,34 @@
     if (S.micOn && S.sBass > 0.38 && S.prevBass < 0.26) {
       var now = performance.now(), gap = now - S.lastBeat;
       if (gap > 180 && gap < 2800) {
-        S.bpmList.push(60000 / gap);
+        var instBpm = 60000 / gap;
+        if (instBpm > 210) instBpm *= 0.5;
+        if (instBpm < 55 && instBpm > 20) instBpm *= 2;
+        instBpm = Math.max(48, Math.min(198, instBpm));
+        if (S.bpmList.length >= 3) {
+          var sorted = S.bpmList.slice().sort(function (a, b) { return a - b; });
+          var med = sorted[(sorted.length / 2) | 0];
+          if (med > 40 && (instBpm > med * 1.65 || instBpm < med * 0.55)) {
+            if (instBpm > med * 1.4 && instBpm * 0.5 > med * 0.75) instBpm *= 0.5;
+            else if (instBpm < med * 0.65 && instBpm * 2 < med * 1.35) instBpm *= 2;
+          }
+        }
+        S.bpmList.push(instBpm);
         if (S.bpmList.length > 8) S.bpmList.shift();
         var sum = 0;
         for (var bi = 0; bi < S.bpmList.length; bi++) sum += S.bpmList[bi];
-        S.bpm = Math.round(sum / S.bpmList.length);
+        var rawBpm = sum / S.bpmList.length;
+        var prevBpm = typeof S.bpm === 'number' ? S.bpm : rawBpm;
+        if (S.bpmList.length >= 2) {
+          S.bpm = Math.round(prevBpm * 0.35 + rawBpm * 0.65);
+        } else {
+          S.bpm = Math.round(rawBpm);
+        }
+        S.bpm = Math.max(52, Math.min(190, S.bpm));
       }
       S.lastBeat = now;
       S.beat = Math.max(S.beat, 1.18);
+      S._beatPulseCount = (S._beatPulseCount || 0) + 1;
     }
     S.prevBass = S.sBass;
     if (S.beat > 0) S.beat = Math.max(0, S.beat - adt * 2.65);
@@ -419,10 +442,36 @@
     var alpha = 1 - Math.exp(-Math.min(adt * 2.5, 0.35) / tau);
     S.beatVisual = (S.beatVisual || 0) + (bvTarget - (S.beatVisual || 0)) * alpha;
     syncVisualDrive(pr);
+
+    var listLen = S.bpmList && S.bpmList.length ? S.bpmList.length : 0;
+    var conf = Math.min(1, listLen / 6);
+    var micE = typeof S.micEnergy === 'number' ? S.micEnergy : 0;
+    var baseConf = (S.micOn && listLen >= 2) ? conf * Math.min(1, micE * 2.8 + 0.2) : 0;
+    if (S.lastBeat && nowA - S.lastBeat > 3200) baseConf *= 0.92;
+    if (S.lastBeat && nowA - S.lastBeat > 8000) baseConf *= 0.88;
+    S.bpmConfidence = Math.max(0, Math.min(1, baseConf));
+    if (S.micOn && S.bpm > 42 && S.bpm < 200 && S.lastBeat) {
+      var beatMs = 60000 / S.bpm;
+      var ph = ((nowA - S.lastBeat) % beatMs) / beatMs;
+      S.beatPhase = ph < 0 ? 0 : (ph > 1 ? 1 : ph);
+    } else {
+      var bv = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
+      S.beatPhase = bv * 0.88 + Math.sin(S.GT * 0.62 + S.sFlux * 2) * 0.06;
+      S.beatPhase = S.beatPhase - Math.floor(S.beatPhase);
+    }
+  }
+
+  /** Beat interval in seconds when BPM is trusted; else null. */
+  function getBeatIntervalSec() {
+    var b = typeof S.bpm === 'number' ? S.bpm : 0;
+    var bc = typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0;
+    if (b < 52 || b > 190 || bc < 0.22) return null;
+    return 60 / b;
   }
 
   NX.audio = {
     tick: tick,
+    getBeatIntervalSec: getBeatIntervalSec,
     startMic: startMic,
     stopMic: stopMic,
     toggleMic: toggleMic,

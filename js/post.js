@@ -74,7 +74,7 @@
   var OUTPUT_FS = [
     'precision mediump float;varying vec2 uv;',
     'uniform sampler2D tex,bloom,streak;uniform vec2 R;',
-    'uniform float BT,T,B,M,H,FL,BM,HS;',
+    'uniform float BT,T,B,M,H,FL,BM,HS,KA,GL,STK,ACES;',
     'vec3 rgb2hsv(vec3 c){',
     ' vec4 K=vec4(0.,-1./3.,2./3.,-1.);',
     ' vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));',
@@ -88,26 +88,43 @@
     ' return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y);',
     '}',
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
+    'vec2 nxKale(vec2 u,float k){',
+    ' if(k<.0005)return u;',
+    ' vec2 p=u-.5;',
+    ' float sl=max(3.,floor(4.+k*11.));',
+    ' float ag=atan(p.y,p.x);',
+    ' float a=abs(mod(ag+3.14159/sl,6.28318/sl)-3.14159/sl);',
+    ' float rl=length(p);',
+    ' return rl*vec2(cos(a),sin(a))+.5;',
+    '}',
+    'vec2 nxGli(vec2 u,float g,float tim){',
+    ' if(g<.0005)return u;',
+    ' float row=floor(u.y*130.);',
+    ' float f=fract(sin(row*19.123+tim*4.2)*43758.5453);',
+    ' float chop=step(.9,f);',
+    ' return u+vec2(chop*g*.07*sin(tim*25.+row*1.7),0.);',
+    '}',
     'void main(){',
+    '  vec2 uvo=nxGli(nxKale(uv,KA),GL,T);',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
     '  float ca=.0024+BT*.0035+B*.0034+H*.0022+FL*.002;',
-    '  vec3 cM=texture2D(tex,uv).rgb;',
-    '  float r=texture2D(tex,vec2(uv.x+ca,uv.y)).r;',
+    '  vec3 cM=texture2D(tex,uvo).rgb;',
+    '  float r=texture2D(tex,vec2(uvo.x+ca,uvo.y)).r;',
     '  float g=cM.g;',
-    '  float b=texture2D(tex,vec2(uv.x-ca,uv.y)).b;',
+    '  float b=texture2D(tex,vec2(uvo.x-ca,uvo.y)).b;',
     '  vec3 col=vec3(r,g,b);',
     /* sharpen */
-    '  vec3 up=texture2D(tex,uv+vec2(0.,px.y)).rgb;',
-    '  vec3 dn=texture2D(tex,uv-vec2(0.,px.y)).rgb;',
-    '  vec3 lf=texture2D(tex,uv-vec2(px.x,0.)).rgb;',
-    '  vec3 rt=texture2D(tex,uv+vec2(px.x,0.)).rgb;',
+    '  vec3 up=texture2D(tex,uvo+vec2(0.,px.y)).rgb;',
+    '  vec3 dn=texture2D(tex,uvo-vec2(0.,px.y)).rgb;',
+    '  vec3 lf=texture2D(tex,uvo-vec2(px.x,0.)).rgb;',
+    '  vec3 rt=texture2D(tex,uvo+vec2(px.x,0.)).rgb;',
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
     '  float shp=.1+BT*.07+FL*.1+H*.07;',
     '  col+=lap*shp;',
     /* bloom + anamorphic (BM = master bloom mix, performance toggle) */
     '  vec3 blm=texture2D(bloom,uv).rgb*2.45*(1.+BT*.42+B*.38+M*.15+FL*.18);',
     '  vec3 stk=texture2D(streak,uv).rgb*.4*(1.+BT*.32+B*.22);',
-    '  col+=(blm+stk)*BM;',
+    '  col+=(blm+stk*STK)*BM;',
     /* lift / gamma / gain  — warm shadows, cool highlights */
     '  vec3 lift=vec3(.025,.018,.01);',
     '  vec3 gain=vec3(.97,.98,1.02);',
@@ -119,7 +136,7 @@
     /* S-curve contrast */
     '  col=col*col*(3.-2.*col);',
     /* ACES */
-    '  col=ACES(col);',
+    '  if(ACES>.5) col=ACES(col);',
     /* saturation pump */
     '  float L=dot(col,vec3(.299,.587,.114));',
     '  float satm=1.06+BT*.06+H*.09+M*.06+FL*.07;',
@@ -212,6 +229,7 @@
   }
 
   function drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm) {
+    var pc = S.postChain;
     gl.useProgram(outProg); bindQuad(outProg);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomSam); gl.uniform1i(u(outProg, 'bloom'), 1);
@@ -228,13 +246,28 @@
     gl.uniform2f(u(outProg, 'R'), NX.C.width, NX.C.height);
     gl.uniform1f(u(outProg, 'BM'), bm);
     gl.uniform1f(u(outProg, 'HS'), Math.max(-0.5, Math.min(0.5, S.hueShift || 0)));
+    var kaBase = S.postFxKaleido == null ? 0 : Math.max(0, Math.min(1, S.postFxKaleido));
+    var glBase = S.postFxGlitch == null ? 0 : Math.max(0, Math.min(1, S.postFxGlitch));
+    if (S.nexusVizPerformance) { kaBase *= 0.45; glBase *= 0.55; }
+    if (pc && pc.kaleido === false) kaBase = 0;
+    if (pc && pc.glitch === false) glBase = 0;
+    var trn = typeof S.sTransient === 'number' ? S.sTransient : 0;
+    var glEff = Math.min(1, glBase + trn * 0.42 * (0.55 + 0.45 * (S.bpmConfidence || 0)));
+    if (pc && pc.glitch === false) glEff = trn * 0.08;
+    gl.uniform1f(u(outProg, 'KA'), kaBase);
+    gl.uniform1f(u(outProg, 'GL'), glEff);
+    var streakOn = !pc || pc.streak !== false ? 1 : 0;
+    var acesOn = !pc || pc.grade !== false ? 1 : 0;
+    gl.uniform1f(u(outProg, 'STK'), streakOn);
+    gl.uniform1f(u(outProg, 'ACES'), acesOn);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   /* ---- Render post chain ------------------------------------------- */
   function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
     ensureBlackTex();
-    var bloomOn = !!S.nexusPostBloom;
+    var pc0 = S.postChain;
+    var bloomOn = !!S.nexusPostBloom && (!pc0 || pc0.bloom !== false);
     var paBloom = postAudioWeight();
     var bm = bloomOn ? Math.max(0, Math.min(2.2, (S.postBloomMul == null ? 1 : S.postBloomMul) * (0.42 + 0.58 * paBloom))) : 0;
     var bloomSam = blackTex;
@@ -291,7 +324,8 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbScratch.f); gl.viewport(0, 0, _auxW, _auxH);
     drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm);
 
-    var tr = S.nexusPostTrails == null ? 0 : Math.max(0, Math.min(1, S.nexusPostTrails));
+    var trBase = S.nexusPostTrails == null ? 0 : Math.max(0, Math.min(1, S.nexusPostTrails));
+    var tr = (!pc0 || pc0.trails !== false) ? trBase : 0;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, _auxW, _auxH);
 
     if (tr > 0.004 && trailProg) {

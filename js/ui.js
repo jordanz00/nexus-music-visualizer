@@ -192,7 +192,8 @@
     }
 
     if (st.autoMorph) {
-      var rem = Math.max(0, Math.round(st.presInterval - st.presTimer));
+      var tgt = NX.getAutoMorphIntervalSec ? NX.getAutoMorphIntervalSec() : st.presInterval;
+      var rem = Math.max(0, Math.round(tgt - st.presTimer));
       var nxt = document.getElementById('auto-timer');
       if (nxt && st.hudTick % 30 < 6) nxt.textContent = rem + 's';
     }
@@ -276,20 +277,21 @@
       var fpsEl = document.getElementById('rec-fps');
       var prof = profEl ? profEl.value : 'native';
       var fps = fpsEl ? Math.max(24, Math.min(60, parseInt(fpsEl.value, 10) || 60)) : 60;
+      var fpsScale = Math.max(0.72, Math.min(1.15, fps / 60));
       var stream;
       var br = 10000000;
       if (prof === '1080') {
         S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
-        br = 14000000;
+        br = Math.round(15000000 * fpsScale);
       } else if (prof === 'stream') {
         S.recCompositeDims = { w: 1920, h: 1080, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
-        br = 22000000;
+        br = Math.round(24000000 * fpsScale);
       } else       if (prof === '4k') {
         S.recCompositeDims = { w: 3840, h: 2160, fps: fps };
         stream = document.getElementById('c-rec').captureStream(fps);
-        br = 32000000;
+        br = Math.round(36000000 * fpsScale);
         S._recPrevPerfLock = !!S.nexusPerfLock;
         S._recHadPerfAssist = true;
         if (!S.nexusPerfLock) {
@@ -304,7 +306,7 @@
       } else {
         S.recCompositeDims = null;
         stream = NX.C.captureStream(fps);
-        br = 12000000;
+        br = Math.round(12500000 * fpsScale);
       }
       mediaRec = createMediaRecorder(stream, br);
       recChunks = [];
@@ -329,7 +331,8 @@
         S.recording = false;
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
       };
-      mediaRec.start(1000);
+      /* ~500 ms chunks: steadier memory vs 1s blobs; aligns better with live frame cadence */
+      mediaRec.start(500);
       S.recording = true;
       var b = document.getElementById('recbtn'); if (b) b.classList.add('on');
     } catch (e) { console.warn('Recording failed:', e.message); S.recCompositeDims = null; }
@@ -462,6 +465,10 @@
         if (window.NXShell && NXShell.setTab) NXShell.setTab('live');
         syncLiveMicUI();
         updatePanelFab();
+        var autob = document.getElementById('autobtn');
+        if (autob) autob.classList.toggle('on', S.autoMorph);
+        var autoT = document.getElementById('auto-timer');
+        if (autoT) autoT.textContent = S.autoMorph ? '-' : 'OFF';
       }
       if (NX.ModernVisualStack && NX.ModernVisualStack.wrapUiTransition) {
         NX.ModernVisualStack.wrapUiTransition(revealApp);
@@ -557,6 +564,20 @@
     var recBtn = document.getElementById('recbtn');
     if (recBtn) recBtn.addEventListener('click', toggleRecording);
 
+    var recAmb = document.getElementById('rec-ambient-bg');
+    if (recAmb) {
+      try {
+        recAmb.checked = localStorage.getItem('nexus.rec.ambientUnderlay') === '1';
+      } catch (eAmb) { recAmb.checked = false; }
+      S.recAmbientUnderlay = !!recAmb.checked;
+      recAmb.addEventListener('change', function () {
+        S.recAmbientUnderlay = !!recAmb.checked;
+        try {
+          localStorage.setItem('nexus.rec.ambientUnderlay', S.recAmbientUnderlay ? '1' : '0');
+        } catch (eAmb2) { /* ignore */ }
+      });
+    }
+
     /* Quality preset */
     var qsel = document.getElementById('qsel');
     if (qsel) qsel.addEventListener('change', function () {
@@ -568,7 +589,7 @@
     var adaptBtn = document.getElementById('adaptbtn');
     if (adaptBtn) adaptBtn.addEventListener('click', function () {
       S.adaptiveGpu = !S.adaptiveGpu; this.classList.toggle('on', S.adaptiveGpu);
-      if (S.adaptiveGpu && qsel && qsel.value !== 'balanced') { qsel.value = 'balanced'; NX.setQualityPreset('balanced'); }
+      /* AUTO Q adjusts renderScale for balanced / perf / ultra without forcing a preset change. */
     });
 
     /* Input panel (mic device selector) */

@@ -41,14 +41,18 @@ window.NX = window.NX || {};
     _visualDrive: 0,
     curDev: '',
     _emaFps: 60, _adaptiveTick: 0,
+    /** Hysteresis for AUTO Q renderScale steps (consecutive slow/fast windows). */
+    _adaptiveLowStreak: 0, _adaptiveHighStreak: 0,
     curS: 0, nxtS: 1, morphing: false, morphBlend: 0,
-    autoMorph: true, presTimer: 0, presInterval: 20, _morphFrame: 0,
+    autoMorph: true, presTimer: 0, presInterval: 14, _morphFrame: 0,
     morphDurationSec: 1.4, showFpsOverlay: false, presentMode: false,
     adaptiveGpu: false, uiHide: false, recording: false,
     /* Nexus Engine — hybrid Butterchurn + shader */
     visualMode: 'hybrid',
     nexusPerfLock: false,
     nexusPostBloom: true,
+    /** Effect chain bypass flags (Show tab); consumed by post.js */
+    postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true },
     nexusPostTrails: 0,
     postBloomMul: 1,
     hueShift: 0,
@@ -59,7 +63,27 @@ window.NX = window.NX || {};
     /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
     bcLastPresetKey: '',
     /** True on iPhone/iPad: coarser pointer smoothing + GPU-friendly caps */
-    _iosCoarsePointer: false
+    _iosCoarsePointer: false,
+    /** 0–1 beat phase (BPM clock); set in audio.js when mic + stable BPM */
+    beatPhase: 0,
+    /** 0–1 confidence in BPM estimate */
+    bpmConfidence: 0,
+    /** Monotonic count of bass-transient “beats” (for quantized cues). */
+    _beatPulseCount: 0,
+    /** club | ambient | psychedelic | '' — biases random scene picks */
+    visualMacro: '',
+    /** One-shot live-FPS mode: caps trails/bloom + perf lock (see setVizPerformanceMode) */
+    nexusVizPerformance: false,
+    /** Kaleido / glitch post strengths 0–1 */
+    postFxKaleido: 0,
+    postFxGlitch: 0,
+    /** During recording: optional assist (restore nexusPerfLock on stop) */
+    _recHadPerfAssist: false,
+    _recPrevPerfLock: false,
+    /** Composite REC only (#c-rec): draw cheap gradient under layers (default off; UI + localStorage) */
+    recAmbientUnderlay: false,
+    /** Show tab: WebGPU WGSL chain samples #c into #nx-wgpu */
+    wgpuGraphEnabled: false
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -96,6 +120,7 @@ window.NX = window.NX || {};
     gl.viewport(0, 0, S.FW, S.FH);
     rebuildFBOs();
     if (NX.VisualEngineManager && NX.VisualEngineManager.resize) NX.VisualEngineManager.resize();
+    if (NX.WgslGraph && NX.WgslGraph.resize) NX.WgslGraph.resize();
   }
   addEventListener('resize', resize);
   window.addEventListener('orientationchange', function () { setTimeout(resize, 300); });
@@ -230,6 +255,23 @@ window.NX = window.NX || {};
     gl.uniform1f(u(prog, 'PAL'), P.PAL);
     gl.uniform1f(u(prog, 'FL'), Math.min(1.35, (S.sFlux * 1.12 + bv * 0.16 + tr * 0.48) * audW));
     gl.uniform1f(u(prog, 'SC'), S.sCent);
+    var bpm = typeof S.bpm === 'number' ? S.bpm : 0;
+    gl.uniform1f(u(prog, 'BP'), Math.min(1, Math.max(0, bpm / 175)));
+    gl.uniform1f(u(prog, 'PH'), typeof S.beatPhase === 'number' ? S.beatPhase : 0);
+    gl.uniform1f(u(prog, 'BC'), typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0);
+    var ld = 1;
+    if (S.nexusVizPerformance) ld *= 0.62;
+    else if (S.nexusPerfLock) ld *= 0.74;
+    else if (S._emaFps < 34) ld *= 0.76;
+    else if (S._emaFps < 46) ld *= 0.88;
+    var scCur = NX.scenes && NX.scenes[S.curS];
+    if (scCur && scCur.cost === 'high') {
+      if (S._emaFps < 40) ld *= 0.9;
+      if (S._emaFps < 30) ld *= 0.88;
+    } else if (scCur && scCur.cost === 'med' && S._emaFps < 28) {
+      ld *= 0.92;
+    }
+    gl.uniform1f(u(prog, 'LD'), Math.max(0.38, Math.min(1, ld)));
   }
 
   /* ---- Vertex shader (shared) -------------------------------------- */
@@ -237,23 +279,69 @@ window.NX = window.NX || {};
 
   /* ---- Pre-warm uniform cache after programs are compiled ---------- */
   function prewarmCache(sceneProgs, postProgs) {
-    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU'];
+    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD'];
     sceneProgs.forEach(function (prog) { if (!prog) return; sn.forEach(function (n) { u(prog, n); }); });
     postProgs.forEach(function (prog) {
       if (!prog) return;
-      ['tex', 'bloom', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2'].forEach(function (n) { u(prog, n); });
+      ['tex', 'bloom', 'streak', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2', 'BM', 'HS', 'KA', 'GL'].forEach(function (n) { u(prog, n); });
     });
+  }
+
+  /** Seconds between auto scene advances; scales with mic energy (slower when silent + mic off). */
+  function getAutoMorphIntervalSec() {
+    var base = S.presInterval;
+    var me = typeof S.micEnergy === 'number' ? S.micEnergy : 0;
+    if (!S.micOn && me < 0.02) return base * 1.48;
+    if (S.micOn && me > 0.07) return base * 0.9;
+    return base;
   }
 
   function tickAdaptiveFps(dt) {
     if (!S.adaptiveGpu) return;
+    if (S.recording || S.presentMode) return;
     S._adaptiveTick += dt;
     if (S._adaptiveTick < 0.75) return;
     S._adaptiveTick = 0;
     var q = document.getElementById('qsel');
-    if (q && q.value !== 'balanced') return;
-    if (S._emaFps < 26 && renderScale > 0.48) applyRenderScaleOnly(renderScale - 0.06);
-    else if (S._emaFps > 52 && renderScale < 0.92) applyRenderScaleOnly(renderScale + 0.04);
+    var mode = q && q.value ? q.value : 'balanced';
+    var downTh = 26;
+    var upTh = 52;
+    var stepDn = 0.06;
+    var stepUp = 0.04;
+    var minScale = 0.48;
+    var maxScale = 0.92;
+    if (mode === 'perf') {
+      downTh = 28;
+      upTh = 50;
+      stepDn = 0.055;
+      stepUp = 0.045;
+      minScale = 0.44;
+      maxScale = 0.82;
+    } else if (mode === 'ultra') {
+      downTh = 22;
+      upTh = 54;
+      stepDn = 0.04;
+      stepUp = 0.03;
+      minScale = 0.52;
+      maxScale = 0.98;
+    }
+    if (S._emaFps < downTh) {
+      S._adaptiveLowStreak++;
+      S._adaptiveHighStreak = 0;
+    } else if (S._emaFps > upTh) {
+      S._adaptiveHighStreak++;
+      S._adaptiveLowStreak = 0;
+    } else {
+      S._adaptiveLowStreak = Math.max(0, S._adaptiveLowStreak - 1);
+      S._adaptiveHighStreak = Math.max(0, S._adaptiveHighStreak - 1);
+    }
+    if (S._adaptiveLowStreak >= 2 && renderScale > minScale) {
+      applyRenderScaleOnly(renderScale - stepDn);
+      S._adaptiveLowStreak = 0;
+    } else if (S._adaptiveHighStreak >= 3 && renderScale < maxScale) {
+      applyRenderScaleOnly(renderScale + stepUp);
+      S._adaptiveHighStreak = 0;
+    }
   }
 
   /* ---- Render one scene into FBO ----------------------------------- */
@@ -291,6 +379,9 @@ window.NX = window.NX || {};
     S.nxtS = (idx !== undefined) ? ((idx + len) % len) : ((S.curS + 1) % len);
     if (S.nxtS === S.curS) S.nxtS = (S.curS + 1) % len;
     S.morphing = true; S.morphBlend = 0; S.presTimer = 0; S._morphFrame = 0;
+    S._activeMorphDur = S.morphDurationSec;
+    var scA = NX.scenes[S.curS], scB = NX.scenes[S.nxtS];
+    if (scA && scB && scA.cost === 'high' && scB.cost === 'high') S._activeMorphDur *= 1.35;
     [fbB[0].f, fbB[1].f].forEach(function (f) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, f);
       gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
@@ -300,16 +391,41 @@ window.NX = window.NX || {};
     if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.nxtS);
   }
   function goPrev() { goNext((S.curS - 1 + NX.scenes.length) % NX.scenes.length); }
+  function sceneTagWeight(i, driveHot, energy) {
+    var sc = NX.scenes[i];
+    if (!sc || !sc.tags) return 1;
+    var w = 1;
+    var macro = S.visualMacro || '';
+    if (macro === 'club') {
+      if (sc.tags.indexOf('intense') >= 0) w += 0.95;
+      if (sc.tags.indexOf('tunnel') >= 0) w += 0.45;
+      if (driveHot && sc.rx > 0) w += sc.rx * 0.5;
+    } else if (macro === 'ambient') {
+      if (sc.tags.indexOf('calm') >= 0) w += 1.15;
+      w += sc.cost === 'high' ? -0.35 : 0.15;
+    } else if (macro === 'psychedelic') {
+      if (sc.tags.indexOf('fractal') >= 0) w += 1.1;
+      if (sc.tags.indexOf('sacred') >= 0) w += 0.65;
+      if (sc.tags.indexOf('tunnel') >= 0) w += 0.35;
+    }
+    if (S.nexusVizPerformance && sc.cost === 'high') w *= 0.35;
+    else if (S.nexusVizPerformance && sc.cost === 'low') w *= 1.25;
+    if (energy > 0.35 && sc.tags.indexOf('intense') >= 0) w += 0.4;
+    if (energy < 0.18 && sc.tags.indexOf('calm') >= 0) w += 0.55;
+    var rx = typeof sc.rx === 'number' ? sc.rx : 0;
+    w += driveHot && rx > 0 ? rx * 0.85 : 0;
+    return Math.max(0.08, w);
+  }
+
   function goRandom() {
     var n = NX.scenes.length;
     if (n < 2) return;
     var driveHot = S.micOn && (typeof S._visualDrive === 'number' ? S._visualDrive : 0) > 0.42;
+    var energy = S.sBass * 0.45 + S.sMid * 0.28 + S.sFlux * 0.22;
     var weights = [];
     var tw = 0;
     for (var i = 0; i < n; i++) {
-      var sc = NX.scenes[i];
-      var rx = sc && typeof sc.rx === 'number' ? sc.rx : 0;
-      var w = 1 + (driveHot && rx > 0 ? rx * 0.85 : 0);
+      var w = sceneTagWeight(i, driveHot, energy);
       weights.push(w);
       tw += w;
     }
@@ -354,13 +470,14 @@ window.NX = window.NX || {};
 
     if (S.autoMorph) {
       S.presTimer += dt;
-      if (S.presTimer >= S.presInterval && !S.morphing) goNext();
+      if (S.presTimer >= getAutoMorphIntervalSec() && !S.morphing) goNext();
     }
     if (S.morphing) {
       var spdBoost = Math.max(0.35, P.SPD / 5);
-      S.morphBlend += dt / (S.morphDurationSec / spdBoost);
+      var mdur = typeof S._activeMorphDur === 'number' ? S._activeMorphDur : S.morphDurationSec;
+      S.morphBlend += dt / (mdur / spdBoost);
       S._morphFrame++;
-      if (S.morphBlend >= 1) { S.morphBlend = 1; S.morphing = false; S.curS = S.nxtS; }
+      if (S.morphBlend >= 1) { S.morphBlend = 1; S.morphing = false; S.curS = S.nxtS; S._activeMorphDur = null; }
     }
 
     var hw = Math.max(1, Math.floor(S.FW / 2)), hh = Math.max(1, Math.floor(S.FH / 2));
@@ -395,20 +512,40 @@ window.NX = window.NX || {};
 
     if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
 
+    if (NX.WgslGraph && NX.WgslGraph.renderFrame) NX.WgslGraph.renderFrame();
+
     if (S.recording && S.recCompositeDims) {
       var rc = document.getElementById('c-rec');
       if (rc) {
         var x2d = rc.getContext('2d');
         var d = S.recCompositeDims;
         if (rc.width !== d.w || rc.height !== d.h) { rc.width = d.w; rc.height = d.h; }
-        x2d.fillStyle = '#000';
+        if (S.recAmbientUnderlay) {
+          var gx = x2d.createLinearGradient(0, 0, d.w * 0.72, d.h * 0.92);
+          gx.addColorStop(0, '#060618');
+          gx.addColorStop(0.42, '#10122a');
+          gx.addColorStop(1, '#020208');
+          x2d.fillStyle = gx;
+        } else {
+          x2d.fillStyle = '#000';
+        }
         x2d.fillRect(0, 0, d.w, d.h);
         var vm = S.visualMode || 'shader';
         if (vm !== 'shader') {
           var cbc = document.getElementById('c-bc');
           if (cbc) try { x2d.drawImage(cbc, 0, 0, d.w, d.h); } catch (eR) { }
         }
-        try { x2d.drawImage(C, 0, 0, d.w, d.h); } catch (eR2) { }
+        if (NX.ClipLayers && NX.ClipLayers.drawForRecording) {
+          NX.ClipLayers.drawForRecording(x2d, d.w, d.h, true);
+        }
+        var wgpuOn = S.wgpuGraphEnabled && NX.WgslGraph && NX.WgslGraph.isReady && NX.WgslGraph.isReady();
+        var wgc = document.getElementById('nx-wgpu');
+        var mainLayer = C;
+        if (wgpuOn && wgc) mainLayer = wgc;
+        try { x2d.drawImage(mainLayer, 0, 0, d.w, d.h); } catch (eR2) { }
+        if (NX.ClipLayers && NX.ClipLayers.drawForRecording) {
+          NX.ClipLayers.drawForRecording(x2d, d.w, d.h, false);
+        }
       }
     }
   }
@@ -487,4 +624,32 @@ window.NX = window.NX || {};
   NX.goRandom = goRandom;
   NX.showName = showName;
   NX.loop = loop;
+  NX.getAutoMorphIntervalSec = getAutoMorphIntervalSec;
+
+  var _vizPerfOwnedLock = false;
+  /**
+   * Live “visual performance” preset: favors stable FPS (does not change quality dropdown).
+   * @param {boolean} on
+   */
+  function setVizPerformanceMode(on) {
+    if (on) {
+      S.nexusVizPerformance = true;
+      if (!S.nexusPerfLock) {
+        S.nexusPerfLock = true;
+        _vizPerfOwnedLock = true;
+      }
+      if (S.nexusPostTrails > 0.06) S.nexusPostTrails = 0.06;
+      if (S.postBloomMul > 1) S.postBloomMul = Math.min(S.postBloomMul, 0.98);
+      resize();
+    } else {
+      S.nexusVizPerformance = false;
+      if (_vizPerfOwnedLock) {
+        S.nexusPerfLock = false;
+        _vizPerfOwnedLock = false;
+      }
+      resize();
+    }
+  }
+
+  NX.setVizPerformanceMode = setVizPerformanceMode;
 })();

@@ -30,7 +30,9 @@
       bcGate: gate,
       bcDrive: bcDrive,
       visualDrive: typeof S._visualDrive === 'number' ? S._visualDrive : 0,
-      micOn: !!S.micOn
+      micOn: !!S.micOn,
+      beatPhase: typeof S.beatPhase === 'number' ? S.beatPhase : 0,
+      bpmConfidence: typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0
     };
   }
 

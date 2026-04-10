@@ -16,6 +16,9 @@
   }
 
   function update(dt) {
+    if (NX.ShowClock && NX.ShowClock.tick) NX.ShowClock.tick(dt);
+    if (NX.CueEngine && NX.CueEngine.tick) NX.CueEngine.tick(dt);
+    if (NX.ModernVisualStack && NX.ModernVisualStack.tick) NX.ModernVisualStack.tick();
     if (NX.SceneManager) {
       NX.SceneManager.tickFade(dt);
       NX.SceneManager.tickQueue();

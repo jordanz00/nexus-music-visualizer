@@ -11,7 +11,10 @@
     'Afterlife Dark': { SPD: 3, RCT: 8, WRP: 6, PAL: 4, GAIN: 1.0, SMTH: 55, morphDur: 2.2, scene: 0, quality: 'balanced' },
     'Festival Energy': { SPD: 7, RCT: 9, WRP: 7, PAL: 1, GAIN: 1.2, SMTH: 45, morphDur: 0.9, scene: 0, quality: 'balanced' },
     'Ambient Chill': { SPD: 2, RCT: 4, WRP: 3, PAL: 2, GAIN: 0.8, SMTH: 70, morphDur: 3.5, scene: 0, quality: 'balanced' },
-    'Laser Show': { SPD: 8, RCT: 10, WRP: 8, PAL: 0, GAIN: 1.3, SMTH: 40, morphDur: 0.7, scene: 0, quality: 'ultra' }
+    'Laser Show': { SPD: 8, RCT: 10, WRP: 8, PAL: 0, GAIN: 1.3, SMTH: 40, morphDur: 0.7, scene: 0, quality: 'ultra' },
+    'Club': { SPD: 7, RCT: 8, WRP: 7, PAL: 0, GAIN: 1.15, SMTH: 48, morphDur: 1.05, scene: 0, quality: 'balanced', visualMacro: 'club', postFxKaleido: 0, postFxGlitch: 0.04, nexusPostTrails: 0.03, postBloomMul: 1.12, visualMode: 'hybrid' },
+    'Ambient Show': { SPD: 2, RCT: 5, WRP: 3, PAL: 2, GAIN: 0.85, SMTH: 72, morphDur: 3.2, scene: 0, quality: 'balanced', visualMacro: 'ambient', postFxKaleido: 0.05, postFxGlitch: 0, nexusPostTrails: 0.16, postBloomMul: 0.88, visualMode: 'hybrid' },
+    'Psychedelic': { SPD: 5, RCT: 8, WRP: 7, PAL: 3, GAIN: 1.05, SMTH: 52, morphDur: 1.45, scene: 0, quality: 'balanced', visualMacro: 'psychedelic', postFxKaleido: 0.14, postFxGlitch: 0.05, nexusPostTrails: 0.11, postBloomMul: 1.08, visualMode: 'hybrid' }
   };
 
   function getUser() {
@@ -34,7 +37,10 @@
       postBloomMul: S.postBloomMul,
       nexusPostBloom: S.nexusPostBloom,
       nexusPostTrails: S.nexusPostTrails,
-      visualMode: S.visualMode || 'hybrid'
+      visualMode: S.visualMode || 'hybrid',
+      visualMacro: S.visualMacro || '',
+      postFxKaleido: S.postFxKaleido,
+      postFxGlitch: S.postFxGlitch
     };
   }
 
@@ -59,6 +65,9 @@
     if (preset.visualMode != null && NX.SceneManager) {
       NX.SceneManager.setMode(preset.visualMode, { crossfade: true, fadeSec: 0.75 });
     }
+    if (preset.visualMacro != null) S.visualMacro = preset.visualMacro;
+    if (preset.postFxKaleido != null) S.postFxKaleido = preset.postFxKaleido;
+    if (preset.postFxGlitch != null) S.postFxGlitch = preset.postFxGlitch;
     if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
   }
 

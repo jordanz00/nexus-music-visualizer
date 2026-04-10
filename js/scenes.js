@@ -9,6 +9,7 @@
     'uniform vec2 R;',
     'uniform vec2 MX;',
     'uniform float T,B,M,H,V,BT,EX,SP,WP,PAL,FL,SC;',
+    'uniform float BP,PH,BC,LD;',
     'uniform sampler2D AU,PV;',
     '#define PI  3.14159265359',
     '#define TAU 6.28318530718',
@@ -74,8 +75,52 @@
 
   NX.HEAD = HEAD;
 
-  /** Register a scene: { n: 'NAME', c: '#hex', fs: HEAD + [...].join('\\n') } */
-  NX.registerScene = function (s) { NX.scenes.push(s); };
+  var CALM_NAMES = ['VOID CATHEDRAL', 'SACRED GEOMETRY', 'INK & OIL', 'DEEP SEA',
+    'AFTERLIFE RINGS', 'DARK MONOLITH', 'GALAXY CORE', 'NEBULA FLYTHROUGH'];
+
+  /**
+   * @param {string} name
+   * @returns {boolean}
+   */
+  NX.sceneHasTag = function (idx, tag) {
+    var sc = NX.scenes[idx];
+    if (!sc || !sc.tags) return false;
+    return sc.tags.indexOf(tag) >= 0;
+  };
+
+  /**
+   * @param {object} s
+   */
+  function normalizeScene(s) {
+    var nm = (s.n || '').toUpperCase();
+    if (!Array.isArray(s.tags) || s.tags.length === 0) {
+      s.tags = CALM_NAMES.indexOf(s.n) >= 0 ? ['calm'] : ['intense'];
+    }
+    if (nm.indexOf('MANDEL') >= 0 || nm.indexOf('FRACTAL') >= 0 || nm.indexOf('BULB') >= 0 ||
+        nm.indexOf('MERGER') >= 0 || nm.indexOf('APOLLON') >= 0 || nm.indexOf('KALI') >= 0 ||
+        nm.indexOf('INFLECT') >= 0) {
+      if (s.tags.indexOf('fractal') < 0) s.tags.push('fractal');
+    }
+    if (nm.indexOf('TUNNEL') >= 0 || nm.indexOf('WORM') >= 0 || nm.indexOf('HYPER') >= 0 ||
+        nm.indexOf('HOLE') >= 0 || nm.indexOf('VORTEX') >= 0) {
+      if (s.tags.indexOf('tunnel') < 0) s.tags.push('tunnel');
+    }
+    if (nm.indexOf('SACRED') >= 0 || nm.indexOf('CATHEDRAL') >= 0 || nm.indexOf('MONOLITH') >= 0 ||
+        nm.indexOf('GEOMETRY') >= 0 || nm.indexOf('LATTICE') >= 0) {
+      if (s.tags.indexOf('sacred') < 0) s.tags.push('sacred');
+    }
+    if (!s.cost) {
+      if (nm.indexOf('ECHO LATTICE') >= 0 || nm === 'TUNNEL GRID') s.cost = 'low';
+      else if (s.rx >= 2) s.cost = 'high';
+      else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|MERGER|APOLLON|KALI|WORMHOLE/i.test(nm)) s.cost = 'high';
+      else if (/GRID|TUNNEL|NEBULA|INK|DEEP|VOID|SACRED|AFTERLIFE|MONOLITH/i.test(nm)) s.cost = 'med';
+      else s.cost = 'med';
+    }
+    return s;
+  }
+
+  /** Register a scene: { n, c, fs, tags?, cost?, rx? } */
+  NX.registerScene = function (s) { NX.scenes.push(normalizeScene(s)); };
 
   /** Compile all registered scenes; returns count of successes. */
   NX.compileScenes = function () {

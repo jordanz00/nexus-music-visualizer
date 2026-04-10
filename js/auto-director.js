@@ -17,17 +17,21 @@
   var intenseScenes = [];
   var allScenes = [];
 
+  function hasTag(sc, t) {
+    return sc && sc.tags && sc.tags.indexOf(t) >= 0;
+  }
+
   function categorize() {
     allScenes = [];
     calmScenes = [];
     intenseScenes = [];
-    var calmNames = ['VOID CATHEDRAL', 'SACRED GEOMETRY', 'INK & OIL', 'DEEP SEA',
-                     'AFTERLIFE RINGS', 'DARK MONOLITH', 'GALAXY CORE', 'NEBULA FLYTHROUGH'];
     NX.scenes.forEach(function (sc, i) {
       allScenes.push(i);
-      if (calmNames.indexOf(sc.n) !== -1) calmScenes.push(i);
-      else intenseScenes.push(i);
+      if (hasTag(sc, 'calm')) calmScenes.push(i);
+      if (hasTag(sc, 'intense')) intenseScenes.push(i);
     });
+    if (!calmScenes.length) calmScenes = allScenes.slice();
+    if (!intenseScenes.length) intenseScenes = allScenes.slice();
   }
 
   function randomFrom(pool) {
@@ -73,11 +77,13 @@
 
     var now = performance.now() / 1000;
     var sinceLast = now - _lastSwitch;
+    var bpmConf = typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0;
+    var gate = 0.88 + 0.12 * bpmConf;
 
     /* DROP DETECTION: energy spike after quiet section */
     var spike = _energy - _prevEnergy;
-    var isDrop = spike > 0.35 && _prevEnergy < 0.25 && _energy > 0.45 && sinceLast > 3;
-    var isBigDrop = spike > 0.5 && _prevEnergy < 0.2 && _energy > 0.55 && sinceLast > 4;
+    var isDrop = spike > 0.35 * gate && _prevEnergy < 0.25 && _energy > 0.45 && sinceLast > 3;
+    var isBigDrop = spike > 0.5 * gate && _prevEnergy < 0.2 && _energy > 0.55 && sinceLast > 4;
 
     if (isBigDrop) {
       S.explode = 0.72; S.beat = 0.78;

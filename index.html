@@ -16,6 +16,7 @@
 <!-- ── CANVAS (Aurora Field back layer / WebGL front) ─────────────── -->
 <canvas id="c-bc" aria-hidden="true"></canvas>
 <canvas id="c"></canvas>
+<canvas id="nx-wgpu" aria-hidden="true"></canvas>
 <!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
 <div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
 <div id="nx-clip-under" class="nx-clip-stack nx-clip-under" aria-hidden="true"></div>
@@ -65,6 +66,7 @@
       <option value="60" selected>60</option>
     </select>
     <button type="button" class="top-btn rec" id="recbtn" title="Record WebM">REC</button>
+    <label class="meta meta-compact nx-rec-ambient" title="1080p/stream/4K composite only: subtle gradient behind layers (default off)"><input type="checkbox" id="rec-ambient-bg" aria-label="REC ambient background"> BG</label>
     <button type="button" class="top-btn" id="perfbtn" title="Performance lock (stable FPS)">PERF</button>
     <button type="button" class="top-btn" id="vizperfbtn" title="Visual performance: cap effects for stable live FPS">VIZ PERF</button>
     <button type="button" class="top-btn" id="midimapbtn" title="MIDI mapping overlay">MAP</button>
@@ -247,6 +249,8 @@
         <span class="nx-compose-arrow" aria-hidden="true">→</span>
         <button type="button" class="nx-compose-node nx-compose-node-main" data-nx-compose="fx">Effects</button>
         <span class="nx-compose-arrow" aria-hidden="true">→</span>
+        <button type="button" class="nx-compose-node" data-nx-compose="wgpu">WGSL</button>
+        <span class="nx-compose-arrow" aria-hidden="true">→</span>
         <button type="button" class="nx-compose-node" data-nx-compose="cues">Cues</button>
         <span class="nx-compose-arrow" aria-hidden="true">→</span>
         <button type="button" class="nx-compose-node" data-nx-compose="dmx">DMX</button>
@@ -260,7 +264,18 @@
         <label class="nx-inline"><input type="checkbox" id="nx-fx-streak" checked> Anamorphic streak</label>
         <label class="nx-inline"><input type="checkbox" id="nx-fx-grade" checked> ACES grade</label>
         <label class="nx-inline"><input type="checkbox" id="nx-fx-trails-chain" checked> Trails mix</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-kaleido-chain" checked> Post kaleido</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-glitch-chain" checked> Post glitch</label>
       </div>
+      <h3 class="nx-section-title" id="nx-compose-wgpu">WebGPU WGSL chain</h3>
+      <p class="nx-show-status">Multi-pass WGSL over a copy of the main WebGL canvas. Requires WebGPU (Chrome/Edge; Safari when enabled). Recording uses this layer when enabled.</p>
+      <p class="nx-show-status" id="nx-wgpu-status">—</p>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline"><input type="checkbox" id="nx-wgpu-enable"> Enable WGSL layer</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-wgpu-half-res"> Half-res chain (faster)</label>
+        <button type="button" class="sm-btn" id="nx-wgpu-add-node">Add node</button>
+      </div>
+      <div id="nx-wgpu-chain-list" class="nx-wgpu-chain-list" aria-label="WGSL node chain"></div>
       <h3 class="nx-section-title" id="nx-compose-clips">Clip layers</h3>
       <p class="nx-show-status">Up to 4 slots each for <strong>under</strong> (plate under WebGL) and <strong>over</strong> (overlay). Uses <code class="nx-code-inline">playsInline</code> + muted for mobile autoplay after your tap.</p>
       <div class="panel-row nx-show-row">
@@ -270,13 +285,49 @@
         <button type="button" class="sm-btn" id="nx-clip-load">Load &amp; play</button>
       </div>
       <div class="panel-row nx-show-row">
+        <label class="nx-inline">Blend <select id="nx-clip-blend" class="preset-select" title="Clip mix-blend / record composite" aria-label="Clip blend mode">
+          <option value="screen" selected>screen</option>
+          <option value="multiply">multiply</option>
+          <option value="overlay">overlay</option>
+          <option value="soft-light">soft-light</option>
+          <option value="plus-lighter">plus-lighter</option>
+          <option value="normal">normal</option>
+          <option value="hard-light">hard-light</option>
+          <option value="color-dodge">color-dodge</option>
+          <option value="color-burn">color-burn</option>
+          <option value="difference">difference</option>
+          <option value="exclusion">exclusion</option>
+          <option value="lighten">lighten</option>
+          <option value="darken">darken</option>
+          <option value="luminosity">luminosity</option>
+          <option value="saturation">saturation</option>
+        </select></label>
+        <button type="button" class="sm-btn" id="nx-clip-blend-set">Apply blend</button>
+      </div>
+      <div class="panel-row nx-show-row">
         <label class="nx-inline">Opacity <input type="range" id="nx-clip-opacity" min="0" max="100" value="100" title="Clip opacity %"></label>
         <button type="button" class="sm-btn" id="nx-clip-opacity-set">Apply opacity</button>
       </div>
-      <h3 class="nx-section-title" id="nx-compose-cues">Cues &amp; executors</h3>
-      <p class="nx-show-status">Cue time = seconds on the master clock. <strong>Re-arm all</strong> clears fired flags so repeats can run.</p>
+      <h3 class="nx-section-title">Scene presets</h3>
+      <p class="nx-show-status">Save the current scene, stack mode, FX bypass chain, and WGSL node list as a named preset.</p>
       <div class="panel-row nx-show-row">
+        <label class="nx-inline">Name <input type="text" id="nx-preset-name" class="nx-ola-url" style="max-width:140px" placeholder="My club look" spellcheck="false"></label>
+        <button type="button" class="sm-btn" id="nx-preset-save">Save preset</button>
+        <select id="nx-preset-sel" class="preset-select" title="Apply saved preset" aria-label="Saved preset"><option value="">— Load —</option></select>
+        <button type="button" class="sm-btn" id="nx-preset-apply">Apply</button>
+      </div>
+      <h3 class="nx-section-title" id="nx-compose-cues">Cues &amp; executors</h3>
+      <p class="nx-show-status">Time cues use the master clock. <strong>Beat</strong> cues fire on bass-transient pulses (mic on) every N beats. <strong>Re-arm all</strong> resets beat phase tracking and time flags.</p>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Trigger <select id="nx-cue-trigger" class="preset-select" title="Cue trigger mode" aria-label="Cue trigger">
+          <option value="time" selected>Time (clock s)</option>
+          <option value="beat">Beat (every N pulses)</option>
+        </select></label>
         <label class="nx-inline">Time (s) <input type="number" id="nx-cue-tsec" class="nx-dmx-num" step="0.25" value="5" min="0"></label>
+        <label class="nx-inline">Every <input type="number" id="nx-cue-every-beats" class="nx-dmx-num" value="8" min="1" max="128" title="Beat cue: fire every N bass pulses"></label>
+        <label class="nx-inline">Phase <input type="number" id="nx-cue-phase-beats" class="nx-dmx-num" value="0" min="0" max="127" title="Beat offset (0 = first fire at pulse N)"></label>
+      </div>
+      <div class="panel-row nx-show-row">
         <label class="nx-inline">Scene # <input type="number" id="nx-cue-scene" class="nx-dmx-num" value="0" min="0" title="WebGL scene index"></label>
         <button type="button" class="sm-btn" id="nx-cue-add">Add cue</button>
         <button type="button" class="sm-btn" id="nx-cue-arm">Re-arm all</button>
@@ -291,7 +342,7 @@
         <div class="nx-exec-row"><button type="button" class="nx-exec-fire" id="nx-exec-5">F</button><select id="nx-exec-sel-5" class="preset-select nx-exec-sel"><option value="">— cue —</option></select></div>
       </div>
       <h3 class="nx-section-title" id="nx-compose-clock">Show clock &amp; lighting</h3>
-      <p class="nx-tab-lead">Master time + DMX to <strong>Open Lighting Architecture</strong> (olad). For Safari/Chrome, run the local CORS proxy next to this app: <code class="nx-code-inline">node tools/ola-cors-proxy.mjs</code>. Optional SMPTE LTC: add <code class="nx-code-inline">vendor/ltc/ltc_decoder.wasm</code> per <code class="nx-code-inline">vendor/ltc/README.txt</code>.</p>
+      <p class="nx-tab-lead">Master time + DMX to <strong>Open Lighting Architecture</strong> (olad). For Safari/Chrome, run the local CORS proxy next to this app: <code class="nx-code-inline">node tools/ola-cors-proxy.mjs</code>. SMPTE LTC: in-app JS decoder runs when WASM is absent; optional <code class="nx-code-inline">vendor/ltc/ltc_decoder.wasm</code> per <code class="nx-code-inline">vendor/ltc/README.txt</code>.</p>
       <div class="panel-row nx-show-row">
         <span class="g-label">Clock</span>
         <select id="nx-show-mode" class="preset-select" title="Time source" aria-label="Show clock mode">
@@ -304,6 +355,10 @@
         <button type="button" class="sm-btn" id="nx-show-mtc">Enable MTC</button>
         <button type="button" class="sm-btn" id="nx-show-ltc">Arm LTC input</button>
         <button type="button" class="sm-btn" id="nx-show-stop-midi">Stop MIDI</button>
+      </div>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline" title="JS decoder edge threshold; lower = more sensitive">LTC schmitt (×0.01) <input type="number" id="nx-ltc-thresh" class="nx-dmx-num" min="2" max="28" value="8" step="1"></label>
+        <button type="button" class="sm-btn" id="nx-ltc-cal-save">Save LTC calibration</button>
       </div>
       <p class="nx-show-status" id="nx-show-clock-status">—</p>
       <h3 class="nx-section-title">OLA</h3>
@@ -419,6 +474,7 @@
 <script src="js/scenes/afterlife.js"></script>
 <script src="js/scenes/unique.js"></script>
 <script src="js/scenes/vision.js"></script>
+<script src="js/scenes/pro-upgrade.js"></script>
 <script src="js/camera.js"></script>
 <script src="js/post.js"></script>
 <script src="js/nexus-engine/audio-engine.js"></script>
@@ -430,14 +486,17 @@
 <script src="js/nexus-engine/butterchurn-scene.js"></script>
 <script src="js/nexus-engine/shader-scene.js"></script>
 <script src="js/nexus-engine/scene-manager.js"></script>
+<script src="js/nexus-engine/wgsl-graph.js"></script>
 <script src="js/nexus-engine/ui-manager.js"></script>
 <script src="js/nexus-engine/midi-manager.js"></script>
 <script src="js/show/ltc-js-decoder.js"></script>
+<script src="js/show/ltc-decode-core.js"></script>
 <script src="js/show/ltc-wasm.js"></script>
 <script src="js/show/show-clock.js"></script>
 <script src="js/show/ola-client.js"></script>
 <script src="js/show/clip-layers.js"></script>
 <script src="js/show/cue-engine.js"></script>
+<script src="js/show/scene-presets.js"></script>
 <script src="js/show/fx-chain.js"></script>
 <script src="js/show/composition-ui.js"></script>
 <script src="js/show/lighting-deck.js"></script>
@@ -467,6 +526,7 @@
   if (NX.CompositionUI && NX.CompositionUI.init) NX.CompositionUI.init();
   if (NX.LightingDeck && NX.LightingDeck.init) NX.LightingDeck.init();
   if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
+  if (NX.WgslGraph && NX.WgslGraph.tryInit) NX.WgslGraph.tryInit().catch(function () { });
   if (NX.midi) NX.midi.init();
   NX.showName(0);
   NX.loop();

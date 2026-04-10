@@ -57,7 +57,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-color);colo
 /* Clip stacks: under = plate (z1), ambient z2, WebGL z3, over z4 — iOS/Android friendly */
 .nx-clip-stack{position:fixed;inset:0;pointer-events:none;overflow:hidden;-webkit-transform:translateZ(0);transform:translateZ(0)}
 .nx-clip-under{z-index:1}
-.nx-clip-over{z-index:4}
+.nx-clip-over{z-index:5}
+#nx-wgpu{position:fixed;top:0;left:0;width:100%;height:100%;z-index:4;display:block;pointer-events:none;opacity:0;touch-action:none;-webkit-user-select:none;user-select:none}
+.nx-wgpu-chain-list{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px}
+.nx-wgpu-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.nx-wgpu-row .nx-wgpu-rm{font-size:12px;padding:4px 8px}
 .nx-clip-cell,.nx-clip-video,.nx-clip-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .nx-clip-cell{pointer-events:none}
 /* Ambient above clip-under, below main WebGL */

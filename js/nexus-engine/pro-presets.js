@@ -20,6 +20,22 @@
     glitch: { SPD: 8, RCT: 10, WRP: 9, PAL: 1, morphDur: 0.68, mode: 'shader', trails: 0.06, bloomMul: 1.08 }
   };
 
+  /** Live “show” macros — bias random scenes + post FX (see engine S.visualMacro). */
+  var SHOW_MACROS = {
+    club: {
+      SPD: 7, RCT: 8, WRP: 7, PAL: 0, morphDur: 1.05, mode: 'hybrid', trails: 0.03, bloomMul: 1.14,
+      visualMacro: 'club', postFxKaleido: 0, postFxGlitch: 0.035
+    },
+    ambient_show: {
+      SPD: 2, RCT: 5, WRP: 3, PAL: 2, morphDur: 3.25, mode: 'hybrid', trails: 0.17, bloomMul: 0.86,
+      visualMacro: 'ambient', postFxKaleido: 0.05, postFxGlitch: 0
+    },
+    psychedelic: {
+      SPD: 5, RCT: 8, WRP: 7, PAL: 3, morphDur: 1.45, mode: 'hybrid', trails: 0.11, bloomMul: 1.1,
+      visualMacro: 'psychedelic', postFxKaleido: 0.14, postFxGlitch: 0.055
+    }
+  };
+
   function build(showcase) {
     if (!showcase || !showcase.length) return [];
     var out = [];
@@ -101,14 +117,40 @@
     if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
   }
 
+  /**
+   * @param {string} id — club | ambient_show | psychedelic
+   */
+  function applyShowMacro(id) {
+    var st = SHOW_MACROS[id];
+    if (!st) return;
+    var S = NX.S;
+    var P = NX.P;
+    P.SPD = st.SPD;
+    P.RCT = st.RCT;
+    P.WRP = st.WRP;
+    P.PAL = st.PAL;
+    S.morphDurationSec = st.morphDur;
+    S.nexusPostTrails = st.trails;
+    S.postBloomMul = st.bloomMul;
+    S.visualMacro = st.visualMacro || '';
+    S.postFxKaleido = st.postFxKaleido != null ? st.postFxKaleido : 0;
+    S.postFxGlitch = st.postFxGlitch != null ? st.postFxGlitch : 0;
+    if (st.mode && NX.SceneManager) {
+      NX.SceneManager.setMode(st.mode, { crossfade: true, fadeSec: 1 });
+    }
+    if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
+  }
+
   var api = {
     VARIANTS: VARIANTS,
     GENRES: GENRES,
     VISUAL_STYLES: VISUAL_STYLES,
+    SHOW_MACROS: SHOW_MACROS,
     build: build,
     filterByGenre: filterByGenre,
     apply: apply,
-    applyVisualStyle: applyVisualStyle
+    applyVisualStyle: applyVisualStyle,
+    applyShowMacro: applyShowMacro
   };
 
   window.NXProPresets = api;

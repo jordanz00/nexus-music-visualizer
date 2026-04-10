@@ -5,6 +5,8 @@
 (function () {
   var S = NX.S, P = NX.P;
   var access = null, inputs = [], mappings = {}, learnTarget = null;
+  var _sceneFamilyBucket = -1;
+  var _nextRandomPrev = 0;
 
   function loadMappings() {
     try { var s = localStorage.getItem('nx_midi'); if (s) mappings = JSON.parse(s); } catch (e) { }
@@ -35,6 +37,51 @@
       var modes = ['shader', 'butterchurn', 'hybrid'];
       var i = Math.min(2, Math.floor(v * 3));
       if (NX.SceneManager) NX.SceneManager.setMode(modes[i], { crossfade: true });
+    } },
+    intensity: { set: function (v) {
+      S.bcIntensity = 0.15 + v * 1.25;
+      if (NX.VisualEngineManager && NX.VisualEngineManager.setIntensity) NX.VisualEngineManager.setIntensity(S.bcIntensity);
+    } },
+    trailsAmt: { set: function (v) {
+      S.nexusPostTrails = Math.max(0, Math.min(1, v));
+      var el = document.getElementById('nx-trails');
+      if (el) el.value = String(Math.round(S.nexusPostTrails * 100));
+    } },
+    kaleido: { set: function (v) { S.postFxKaleido = Math.max(0, Math.min(1, v)); } },
+    glitch: { set: function (v) { S.postFxGlitch = Math.max(0, Math.min(1, v)); } },
+    postFx: { set: function (v) {
+      S.postFxKaleido = Math.max(0, Math.min(1, v * 0.55));
+      S.postFxGlitch = Math.max(0, Math.min(1, v * 0.45));
+    } },
+    nextRandom: { set: function (v) {
+      if (v > 0.9 && _nextRandomPrev <= 0.9) NX.goRandom();
+      _nextRandomPrev = v;
+    } },
+    sceneFamily: { set: function (v) {
+      var tags = ['calm', 'intense', 'fractal', 'tunnel', 'sacred'];
+      var b = Math.min(tags.length - 1, Math.floor(Math.max(0, Math.min(1, v)) * tags.length));
+      if (b === _sceneFamilyBucket) return;
+      _sceneFamilyBucket = b;
+      var tag = tags[b];
+      if (!NX.sceneHasTag) return;
+      var pool = [];
+      for (var i = 0; i < NX.scenes.length; i++) if (NX.sceneHasTag(i, tag)) pool.push(i);
+      if (!pool.length) return;
+      var pick = pool[Math.floor(Math.random() * pool.length)];
+      if (pick === S.curS && pool.length > 1) {
+        var j = pool.indexOf(pick);
+        pick = pool[(j + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length];
+      }
+      NX.goNext(pick);
+    } },
+    autoMorphCc: { set: function (v) {
+      S.autoMorph = v > 0.5;
+      var ab = document.getElementById('autobtn');
+      if (ab) ab.classList.toggle('on', S.autoMorph);
+      var t = document.getElementById('auto-timer'); if (t) t.textContent = S.autoMorph ? '-' : 'OFF';
+    } },
+    explodePulse: { set: function (v) {
+      if (v > 0.88) { S.explode = 0.95; S.beat = 0.72; }
     } }
   };
 
