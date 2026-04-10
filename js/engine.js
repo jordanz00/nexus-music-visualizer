@@ -318,6 +318,24 @@ window.NX = window.NX || {};
   /* ---- Vertex shader (shared) -------------------------------------- */
   var VS = 'attribute vec2 pos;varying vec2 uv;void main(){uv=pos*.5+.5;gl_Position=vec4(pos,0,1);}';
 
+  /* ---- Passthrough blit (when bloom/grade post chain missing or errors) */
+  var BLIT_FALLBACK_FS = 'precision mediump float;varying vec2 uv;uniform sampler2D tex;void main(){gl_FragColor=texture2D(tex,uv);}';
+  var blitFallbackProg = null;
+  function blitTextureToCanvas(tex) {
+    if (!tex) return;
+    if (!blitFallbackProg) blitFallbackProg = mkProg(VS, BLIT_FALLBACK_FS);
+    if (!blitFallbackProg) return;
+    gl.disable(gl.BLEND);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, Math.max(1, C.width | 0), Math.max(1, C.height | 0));
+    gl.useProgram(blitFallbackProg);
+    bindQuad(blitFallbackProg);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(u(blitFallbackProg, 'tex'), 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
   /* ---- Pre-warm uniform cache after programs are compiled ---------- */
   function prewarmCache(sceneProgs, postProgs) {
     var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD'];
@@ -573,17 +591,17 @@ window.NX = window.NX || {};
       finalTex = fbMorph.t;
     }
 
-    if (drawShader && NX.post && NX.post.render) {
+    var postReady = !!(drawShader && finalTex && NX.post && NX.post.render && NX.postProgs && NX.postProgs.out && NX.postProgs.copy);
+    if (postReady) {
       try {
         NX.post.render(finalTex, fbBloom, fbBloomBlur, hw, hh);
       } catch (ePost) {
-        console.warn('NEXUS post.render failed', ePost);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        var cwE = Math.max(1, C.width | 0), chE = Math.max(1, C.height | 0);
-        gl.viewport(0, 0, cwE, chE);
-        gl.clearColor(0.04, 0.04, 0.12, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        console.warn('NEXUS post.render failed — blitting scene FBO', ePost);
+        blitTextureToCanvas(finalTex);
       }
+    } else if (drawShader && finalTex) {
+      /* Missing or partial post compile: still show raw scene texture. */
+      blitTextureToCanvas(finalTex);
     } else if (!drawShader) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, C.width, C.height);

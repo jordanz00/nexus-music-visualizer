@@ -2,6 +2,20 @@
 <html lang="en" class="nexus-app">
 <head>
   <meta charset="UTF-8">
+  <script>
+  /* GitHub Pages project sites: opening …/repo-name (no trailing slash) makes relative
+     script URLs resolve to the domain root → 404 → NX undefined → bootstrap error. */
+  (function () {
+    try {
+      var path = location.pathname;
+      if (/\.html$/i.test(path)) path = path.replace(/[^/]+$/, '');
+      else if (path.length > 1 && path.charAt(path.length - 1) !== '/') path += '/';
+      var b = document.createElement('base');
+      b.href = path.length ? path : '/';
+      document.head.insertBefore(b, document.head.firstChild);
+    } catch (e0) { /* ignore */ }
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#07070c">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -515,8 +529,18 @@
 <script>
 /* ── Bootstrap: compile, wire, run ─────────────────────────────────── */
 (function () {
+  if (typeof window.NX === 'undefined') {
+    console.error('NEXUS: NX namespace missing — scripts likely failed to load (404 or blocked). Check Network tab.');
+    return;
+  }
   if (NX._fatalNoWebGL) return;
   try {
+    if (typeof NX.compileScenes !== 'function') {
+      throw new Error('compileScenes missing — is js/scenes.js loading?');
+    }
+    if (!NX.post || typeof NX.post.compile !== 'function') {
+      throw new Error('post pipeline missing — is js/post.js loading?');
+    }
     var ok = NX.compileScenes();
     console.log('Scenes compiled:', ok, '/', NX.scenes.length);
     NX.post.compile();
@@ -550,9 +574,10 @@
     console.error('NEXUS bootstrap failed:', err);
     var sp = document.getElementById('splash');
     if (sp) {
+      var detail = (err && err.message) ? String(err.message) : String(err);
       var msg = document.createElement('p');
       msg.style.cssText = 'color:#ff8a80;font-size:12px;margin-top:12px;max-width:28em;line-height:1.4';
-      msg.textContent = 'Startup error — check console (F12). Try a hard refresh or serve over http://localhost (not file://).';
+      msg.textContent = detail + ' — Open console (F12) for full trace. Use http://localhost or GitHub Pages URL with trailing slash if assets 404.';
       var card = sp.querySelector('.nx-splash-card');
       if (card) card.appendChild(msg);
     }

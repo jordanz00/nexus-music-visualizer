@@ -96,10 +96,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);co
 }
 /* touch-action: none — camera drag without page scroll / pinch stealing on iOS */
 #c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;display:block;touch-action:none;-webkit-user-select:none;user-select:none}
+/* screen: reliable across WebKit; plus-lighter could composite to invisible on some iOS/macOS builds */
 #c.nexus-hybrid{mix-blend-mode:screen}
-@supports (mix-blend-mode: plus-lighter){
-  #c.nexus-hybrid{mix-blend-mode:plus-lighter}
-}
 body.nexus-mode-bc #c{pointer-events:none}
 
 /* -- Nexus Engine row ----------------------------------------------- */

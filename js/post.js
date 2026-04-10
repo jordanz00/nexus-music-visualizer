@@ -3,7 +3,8 @@
     ACES output. Beat-driven lift uses smoothed `S.beatVisual` (see audio.js). */
 
 (function () {
-  var gl = NX.gl, S = NX.S, P = NX.P;
+  /* Resolve GL at call time — same context as engine; avoids a stale closure if load order ever shifts. */
+  var S = NX.S, P = NX.P;
   var u = NX.u, bindQuad = NX.bindQuad, shapeDrive = NX.shapeDrive;
 
   function postAudioWeight() {
@@ -195,11 +196,16 @@
     copyProg = NX.mkProg(NX.VS, COPY_FS);
     trailProg = NX.mkProg(NX.VS, TRAIL_FS);
     NX.postProgs = { bloom: bloomProg, blur: blurProg, streak: streakProg, out: outProg, blend: blendProg, copy: copyProg, trail: trailProg };
-    console.log('Post: bloom', !!bloomProg, '| out', !!outProg, '| copy', !!copyProg);
-    return !!(bloomProg && blurProg && outProg && blendProg && copyProg && trailProg);
+    if (!trailProg) console.warn('NEXUS post: trail shader failed to compile — motion trails disabled');
+    /* Trail is optional (trails UI off by default). Requiring it made the whole pipeline “fail” on some drivers. */
+    var ok = !!(bloomProg && blurProg && outProg && blendProg && copyProg);
+    console.log('Post: ok', ok, '| bloom', !!bloomProg, '| out', !!outProg, '| copy', !!copyProg, '| trail', !!trailProg);
+    return ok;
   }
 
   function ensureBlackTex() {
+    var gl = NX.gl;
+    if (!gl) return;
     if (blackTex) return;
     blackTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, blackTex);
@@ -209,6 +215,8 @@
   }
 
   function releaseAux() {
+    var gl = NX.gl;
+    if (!gl) return;
     function del(rt) {
       if (!rt) return;
       gl.deleteTexture(rt.t); gl.deleteFramebuffer(rt.f);
@@ -230,6 +238,8 @@
 
   function drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm) {
     if (!outProg || !finalTex) return;
+    var gl = NX.gl;
+    if (!gl) return;
     var pc = S.postChain;
     gl.useProgram(outProg); bindQuad(outProg);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, finalTex); gl.uniform1i(u(outProg, 'tex'), 0);
@@ -267,6 +277,8 @@
 
   /* ---- Render post chain ------------------------------------------- */
   function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
+    var gl = NX.gl;
+    if (!gl) return;
     ensureBlackTex();
     var screenW = Math.max(1, NX.C.width | 0), screenH = Math.max(1, NX.C.height | 0);
     if (!outProg || !copyProg || !finalTex) {
