@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="nexus-app">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0a0f">
+  <meta name="theme-color" content="#07070c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
@@ -29,10 +29,13 @@
 
 <!-- ── SPLASH ─────────────────────────────────────────────────────── -->
 <div id="splash">
-  <h1>NEXUS ENGINE</h1>
-  <p class="sub">PRO · LIVE DJ / VJ · AURORA FIELD SPECTRUM</p>
-  <button class="start-btn" id="start-btn" type="button">LAUNCH</button>
-      <p class="hint">Microphone drives meters and spectrum visuals &middot; tap anywhere here or Launch (browsers need a tap before audio). Visuals run behind this screen.</p>
+  <div class="nx-splash-card">
+    <p class="nx-splash-eyebrow">Live visual suite</p>
+    <h1>NEXUS ENGINE</h1>
+    <p class="sub">Pro · hybrid WebGL + Aurora · touch-first</p>
+    <button class="start-btn" id="start-btn" type="button">Launch</button>
+    <p class="hint">Tap <strong>Launch</strong> or anywhere on this card to unlock audio. Visuals already run behind this screen.</p>
+  </div>
 </div>
 
 <!-- ── TOP BAR (two rows on phone: brand + scrollable transport) ─── -->
@@ -43,7 +46,7 @@
     <div class="meta scene-name-truncate" id="scene-name">&mdash;</div>
     <div class="meta bc-preset-hud" id="bc-preset-hud" style="display:none" title="Current Aurora preset"></div>
   </div>
-  <div class="topbar-row topbar-toolbar" role="toolbar" aria-label="Transport and recording">
+  <div class="topbar-row topbar-toolbar" role="toolbar" aria-label="Transport, audio, and recording">
     <div class="meta meta-compact" id="bpm-val">--</div>
     <div class="meta meta-compact nx-show-tc" id="show-timecode" title="Show clock (SMPTE-style)">00:00:00:00</div>
     <div class="meta meta-compact" id="auto-timer">-</div>
@@ -81,7 +84,7 @@
       <option value="resolume">Resolume Killer</option>
     </select>
     <button type="button" class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
-    <button type="button" class="top-btn" id="presentbtn" title="Present mode (P)">PRESENT</button>
+    <button type="button" class="top-btn top-btn-present" id="presentbtn" title="Clean output: hide chrome (keyboard P)" aria-pressed="false">Present</button>
   </div>
 </div>
 
@@ -516,6 +519,11 @@
   console.log('Scenes compiled:', ok, '/', NX.scenes.length);
   NX.post.compile();
   NX.resize();
+  /* iOS WebKit: first layout pass sometimes reports 0×0 until after first paint */
+  if (NX.S && NX.S._iosCoarsePointer) {
+    requestAnimationFrame(function () { NX.resize(); });
+    setTimeout(function () { NX.resize(); }, 320);
+  }
   if (NX.ModernVisualStack && NX.ModernVisualStack.init) NX.ModernVisualStack.init();
   if (window.NexusEngine) NexusEngine.init();
   if (NX.watermark) NX.watermark.checkPro();

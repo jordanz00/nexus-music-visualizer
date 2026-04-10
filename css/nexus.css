@@ -11,19 +11,37 @@
   color: rgba(0, 255, 213, 0.75);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Orbitron:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap');
 
+/* Design tokens — iOS-safe surfaces, pro chrome, one coherent “new” stack */
 :root{
-  --bg-color:#111;
+  --nx-bg-deep:#07070c;
+  --nx-bg-chrome:rgba(8,10,18,.94);
+  --nx-bg-panel:rgba(6,8,14,.88);
+  --nx-bg-elev:rgba(18,20,32,.82);
+  --nx-border-chrome:rgba(0,214,196,.12);
+  --nx-border-strong:rgba(0,255,213,.22);
+  --nx-radius-sm:8px;
+  --nx-radius-md:12px;
+  --nx-radius-lg:20px;
+  --nx-shadow-lg:0 16px 48px rgba(0,0,0,.55);
+  --nx-ease:cubic-bezier(.25,.1,.25,1);
+  --nx-duration:.22s;
+  --nx-font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --nx-font-display:'Orbitron',system-ui,sans-serif;
+  --nx-text-muted:rgba(255,255,255,.55);
+  --nx-text-dim:rgba(255,255,255,.38);
+  /* Legacy aliases (existing rules) */
+  --bg-color:var(--nx-bg-deep);
   --accent-color:#00ffd5;
-  --accent-dim:rgba(0,255,213,.35);
-  --slider-track:#333;
+  --accent-dim:rgba(0,255,213,.38);
+  --slider-track:#2a2e3a;
   --slider-thumb:#00ffb0;
-  --panel-bg:rgba(0,0,0,.72);
-  --text-color:#fff;
-  --surface-elev:#1a1a22;
-  --border-subtle:rgba(0,255,213,.14);
-  /* Modern Visual Stack — driven by js/nexus-engine/modern-visual-stack.js */
+  --panel-bg:var(--nx-bg-panel);
+  --text-color:#f4f6fb;
+  --surface-elev:#161a24;
+  --border-subtle:var(--nx-border-chrome);
+  /* Modern Visual Stack — js/nexus-engine/modern-visual-stack.js */
   --nx-amb-h:200;
   --nx-amb-c:0.08;
   --nx-amb-l:0.1;
@@ -32,25 +50,9 @@
   --nx-spot-y:28%;
 }
 
-/* Registered hues/chroma/lightness for smoother CSS interpolation (Chrome 85+, Safari 16+) */
-@property --nx-amb-h {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 200;
-}
-@property --nx-amb-c {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0.08;
-}
-@property --nx-amb-l {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0.1;
-}
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-color);color:var(--text-color);font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+html.nexus-app,body.nexus-app,html.nexus-app body{width:100%;height:100%}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);color:var(--text-color);font-family:var(--nx-font-sans);font-size:clamp(12px,2.8vw,14px);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
 
 /* -- Canvas --------------------------------------------------------- */
 #c-bc{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block;opacity:0;pointer-events:none;transition:opacity .6s ease}
@@ -64,16 +66,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-color);colo
 .nx-wgpu-row .nx-wgpu-rm{font-size:12px;padding:4px 8px}
 .nx-clip-cell,.nx-clip-video,.nx-clip-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .nx-clip-cell{pointer-events:none}
-/* Ambient above clip-under, below main WebGL */
-.nx-ambient-layer{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:plus-lighter;opacity:.52;transition:opacity .45s ease}
+/* Ambient above clip-under, below main WebGL — screen blend works on older iOS; plus-lighter is Safari 17+ */
+.nx-ambient-layer{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.38;transition:opacity .45s ease}
+@supports (mix-blend-mode: plus-lighter){
+  .nx-ambient-layer{mix-blend-mode:plus-lighter;opacity:.52}
+}
 .nx-modern-vis .nx-ambient-layer{
   background:
-    radial-gradient(ellipse 130% 92% at 50% 108%,hsl(var(--nx-fb-h) 88% 58% / 0.2),transparent 58%),
-    radial-gradient(ellipse 72% 58% at var(--nx-spot-x,50%) var(--nx-spot-y,28%),hsl(var(--nx-fb-h) 92% 64% / 0.14),transparent 74%);
+    radial-gradient(ellipse 130% 92% at 50% 108%,hsla(var(--nx-fb-h),88%,58%,0.2),transparent 58%),
+    radial-gradient(ellipse 72% 58% at var(--nx-spot-x,50%) var(--nx-spot-y,28%),hsla(var(--nx-fb-h),92%,64%,0.14),transparent 74%);
 }
-.nx-modern-vis.nx-amb-subtle .nx-ambient-layer{opacity:.28}
+.nx-modern-vis.nx-amb-subtle .nx-ambient-layer{opacity:.22}
+@supports (mix-blend-mode: plus-lighter){
+  .nx-modern-vis.nx-amb-subtle .nx-ambient-layer{opacity:.28}
+}
 @media (prefers-reduced-motion:reduce){
-  .nx-ambient-layer{opacity:.32;transition:none}
+  .nx-ambient-layer{opacity:.3;transition:none}
 }
 @supports (color:oklch(0.7 0.12 200)){
   .nx-modern-vis:not(.nx-fallback-amb) .nx-ambient-layer{
@@ -88,7 +96,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-color);colo
 }
 /* touch-action: none — camera drag without page scroll / pinch stealing on iOS */
 #c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;display:block;touch-action:none;-webkit-user-select:none;user-select:none}
-#c.nexus-hybrid{mix-blend-mode:plus-lighter}
+#c.nexus-hybrid{mix-blend-mode:screen}
+@supports (mix-blend-mode: plus-lighter){
+  #c.nexus-hybrid{mix-blend-mode:plus-lighter}
+}
 body.nexus-mode-bc #c{pointer-events:none}
 
 /* -- Nexus Engine row ----------------------------------------------- */
@@ -100,20 +111,28 @@ body.nexus-mode-bc #c{pointer-events:none}
 .wide-select{min-width:200px;max-width:min(420px,45vw)}
 
 /* -- Top bar (iOS: two rows + horizontal scroll; desktop: one row) --- */
-#topbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;flex-direction:column;align-items:stretch;height:auto;background:rgba(10,10,15,.94);border-bottom:1px solid rgba(0,229,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#topbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;flex-direction:column;align-items:stretch;height:auto;background:var(--nx-bg-chrome);border-bottom:1px solid var(--nx-border-chrome);backdrop-filter:saturate(140%) blur(14px);-webkit-backdrop-filter:saturate(140%) blur(14px);box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:box-shadow var(--nx-duration) var(--nx-ease)}
 .topbar-row{display:flex;align-items:center;gap:6px;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
 .topbar-brand-row{padding-top:max(6px,env(safe-area-inset-top));padding-bottom:6px;border-bottom:1px solid rgba(0,229,255,.08);min-height:44px}
 .topbar-toolbar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;gap:4px;padding:8px 10px 10px;scrollbar-width:none;min-height:48px;align-items:center}
 .topbar-toolbar::-webkit-scrollbar{display:none}
-.scene-name-truncate{flex:1;min-width:0;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:.12em;color:var(--accent-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#topbar .brand{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--accent-color);flex-shrink:0}
+.scene-name-truncate{flex:1;min-width:0;font-family:var(--nx-font-display);font-size:9px;letter-spacing:.12em;color:var(--accent-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#topbar .brand{font-family:var(--nx-font-display);font-size:clamp(11px,3.2vw,13px);font-weight:700;letter-spacing:.2em;color:var(--accent-color);flex-shrink:0}
 #topbar .brand span{color:var(--accent-dim);font-weight:500;font-size:10px;margin-left:6px;letter-spacing:.12em}
 #topbar .brand .ver-mark{font-size:7px;letter-spacing:.2em;color:rgba(255,255,255,.35);border:1px solid var(--border-subtle);padding:2px 6px;border-radius:3px;margin-left:8px}
 #topbar .meta{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:.12em;color:var(--accent-dim)}
 .meta-compact{flex-shrink:0;margin-right:4px}
-.top-btn{background:none;border:1px solid var(--border-subtle);color:var(--accent-color);font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.08em;padding:8px 12px;border-radius:6px;cursor:pointer;transition:transform .2s ease,background .2s,border-color .2s,box-shadow .2s;min-height:44px;min-width:44px;margin-left:0;flex-shrink:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.top-btn:hover,.top-btn.on{background:rgba(0,255,213,.1);border-color:rgba(0,255,213,.45);transform:translateY(-1px)}
-.top-btn.on{color:#fff;text-shadow:0 0 10px rgba(0,255,213,.45)}
+.top-btn{background:rgba(255,255,255,.04);border:1px solid var(--border-subtle);color:var(--accent-color);font-family:var(--nx-font-sans);font-size:10px;font-weight:500;letter-spacing:.06em;padding:8px 12px;border-radius:var(--nx-radius-sm);cursor:pointer;transition:transform var(--nx-duration) var(--nx-ease),background var(--nx-duration) var(--nx-ease),border-color var(--nx-duration) var(--nx-ease),box-shadow var(--nx-duration) var(--nx-ease);min-height:44px;min-width:44px;margin-left:0;flex-shrink:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.top-btn:hover,.top-btn:focus-visible{background:rgba(0,255,213,.1);border-color:var(--nx-border-strong);outline:none}
+.top-btn:focus-visible{box-shadow:0 0 0 2px rgba(0,229,255,.25)}
+@media (prefers-reduced-motion:no-preference){
+  .top-btn:hover,.top-btn.on{transform:translateY(-1px)}
+}
+.top-btn.on{background:rgba(0,255,213,.12);border-color:rgba(0,255,213,.5);color:#fff;box-shadow:0 0 20px rgba(0,255,213,.12);text-shadow:0 0 12px rgba(0,255,213,.35)}
+.top-btn-present{font-weight:600;letter-spacing:.1em}
+@media (prefers-reduced-motion:reduce){
+  .top-btn,.top-btn.on,.panel-fab{transform:none!important}
+}
 .top-btn.rec{border-color:rgba(255,23,68,.3);color:#ff1744}
 .top-btn.rec.on{background:rgba(255,23,68,.18);border-color:#ff1744;animation:rec-pulse 1.2s ease infinite}
 .top-btn .top-btn-short{display:none}
@@ -133,7 +152,7 @@ body.nexus-mode-bc #c{pointer-events:none}
 }
 
 /* -- Bottom panel (tabbed app shell) -------------------------------- */
-#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--panel-bg);border-top:1px solid var(--border-subtle);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;transition:transform .35s ease;max-height:min(58vh,720px);box-shadow:0 -8px 40px rgba(0,0,0,.45);padding:0;overflow:hidden}
+#panel{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--panel-bg);border-top:1px solid var(--nx-border-strong);backdrop-filter:saturate(140%) blur(16px);-webkit-backdrop-filter:saturate(140%) blur(16px);display:flex;flex-direction:column;transition:transform .35s var(--nx-ease);max-height:min(58vh,720px);box-shadow:0 -12px 48px rgba(0,0,0,.55);padding:0;overflow:hidden}
 #panel.hide{transform:translateY(100%)}
 #panel.nx-app-panel .nx-panel-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
 .nx-tab-panel{display:none;padding-bottom:max(8px,env(safe-area-inset-bottom))}
@@ -158,9 +177,10 @@ body.nexus-mode-bc #c{pointer-events:none}
 .live-peak-label{margin:0 14px 2px;font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,.3);text-transform:uppercase}
 .live-peak-wrap{height:10px;margin:0 14px 16px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
 .live-peak-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent-color),#00bcd4);transition:width .05s linear;border-radius:6px}
-.nx-tabbar{display:flex;flex-direction:row;justify-content:stretch;gap:3px;padding:6px 8px;padding-bottom:max(6px,env(safe-area-inset-bottom));background:rgba(6,8,12,.97);border-top:1px solid rgba(0,229,255,.1);flex-shrink:0}
-.nx-tab-btn{flex:1;min-height:48px;padding:6px 4px;border:1px solid transparent;border-radius:8px;background:transparent;color:rgba(255,255,255,.45);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;letter-spacing:.04em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .2s,background .2s,border-color .2s}
-.nx-tab-btn.nx-tab-on{color:var(--accent-color);background:rgba(0,255,213,.08);border-color:rgba(0,255,213,.25)}
+.nx-tabbar{display:flex;flex-direction:row;justify-content:stretch;gap:4px;padding:8px 10px;padding-bottom:max(8px,env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(255,255,255,.03),transparent 40%),rgba(4,6,12,.98);border-top:1px solid var(--nx-border-chrome);flex-shrink:0}
+.nx-tab-btn{flex:1;min-height:48px;padding:8px 4px;border:1px solid transparent;border-radius:var(--nx-radius-sm);background:transparent;color:var(--nx-text-dim);font-family:var(--nx-font-sans);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color var(--nx-duration) var(--nx-ease),background var(--nx-duration) var(--nx-ease),border-color var(--nx-duration) var(--nx-ease),box-shadow var(--nx-duration) var(--nx-ease)}
+.nx-tab-btn.nx-tab-on{color:var(--accent-color);background:rgba(0,255,213,.1);border-color:rgba(0,255,213,.32);box-shadow:0 0 24px rgba(0,255,213,.08)}
+.nx-tab-btn:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(0,229,255,.3)}
 .nx-acc-inline{border-bottom:none;margin-top:8px}
 @media (min-width:900px){
   #panel.nx-app-panel{flex-direction:row;align-items:stretch;max-height:min(72vh,820px);border-right:1px solid rgba(0,229,255,.08)}
@@ -224,14 +244,20 @@ html.nexus-ios .ctrl-slider input[type=range]::-webkit-slider-thumb{width:22px;h
 #midi-status.learning{color:#ffab00;animation:midi-blink .6s infinite}
 @keyframes midi-blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* -- Splash --------------------------------------------------------- */
-#splash{position:fixed;inset:0;z-index:200;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease;padding:max(28px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+/* -- Splash (glass card — readable on any iPhone size) ---------------- */
+#splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .75s var(--nx-ease);padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:radial-gradient(100% 70% at 50% -15%,rgba(0,255,213,.09),transparent 50%),radial-gradient(80% 50% at 80% 100%,rgba(0,180,255,.06),transparent 45%),var(--nx-bg-deep);touch-action:manipulation}
 #splash.out{opacity:0;pointer-events:none}
-#splash h1{font-family:'Orbitron',monospace;font-size:36px;font-weight:700;letter-spacing:.22em;color:var(--accent-color);margin-bottom:8px;text-shadow:0 0 32px rgba(0,255,213,.22)}
-#splash .sub{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:.16em;margin-bottom:28px}
-#splash .start-btn{background:transparent;border:1px solid var(--border-subtle);color:var(--accent-color);font-family:'Orbitron',monospace;font-size:14px;letter-spacing:.18em;padding:14px 40px;min-height:48px;min-width:min(280px,88vw);border-radius:8px;cursor:pointer;transition:all .25s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-#splash .start-btn:hover,#splash .start-btn:active{background:rgba(0,255,213,.1);border-color:var(--accent-color);box-shadow:0 0 24px rgba(0,255,213,.2)}
-#splash .hint{font-size:10px;color:rgba(255,255,255,.2);margin-top:14px;letter-spacing:.08em}
+.nx-splash-card{width:100%;max-width:min(400px,100%);text-align:center;padding:clamp(20px,5vw,32px) clamp(18px,4vw,28px);border-radius:var(--nx-radius-lg);border:1px solid var(--nx-border-strong);background:var(--nx-bg-elev);backdrop-filter:saturate(160%) blur(20px);-webkit-backdrop-filter:saturate(160%) blur(20px);box-shadow:var(--nx-shadow-lg),0 0 0 1px rgba(255,255,255,.04) inset;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.nx-splash-eyebrow{font-family:var(--nx-font-display);font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(0,229,255,.55);margin-bottom:10px}
+#splash h1{font-family:var(--nx-font-display);font-size:clamp(26px,7vw,36px);font-weight:700;letter-spacing:.2em;color:var(--accent-color);margin-bottom:6px;text-shadow:0 0 40px rgba(0,255,213,.25)}
+#splash .sub{font-size:clamp(10px,2.8vw,12px);color:var(--nx-text-muted);letter-spacing:.12em;margin-bottom:22px;line-height:1.4}
+#splash .start-btn{width:100%;max-width:280px;background:linear-gradient(180deg,rgba(0,255,213,.14),rgba(0,255,213,.06));border:1px solid var(--nx-border-strong);color:var(--accent-color);font-family:var(--nx-font-display);font-size:13px;font-weight:600;letter-spacing:.2em;padding:16px 32px;min-height:52px;border-radius:var(--nx-radius-md);cursor:pointer;transition:background var(--nx-duration) var(--nx-ease),border-color var(--nx-duration) var(--nx-ease),box-shadow var(--nx-duration) var(--nx-ease),transform var(--nx-duration) var(--nx-ease);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#splash .start-btn:hover,#splash .start-btn:focus-visible,#splash .start-btn:active{background:rgba(0,255,213,.2);border-color:var(--accent-color);box-shadow:0 0 32px rgba(0,255,213,.18);outline:none}
+@media (prefers-reduced-motion:no-preference){
+  #splash .start-btn:active{transform:scale(.985)}
+}
+#splash .hint{font-size:10px;color:var(--nx-text-dim);margin-top:16px;letter-spacing:.04em;line-height:1.45;max-width:36em;margin-left:auto;margin-right:auto}
+#splash .hint strong{color:rgba(0,229,255,.75);font-weight:600}
 
 /* View Transitions API — paired with ModernVisualStack.wrapUiTransition (splash → app) */
 @media (prefers-reduced-motion:no-preference){
@@ -245,10 +271,13 @@ html.nexus-ios .ctrl-slider input[type=range]::-webkit-slider-thumb{width:22px;h
 }
 
 /* -- Present mode --------------------------------------------------- */
-body.nexus-present #topbar,body.nexus-present #panel{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
-body.nexus-present .panel-fab{opacity:0!important;pointer-events:none!important;transition:opacity .45s ease}
+body.nexus-present #topbar,body.nexus-present #panel{opacity:0!important;pointer-events:none!important;transition:opacity .45s var(--nx-ease)}
+body.nexus-present .panel-fab{opacity:0!important;pointer-events:none!important;transition:opacity .45s var(--nx-ease)}
 body.nexus-present{cursor:none}
 body.nexus-present:hover #present-hint{opacity:1}
+
+body.nexus-recording #topbar{box-shadow:0 0 0 1px rgba(255,23,68,.4),0 4px 24px rgba(255,23,68,.08)}
+body.nexus-recording #topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,23,68,.75),transparent);opacity:.85;pointer-events:none}
 
 #fps-badge{position:fixed;top:calc(env(safe-area-inset-top) + 92px);right:max(12px,env(safe-area-inset-right));z-index:90;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:.12em;color:rgba(0,229,255,.35);pointer-events:none;display:none;white-space:pre;text-align:right}
 @media (min-width:900px){
@@ -260,7 +289,8 @@ body.nexus-present #fps-badge{top:10px;opacity:.25}
 #present-hint{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:90;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.16);opacity:0;transition:opacity .35s;pointer-events:none;padding:0 16px;text-align:center;max-width:96vw}
 
 /* -- Panel show/hide FAB (above canvas, below splash & MIDI) ------ */
-.panel-fab{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:58;min-height:44px;min-width:44px;padding:10px 16px;border-radius:999px;border:1px solid rgba(0,229,255,.35);background:rgba(8,10,14,.88);color:var(--accent-color);font-family:'Inter',sans-serif;font-size:11px;letter-spacing:.06em;font-weight:600;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .2s ease,background .2s,border-color .2s,opacity .35s ease}
+.panel-fab{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:58;min-height:44px;min-width:44px;padding:10px 16px;border-radius:999px;border:1px solid var(--nx-border-strong);background:var(--nx-bg-elev);color:var(--accent-color);font-family:var(--nx-font-sans);font-size:11px;letter-spacing:.06em;font-weight:600;cursor:pointer;box-shadow:var(--nx-shadow-lg);touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform var(--nx-duration) var(--nx-ease),background var(--nx-duration) var(--nx-ease),border-color var(--nx-duration) var(--nx-ease),opacity .35s var(--nx-ease)}
+html.nexus-ios .panel-fab{bottom:max(18px,env(safe-area-inset-bottom))}
 .panel-fab:hover{background:rgba(0,255,213,.12);border-color:rgba(0,255,213,.55);transform:translateY(-1px)}
 .panel-fab:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(0,229,255,.45),0 6px 24px rgba(0,0,0,.45)}
 @media (prefers-reduced-motion:reduce){

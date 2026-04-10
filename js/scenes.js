@@ -4,7 +4,8 @@
 
 (function () {
   var HEAD = [
-    'precision highp float;',
+    /* iOS / Mali: fragment highp is optional; fall back so scenes still compile */
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif',
     'varying vec2 uv;',
     'uniform vec2 R;',
     'uniform vec2 MX;',

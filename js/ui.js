@@ -329,13 +329,15 @@
         a.download = 'NEXUS_Pro_' + Date.now() + '.webm';
         a.click(); URL.revokeObjectURL(a.href);
         S.recording = false;
+        document.body.classList.remove('nexus-recording');
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
       };
       /* ~500 ms chunks: steadier memory vs 1s blobs; aligns better with live frame cadence */
       mediaRec.start(500);
       S.recording = true;
+      document.body.classList.add('nexus-recording');
       var b = document.getElementById('recbtn'); if (b) b.classList.add('on');
-    } catch (e) { console.warn('Recording failed:', e.message); S.recCompositeDims = null; }
+    } catch (e) { console.warn('Recording failed:', e.message); S.recCompositeDims = null; document.body.classList.remove('nexus-recording'); }
   }
   function stopRecording() { if (mediaRec && S.recording) mediaRec.stop(); }
   function toggleRecording() { S.recording ? stopRecording() : startRecording(); }
@@ -436,7 +438,12 @@
     S.presentMode = !S.presentMode;
     document.body.classList.toggle('nexus-present', S.presentMode);
     var b = document.getElementById('presentbtn');
-    if (b) { b.textContent = S.presentMode ? 'EXIT' : 'PRESENT'; b.classList.toggle('on', S.presentMode); }
+    if (b) {
+      b.textContent = S.presentMode ? 'Exit' : 'Present';
+      b.classList.toggle('on', S.presentMode);
+      b.setAttribute('aria-pressed', S.presentMode ? 'true' : 'false');
+      b.setAttribute('aria-label', S.presentMode ? 'Exit present mode (keyboard P)' : 'Present mode: hide chrome (keyboard P)');
+    }
     updatePanelFab();
   }
 

@@ -512,7 +512,14 @@ window.NX = window.NX || {};
 
     if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
 
-    if (NX.WgslGraph && NX.WgslGraph.renderFrame) NX.WgslGraph.renderFrame();
+    if (NX.WgslGraph && NX.WgslGraph.renderFrame) {
+      try {
+        NX.WgslGraph.renderFrame();
+      } catch (eW) {
+        /* iOS / partial WebGPU: never let WGSL compositor kill the main rAF loop */
+        if (NX.WgslGraph.setEnabled) NX.WgslGraph.setEnabled(false);
+      }
+    }
 
     if (S.recording && S.recCompositeDims) {
       var rc = document.getElementById('c-rec');
