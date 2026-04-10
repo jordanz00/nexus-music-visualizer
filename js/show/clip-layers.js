@@ -9,7 +9,9 @@
   var maxSlots = 4;
 
   function ensureSlots(arr) {
-    while (arr.length < maxSlots) arr.push({ video: null, url: '', opacity: 0, blend: 'screen', playing: false });
+    while (arr.length < maxSlots) {
+      arr.push({ video: null, url: '', opacity: 0, blend: 'normal', playing: false, fileName: '' });
+    }
   }
   ensureSlots(slotsBelow);
   ensureSlots(slotsAbove);
@@ -55,7 +57,7 @@
   function applyStyle(st, below, idx) {
     if (!st.wrap) return;
     st.wrap.style.opacity = String(st.opacity);
-    st.wrap.style.mixBlendMode = st.blend || 'screen';
+    st.wrap.style.mixBlendMode = st.blend || 'normal';
     st.wrap.style.zIndex = String(10 + idx);
   }
 
@@ -72,6 +74,7 @@
       try { URL.revokeObjectURL(st.url); } catch (e) { }
     }
     st.url = '';
+    st.fileName = '';
   }
 
   /**
@@ -86,6 +89,7 @@
     revoke(st);
     var url = URL.createObjectURL(file);
     st.url = url;
+    st.fileName = file.name || '';
     mountIfNeeded(below, idx);
     var v = st.video;
     var isVid = file.type.indexOf('video') === 0;
@@ -151,7 +155,7 @@
       lighten: 'lighten',
       darken: 'darken'
     };
-    return m[blend] || 'screen';
+    return m[blend] || 'source-over';
   }
 
   var BLEND_OPTIONS = [
@@ -198,6 +202,18 @@
     }
   }
 
+  function slotState(below, idx) {
+    var st = getSlot(!!below, idx);
+    if (!st) return null;
+    return {
+      hasMedia: !!st.url,
+      opacity: st.opacity,
+      playing: !!st.playing,
+      blend: st.blend || 'normal',
+      fileName: st.fileName || ''
+    };
+  }
+
   function init() {
     window.addEventListener('resize', resize, { passive: true });
     resize();
@@ -212,9 +228,20 @@
     stopSlot: function (idx, below) { stopSlotBelow(!!below, idx); },
     setBlend: function (idx, below, mode) {
       var st = getSlot(!!below, idx);
-      if (st) { st.blend = mode || 'screen'; applyStyle(st, !!below, idx); }
+      if (st) { st.blend = mode || 'normal'; applyStyle(st, !!below, idx); }
     },
     getBlendOptions: function () { return BLEND_OPTIONS.slice(); },
+    getSlotState: function (idx, below) { return slotState(!!below, idx | 0); },
+    getAllSlotStates: function () {
+      var below = [];
+      var above = [];
+      var i;
+      for (i = 0; i < maxSlots; i++) {
+        below.push(slotState(true, i));
+        above.push(slotState(false, i));
+      }
+      return { below: below, above: above };
+    },
     drawForRecording: drawForRecording
   };
 })();

@@ -3,6 +3,25 @@
  * Wires Show tab: cues list, executors, clip file picker, FX chain sync with Aurora bloom checkbox.
  */
 (function () {
+  function setClipStatus(msg, asError) {
+    var el = document.getElementById('nx-clip-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.color = asError ? 'rgba(255,138,128,.92)' : 'rgba(200,230,255,.78)';
+  }
+
+  function summarizeLoadedSlots() {
+    if (!NX.ClipLayers || !NX.ClipLayers.getAllSlotStates) return '';
+    var st = NX.ClipLayers.getAllSlotStates();
+    var bits = [];
+    var i;
+    for (i = 0; i < 4; i++) {
+      if (st.above[i].hasMedia) bits.push('overlay ' + i + (st.above[i].fileName ? ' (' + st.above[i].fileName + ')' : ''));
+      if (st.below[i].hasMedia) bits.push('behind ' + i + (st.below[i].fileName ? ' (' + st.below[i].fileName + ')' : ''));
+    }
+    return bits.length ? ' Active: ' + bits.join(' · ') + '.' : '';
+  }
+
   function refreshCueList() {
     var ul = document.getElementById('nx-cue-list');
     if (!ul || !NX.CueEngine) return;
@@ -249,31 +268,51 @@
     if (go && fin) {
       go.addEventListener('click', function () {
         var f = fin.files && fin.files[0];
-        if (!f || !NX.ClipLayers) return;
+        if (!NX.ClipLayers) {
+          setClipStatus('Clip layers are not available.', true);
+          return;
+        }
+        if (!f) {
+          setClipStatus('Choose a video or image file first.', true);
+          return;
+        }
         var sl = slot ? parseInt(slot.value, 10) : 0;
-        var bl = below ? !!below.checked : true;
+        var bl = below ? !!below.checked : false;
         NX.ClipLayers.loadFile(f, bl, sl).then(function () {
           NX.ClipLayers.playSlot(sl, bl);
-        }).catch(function () { });
+          var where = bl ? 'Behind WebGL (often hidden — see note above)' : 'Overlay on WebGL';
+          setClipStatus('Playing — ' + where + ', slot ' + sl + ': ' + (f.name || 'media') + '.' + summarizeLoadedSlots(), false);
+        }).catch(function (err) {
+          console.warn('NEXUS clip load failed', err);
+          setClipStatus('Could not decode that file. Try MP4 (H.264), WebM, or JPEG/PNG.', true);
+        });
       });
     }
     var opR = document.getElementById('nx-clip-opacity');
     var opGo = document.getElementById('nx-clip-opacity-set');
     if (opGo && opR) {
       opGo.addEventListener('click', function () {
-        var sl = slot ? parseInt(slot.value, 10) : 0;
-        var bl = below ? !!below.checked : true;
+        var slEl = document.getElementById('nx-clip-slot');
+        var blEl = document.getElementById('nx-clip-below');
+        var sl = slEl ? parseInt(slEl.value, 10) : 0;
+        var bl = blEl ? !!blEl.checked : false;
         var v = parseInt(opR.value, 10) / 100;
-        if (NX.ClipLayers) NX.ClipLayers.setOpacity(sl, bl, v);
+        if (NX.ClipLayers) {
+          NX.ClipLayers.setOpacity(sl, bl, v);
+          setClipStatus('Opacity ' + Math.round(v * 100) + '% for slot ' + sl + '.' + summarizeLoadedSlots(), false);
+        }
       });
     }
     var blSel = document.getElementById('nx-clip-blend');
     var blGo = document.getElementById('nx-clip-blend-set');
     if (blGo && blSel && NX.ClipLayers) {
       blGo.addEventListener('click', function () {
-        var sl = slot ? parseInt(slot.value, 10) : 0;
-        var bl = below ? !!below.checked : true;
+        var slEl = document.getElementById('nx-clip-slot');
+        var blEl = document.getElementById('nx-clip-below');
+        var sl = slEl ? parseInt(slEl.value, 10) : 0;
+        var bl = blEl ? !!blEl.checked : false;
         NX.ClipLayers.setBlend(sl, bl, blSel.value);
+        setClipStatus('Blend mode: ' + blSel.value + '.' + summarizeLoadedSlots(), false);
       });
     }
 
@@ -327,5 +366,5 @@
   }
 
   window.NX = window.NX || {};
-  NX.ShowWorkbench = { init: init, refreshCueList: refreshCueList, syncExecSelectors: syncExecSelectors };
+  NX.ShowWorkbench = { init: init, refreshCueList: refreshCueList, syncExecSelectors: syncExecSelectors, setClipStatus: setClipStatus };
 })();

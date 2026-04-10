@@ -25,7 +25,17 @@
       var name = document.createElement('span');
       name.className = 'sp-name'; name.textContent = sc.n;
       pad.appendChild(idx); pad.appendChild(name);
-      pad.addEventListener('click', function () { NX.goNext(i); });
+      pad.addEventListener('click', function () {
+        var target = i;
+        /* Defer to next frame on iOS — avoids GL work during the same tick as WebKit hit-testing / compositor. */
+        if (S._iosCoarsePointer) {
+          requestAnimationFrame(function () {
+            try { NX.goNext(target); } catch (ePad) { if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: scene pad', ePad); }
+          });
+        } else {
+          try { NX.goNext(target); } catch (ePad2) { if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: scene pad', ePad2); }
+        }
+      });
       grid.appendChild(pad);
     });
   }
@@ -532,7 +542,10 @@
     });
 
     var rndBtn = document.getElementById('rndbtn');
-    if (rndBtn) rndBtn.addEventListener('click', NX.goRandom);
+    if (rndBtn) rndBtn.addEventListener('click', function () {
+      if (S._iosCoarsePointer) requestAnimationFrame(function () { try { NX.goRandom(); } catch (eR) { /* ignore */ } });
+      else try { NX.goRandom(); } catch (eR2) { /* ignore */ }
+    });
 
     var panelFab = document.getElementById('panel-fab');
     if (panelFab) panelFab.addEventListener('click', function () { togglePanelVisibility(); });
@@ -543,10 +556,16 @@
     if (xBtn) xBtn.addEventListener('click', function () { S.explode = 0.95; S.beat = 0.72; });
 
     var nextBtn = document.getElementById('nextbtn');
-    if (nextBtn) nextBtn.addEventListener('click', function () { NX.goNext(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () {
+      if (S._iosCoarsePointer) requestAnimationFrame(function () { try { NX.goNext(); } catch (eN) { /* ignore */ } });
+      else try { NX.goNext(); } catch (eN2) { /* ignore */ }
+    });
 
     var prevBtn = document.getElementById('prevbtn');
-    if (prevBtn) prevBtn.addEventListener('click', NX.goPrev);
+    if (prevBtn) prevBtn.addEventListener('click', function () {
+      if (S._iosCoarsePointer) requestAnimationFrame(function () { try { NX.goPrev(); } catch (eP) { /* ignore */ } });
+      else try { NX.goPrev(); } catch (eP2) { /* ignore */ }
+    });
 
     function toggleMicUi() {
       NX.audio.toggleMic();

@@ -31,6 +31,22 @@ window.NX = window.NX || {};
   }
   gl.getExtension('OES_texture_float');
 
+  /* iOS / memory pressure: allow context restore; preventDefault is required for restoration. */
+  C.addEventListener('webglcontextlost', function (ev) {
+    ev.preventDefault();
+    if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: WebGL context lost — will rebuild if restored');
+  }, true);
+  C.addEventListener('webglcontextrestored', function () {
+    try {
+      gl.getExtension('OES_texture_float');
+      if (NX.compileScenes) NX.compileScenes();
+      if (NX.post && typeof NX.post.compile === 'function') NX.post.compile();
+      if (NX.resize) NX.resize();
+    } catch (eRest) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: context restore rebuild failed', eRest);
+    }
+  }, true);
+
   /* ---- shared state ------------------------------------------------ */
   var S = {
     W: 0, H: 0, FW: 0, FH: 0, GT: 0, frame: 0, hudTick: 0,
@@ -119,9 +135,11 @@ window.NX = window.NX || {};
     var ua = navigator.userAgent || '';
     var iOS = /iP(ad|hone|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     S._iosCoarsePointer = !!iOS;
+    /** iOS WebGL: dual-scene morph + extra FBO passes often triggers GPU watchdog / tab kill — use instant cuts (see goNext). */
+    S._iosInstantSceneChange = !!iOS;
     if (iOS) {
-      maxDpr = Math.min(maxDpr, 1.75);
-      renderScale = Math.min(renderScale, 0.66);
+      maxDpr = Math.min(maxDpr, 1.5);
+      renderScale = Math.min(renderScale, 0.58);
       document.documentElement.classList.add('nexus-ios');
     }
   })();
@@ -451,17 +469,37 @@ window.NX = window.NX || {};
   function goNext(idx) {
     if (S.morphing) return;
     var len = NX.scenes.length;
+    if (!len) return;
     S.nxtS = (idx !== undefined) ? ((idx + len) % len) : ((S.curS + 1) % len);
     if (S.nxtS === S.curS) S.nxtS = (S.curS + 1) % len;
+    /* iOS: skip morph (extra scene pass + blend FBO) — major stability win vs GPU timeouts. */
+    if (S._iosInstantSceneChange) {
+      S.curS = S.nxtS;
+      S.morphing = false;
+      S.morphBlend = 0;
+      S._morphFrame = 0;
+      S._activeMorphDur = null;
+      S.presTimer = 0;
+      try {
+        showName(S.curS);
+        if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.curS);
+      } catch (eUi) { /* ignore */ }
+      return;
+    }
     S.morphing = true; S.morphBlend = 0; S.presTimer = 0; S._morphFrame = 0;
     S._activeMorphDur = S.morphDurationSec;
     var scA = NX.scenes[S.curS], scB = NX.scenes[S.nxtS];
     if (scA && scB && scA.cost === 'high' && scB.cost === 'high') S._activeMorphDur *= 1.35;
-    [fbB[0].f, fbB[1].f].forEach(function (f) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, f);
-      gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
-    });
-    pingB = 0; gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    try {
+      if (fbB[0] && fbB[1]) {
+        [fbB[0].f, fbB[1].f].forEach(function (f) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+          gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+        });
+      }
+      pingB = 0;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    } catch (eFb) { /* ignore */ }
     showName(S.nxtS);
     if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.nxtS);
   }
@@ -522,6 +560,8 @@ window.NX = window.NX || {};
 
   function loop(now) {
     requestAnimationFrame(loop);
+    try {
+    if (gl.isContextLost && gl.isContextLost()) return;
     if (!now) now = performance.now();
     var dt = Math.min((now - _lastTime) / 1000, 0.05);
     if (dt <= 0 || dt > 0.05) dt = 0.016;
@@ -575,22 +615,30 @@ window.NX = window.NX || {};
     if (drawShader) {
       var sceneIdx = resolveSceneIndex();
       if (sceneIdx >= 0) {
-        renderScene(sceneIdx, fbA[1 - pingA].f, fbA[pingA].t);
-        pingA = 1 - pingA;
+        try {
+          renderScene(sceneIdx, fbA[1 - pingA].f, fbA[pingA].t);
+          pingA = 1 - pingA;
+        } catch (eRs) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: renderScene failed', eRs);
+        }
       }
     }
     var curOut = fbA[pingA] ? fbA[pingA].t : null;
     var finalTex = curOut;
 
-    if (drawShader && S.morphing && NX.postProgs.blend) {
-      if (S._morphFrame % 2 === 1) { renderScene(S.nxtS, fbB[1 - pingB].f, fbB[pingB].t, hw, hh); pingB = 1 - pingB; }
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbMorph.f); gl.viewport(0, 0, S.FW, S.FH);
-      gl.useProgram(NX.postProgs.blend); bindQuad(NX.postProgs.blend);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, curOut); gl.uniform1i(u(NX.postProgs.blend, 'A'), 0);
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fbB[pingB].t); gl.uniform1i(u(NX.postProgs.blend, 'B2'), 1);
-      gl.uniform1f(u(NX.postProgs.blend, 'mix2'), S.morphBlend);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      finalTex = fbMorph.t;
+    if (drawShader && S.morphing && NX.postProgs && NX.postProgs.blend && fbMorph && fbMorph.f && fbB[0] && fbB[1]) {
+      try {
+        if (S._morphFrame % 2 === 1) { renderScene(S.nxtS, fbB[1 - pingB].f, fbB[pingB].t, hw, hh); pingB = 1 - pingB; }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbMorph.f); gl.viewport(0, 0, S.FW, S.FH);
+        gl.useProgram(NX.postProgs.blend); bindQuad(NX.postProgs.blend);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, curOut); gl.uniform1i(u(NX.postProgs.blend, 'A'), 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fbB[pingB].t); gl.uniform1i(u(NX.postProgs.blend, 'B2'), 1);
+        gl.uniform1f(u(NX.postProgs.blend, 'mix2'), S.morphBlend);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        finalTex = fbMorph.t;
+      } catch (eMorph) {
+        if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: morph pass failed', eMorph);
+      }
     }
 
     var postReady = !!(drawShader && finalTex && NX.post && NX.post.render && NX.postProgs && NX.postProgs.out && NX.postProgs.copy);
@@ -655,6 +703,9 @@ window.NX = window.NX || {};
           NX.ClipLayers.drawForRecording(x2d, d.w, d.h, false);
         }
       }
+    }
+    } catch (eFrame) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: frame error', eFrame);
     }
   }
 
