@@ -7,6 +7,7 @@
      script URLs resolve to the domain root → 404 → NX undefined → bootstrap error. */
   (function () {
     try {
+      if (location.protocol === 'file:') return;
       var path = location.pathname;
       if (/\.html$/i.test(path)) path = path.replace(/[^/]+$/, '');
       else if (path.length > 1 && path.charAt(path.length - 1) !== '/') path += '/';

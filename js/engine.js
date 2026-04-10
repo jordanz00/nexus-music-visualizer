@@ -67,8 +67,8 @@ window.NX = window.NX || {};
     autoMorph: true, presTimer: 0, presInterval: 14, _morphFrame: 0,
     morphDurationSec: 1.4, showFpsOverlay: false, presentMode: false,
     adaptiveGpu: false, uiHide: false, recording: false,
-    /* Nexus Engine — hybrid Butterchurn + shader */
-    visualMode: 'hybrid',
+    /* Default shader: hybrid stack used mix-blend screen + dark rays → “no WebGL” for many scenes. Enable hybrid in UI when desired. */
+    visualMode: 'shader',
     nexusPerfLock: false,
     nexusPostBloom: true,
     /** Effect chain bypass flags (Show tab); consumed by post.js */
@@ -542,12 +542,14 @@ window.NX = window.NX || {};
     }
 
     /* Other modules share no GL state with us, but reset common pitfalls so fullscreen passes always draw. */
-    gl.disable(gl.DEPTH_TEST);
-    gl.disable(gl.STENCIL_TEST);
-    gl.disable(gl.SCISSOR_TEST);
-    gl.disable(gl.CULL_FACE);
-    gl.disable(gl.BLEND);
-    gl.colorMask(true, true, true, true);
+    try {
+      gl.disable(gl.DEPTH_TEST);
+      if (typeof gl.STENCIL_TEST === 'number') gl.disable(gl.STENCIL_TEST);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.disable(gl.CULL_FACE);
+      gl.disable(gl.BLEND);
+      gl.colorMask(true, true, true, true);
+    } catch (eGlState) { /* rare: invalid enum on minimal GL */ }
 
     if (NX.ui && NX.ui.tickHud) NX.ui.tickHud(S);
     if (NX.demo && NX.demo.tick) NX.demo.tick();
