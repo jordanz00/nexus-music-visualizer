@@ -56,51 +56,6 @@
   });
 
   NX.registerScene({
-    n: 'WORMHOLE VOID', rx: 2, c: '#00e5ff',
-    fs: H + [
-      'float wh(vec3 p){',
-      '  float r=length(p.xz);',
-      '  float a=atan(p.z,p.x)+p.y*(2.2+M*1.5)+T*SP*.15+B*1.2;',
-      '  float twist=.35+BP*.15;',
-      '  vec2 q=vec2(r-1.1-sin(a*3.+T*.4)*.08*twist,p.y);',
-      '  float tor=length(q)-.22;',
-      '  float tube=sdCyl(vec3(r-1.85,p.y,0),.12+BT*.06,4.);',
-      '  return smin(tor,tube,.12);',
-      '}',
-      'vec3 gnw(vec3 p){vec2 e=vec2(.004,0);',
-      ' return normalize(vec3(wh(p+e.xyy)-wh(p-e.xyy),wh(p+e.yxy)-wh(p-e.yxy),wh(p+e.yyx)-wh(p-e.yyx)));}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  float fly=T*SP*.35+B*.4;',
-      '  vec3 ro=vec3(sin(fly*.3)*.15,.05,cos(fly*.3)*.15)+vec3(0,0,fly);',
-      '  vec3 ta=ro+vec3(0,0,1.);',
-      '  mat3 cm=camMat(ro,ta,sin(fly)*.04);',
-      '  vec3 rd=cm*normalize(vec3(st,.85));',
-      '  float t=0.;vec3 col=vec3(0.);',
-      '  int steps=int(mix(40.,96.,LD));',
-      '  for(int i=0;i<100;i++){',
-      '    if(i>=steps)break;',
-      '    vec3 p=ro+rd*t;',
-      '    float d=wh(p);',
-      '    if(d<.015){',
-      '      vec3 n=gnw(p);',
-      '      vec3 c0=mix(vec3(.02,.08,.2),vec3(.1,.9,.95),sat(.5+sin(atan(p.z,p.x)*4.+p.y*6.)*.5));',
-      '      col=blinnPhong(n,rd,normalize(vec3(0,.3,1.)),c0,.06);',
-      '      col+=vec3(.6,.95,1.)*BT*.35*pow(sat(1.-abs(dot(n,rd))),2.5);',
-      '      break;',
-      '    }',
-      '    if(t>40.)break;',
-      '    t+=d*.88;',
-      '  }',
-      '  col+=vec3(0,.15,.35)*exp(-t*.04)*(1.+B*.6);',
-      '  vec2 fuv=feedUV(1.004,PH*.02,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.82,col,.28);',
-      '  gl_FragColor=vec4(sat(col),1.);',
-      '}'
-    ].join('\n')
-  });
-
-  NX.registerScene({
     n: 'KALI ABYSS', rx: 2, c: '#d500f9',
     fs: H + [
       'float kal(vec3 p){',

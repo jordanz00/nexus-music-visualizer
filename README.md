@@ -1,6 +1,6 @@
 # NEXUS Engine — Pro (DJ / VJ)
 
-**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) with the **full vendored `butterchurn-presets` library** (hundreds of presets) **plus** 17 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p / 4K** with **30–60 FPS**. No build step.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) with the **full vendored `butterchurn-presets` library** (hundreds of presets) **plus** 16 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p / 4K** with **30–60 FPS**. No build step.
 
 **Anti-flash tuning:** a smoothed **`beatVisual`** channel drives shaders and post (attack ~90ms, release ~400ms) so kicks and bloom no longer strobe as hard as raw beat spikes.
 
@@ -24,7 +24,7 @@
 | **Visual modes** | **Shader** (WebGL1 scenes only), **Butterchurn** (MilkDrop on `#c-bc`), **Hybrid** (Butterchurn base + WebGL with `mix-blend-mode: plus-lighter`) |
 | **Butterchurn** | `butterchurnPresets.min.js` ships the **official** npm pack: presets live behind **`getPresets()`** on the bundle’s default export (not a plain object — the catalog reads that map so **every** preset is addressable). Optional: run `vendor/fetch-extra-presets.sh` and add `<script src="vendor/butterchurnPresetsExtra.min.js">` (and siblings) before `preset-library` to merge **Extra / Extra2 / MD1 / NonMinimal** into one library. **Auto morph** + full dropdown + RND BC use the merged key list. Mic required for BC. |
 | **Nexus modules** | `js/nexus-engine/` — `AudioEngine`, `VisualEngineManager`, `SceneManager`, `PresetLibrary`, `bc-morph-conductor.js`, `pro-presets.js` (Pro 60 + `applyVisualStyle`), `NexusEngine` host (`3.1.0-pro`, `init` / `update` / `renderButterchurnLayer`) |
-| **Scenes** | 18 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
+| **Scenes** | 16 real-time raymarched 3D scenes (fractals, volumetrics, particles, tunnels, geometry, environments) |
 | **Audio** | FFT frequency bands, spectral flux, spectral centroid, beat detection, BPM tracking |
 | **Post-processing** | Tinted knee bloom (toggle + MIDI **bloom** multiplier), anamorphic streak, trails / afterimage, sharpen, ACES, subtle beat lift (smoothed) |
 | **Camera** | 5 cinematic modes — orbit, dolly, crane, handheld, snap (beat-triggered angle jumps) |
@@ -57,7 +57,7 @@
 
 ---
 
-## Scene Roster (17)
+## Scene Roster (16)
 
 ### Cosmic
 HYPERSPACE · BLACK HOLE · MANDELBULB · CHROME PLANET · GALAXY CORE
