@@ -77,44 +77,4 @@
       '}'
     ].join('\n')
   });
-
-  NX.registerScene({
-    n: 'INFLECT CORRIDOR', rx: 2, c: '#69f0ae',
-    fs: H + [
-      'float cor(vec3 p){',
-      '  p.xy=abs(p.xy);',
-      '  p.xy-=vec2(.55,.55);',
-      '  p=abs(p);',
-      '  float d=sdBox(p-vec3(0,0,opRep1(p.z-T*SP*.4,2.4)),vec3(.18,.18,.35));',
-      '  return d;',
-      '}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  vec3 ro=vec3(.05*sin(T*.1),0.,T*SP*.45);',
-      '  ro.xy+=MX.xy*.12;',
-      '  vec3 rd=rotY(sin(ro.z*.5)*.15)*normalize(vec3(st.x*.9,st.y,1.));',
-      '  float t=0.;vec3 col=vec3(.015,.03,.025);',
-      '  int steps=int(mix(36.,80.,LD));',
-      '  for(int i=0;i<84;i++){',
-      '    if(i>=steps)break;',
-      '    vec3 p=ro+rd*t;',
-      '    float d=cor(p);',
-      '    if(d<.012){',
-      '      vec2 e=vec2(.0025,0);',
-      '      vec3 n=normalize(vec3(cor(p+e.xyy)-cor(p-e.xyy),cor(p+e.yxy)-cor(p-e.yxy),cor(p+e.yyx)-cor(p-e.yyx)));',
-      '      vec3 em=mix(vec3(.1,.4,.25),vec3(.9,1.,.75),sat(sin(p.z*3.+T)*.5+.5));',
-      '      col=blinnPhong(n,rd,normalize(vec3(.2,.5,.4)),em,.18);',
-      '      col+=vec3(.4,1.,.7)*BT*.25;',
-      '      break;',
-      '    }',
-      '    t+=d*.92;',
-      '    if(t>35.)break;',
-      '  }',
-      '  col=mix(col,vec3(0,.02,.015),1.-exp(-t*.035));',
-      '  vec2 fuv=feedUV(1.002,0.,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.87,col,.22);',
-      '  gl_FragColor=vec4(sat(col),1.);',
-      '}'
-    ].join('\n')
-  });
 })();

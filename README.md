@@ -1,6 +1,6 @@
 # NEXUS Engine — Pro (DJ / VJ)
 
-**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) with the **full vendored `butterchurn-presets` library** (hundreds of presets) **plus** 15 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p / 4K** with **30–60 FPS**. No build step.
+**Production-style live VJ stack:** [Butterchurn](https://github.com/jberg/butterchurn) (MilkDrop) with the **full vendored `butterchurn-presets` library** (hundreds of presets) **plus** 14 custom raymarched WebGL scenes, shared audio analysis (bass / **low-mid** / mid / high), MIDI map overlay, graded post (bloom, trails, **hue**), and recording at **native / 1080p / Stream 1080p / 4K** with **30–60 FPS**. No build step.
 
 **Anti-flash tuning:** a smoothed **`beatVisual`** channel drives shaders and post (attack ~90ms, release ~400ms) so kicks and bloom no longer strobe as hard as raw beat spikes.
 
@@ -57,7 +57,7 @@
 
 ---
 
-## Scene Roster (15)
+## Scene Roster (14)
 
 ### Cosmic
 HYPERSPACE · BLACK HOLE · MANDELBULB · CHROME PLANET · GALAXY CORE

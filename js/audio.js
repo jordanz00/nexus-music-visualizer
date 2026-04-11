@@ -128,6 +128,10 @@
     S.sTransient += (0 - S.sTransient) * k;
     S._rmsSlow += (0 - S._rmsSlow) * k;
     S._visualBcDrive = 0;
+    S.workletRms += (0 - S.workletRms) * k;
+    S.workletCrest += (0 - S.workletCrest) * k;
+    S._workletRmsTarget = 0;
+    S._workletCrestTarget = 0;
   }
 
   function silenceAudioTexture() {
@@ -153,6 +157,61 @@
     S._visualDrive = cur + (tgt - cur) * r;
   }
 
+  function workletDisabledByQuery() {
+    try {
+      return new URLSearchParams(location.search).get('noworklet') === '1';
+    } catch (eQ) {
+      return false;
+    }
+  }
+
+  function meterWorkletModuleUrl() {
+    try {
+      return new URL('js/audio-meter-processor.js', document.baseURI || location.href).href;
+    } catch (eU) {
+      return 'js/audio-meter-processor.js';
+    }
+  }
+
+  /**
+   * Insert AudioWorkletNode between gain and analyser when supported (optional `?noworklet=1` disables).
+   * @returns {Promise<boolean>}
+   */
+  async function installMeterWorkletIfPossible() {
+    if (!S.audioCtx || !S.gainNode || !S.analyser) return false;
+    if (workletDisabledByQuery()) return false;
+    if (S._audioMeterWorkletNode) {
+      S._audioMeterWorkletReady = true;
+      return true;
+    }
+    if (!S.audioCtx.audioWorklet || !S.audioCtx.audioWorklet.addModule) return false;
+    try {
+      await S.audioCtx.audioWorklet.addModule(meterWorkletModuleUrl());
+      var node = new AudioWorkletNode(S.audioCtx, 'nx-audio-meter');
+      node.port.onmessage = function (ev) {
+        var d = ev.data;
+        if (!d || typeof d.rms !== 'number') return;
+        S._workletRmsTarget = Math.min(1.2, Math.max(0, d.rms * 9.5));
+        S._workletCrestTarget = typeof d.crest === 'number' ? Math.min(1, Math.max(0, d.crest)) : 0;
+      };
+      try {
+        S.gainNode.disconnect(S.analyser);
+      } catch (eD0) { /* not connected yet */ }
+      S.gainNode.connect(node);
+      node.connect(S.analyser);
+      S._audioMeterWorkletNode = node;
+      S._audioMeterWorkletReady = true;
+      return true;
+    } catch (eW) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: AudioWorklet meter skipped', eW);
+      S._audioMeterWorkletReady = false;
+      try {
+        S.gainNode.connect(S.analyser);
+      } catch (eD1) { /* already wired */ }
+      return false;
+    }
+  }
+
   async function ensureButterchurnAudioGraph() {
     if (S.audioCtx && S.gainNode && S.analyser) {
       if (S.audioCtx.state === 'suspended') { try { await S.audioCtx.resume(); } catch (e) { } }
@@ -175,6 +234,7 @@
     S.prevFreqFlux = new Uint8Array(S.bufLen);
     S.gainNode.connect(S.analyser);
     S.gainNode.connect(S.bcGateNode);
+    installMeterWorkletIfPossible().catch(function () { });
     S.micOn = false;
     S._bcGateOpen = 0;
     S.micEnergy = 0;
@@ -228,6 +288,7 @@
       src.connect(S.gainNode);
       S.gainNode.connect(S.analyser);
       S.gainNode.connect(S.bcGateNode);
+      installMeterWorkletIfPossible().catch(function () { });
       S.micOn = true;
       S.curDev = devId || '';
       S._bcGateOpen = 0;
@@ -244,9 +305,20 @@
 
   async function stopMic() {
     if (S.micStream) { S.micStream.getTracks().forEach(function (t) { t.stop(); }); S.micStream = null; }
+    if (S._audioMeterWorkletNode) {
+      try {
+        S._audioMeterWorkletNode.disconnect();
+      } catch (eM0) { /* ignore */ }
+      S._audioMeterWorkletNode = null;
+    }
+    S._audioMeterWorkletReady = false;
     if (S.audioCtx) { try { await S.audioCtx.close(); } catch (e) { } S.audioCtx = null; }
     S.analyser = null; S.gainNode = null; S.bcGateNode = null; S.micOn = false; S.prevFreqFlux = null;
     S._bcGateOpen = 0; S.micEnergy = 0; S._rmsSlow = 0; S.sTransient = 0; S._visualBcDrive = 0;
+    S.workletRms = 0;
+    S.workletCrest = 0;
+    S._workletRmsTarget = 0;
+    S._workletCrestTarget = 0;
     if (NX.VisualEngineManager) NX.VisualEngineManager.disconnectAudio();
     var db = document.getElementById('db');
     if (db) db.classList.remove('h');
@@ -276,6 +348,17 @@
     var adt = Math.min(0.055, S._lastAudT ? ((nowA - S._lastAudT) / 1000) : 0.016);
     S._lastAudT = nowA;
 
+    function smoothWorkletMeters() {
+      var wrt = typeof S._workletRmsTarget === 'number' ? S._workletRmsTarget : 0;
+      var wct = typeof S._workletCrestTarget === 'number' ? S._workletCrestTarget : 0;
+      var wr0 = typeof S.workletRms === 'number' ? S.workletRms : 0;
+      var wc0 = typeof S.workletCrest === 'number' ? S.workletCrest : 0;
+      var aR = Math.min(1, adt * 20);
+      var aC = Math.min(1, adt * 16);
+      S.workletRms = wr0 + (wrt - wr0) * aR;
+      S.workletCrest = wc0 + (wct - wc0) * aC;
+    }
+
     if (!S.analyser) {
       dampAudioState(0.35);
       S.micEnergy = 0;
@@ -292,6 +375,7 @@
       S.beatPhase = ((S.beatVisual || 0) * 0.9 + Math.sin(S.GT * 0.55) * 0.05);
       S.beatPhase = S.beatPhase - Math.floor(S.beatPhase);
       syncVisualDrive(pr);
+      smoothWorkletMeters();
       gl.bindTexture(gl.TEXTURE_2D, atex);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 512, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, abuf);
       return;
@@ -314,6 +398,7 @@
       if (S.bcGateNode) S.bcGateNode.gain.value = 0;
       silenceAudioTexture();
     } else {
+      smoothWorkletMeters();
       var fluxRaw = 0;
       for (var fi = 2; fi < S.bufLen; fi++) {
         var d = S.freqArr[fi] - S.prevFreqFlux[fi];
@@ -480,6 +565,7 @@
     resumeAudioContext: resumeAudioContext,
     primeForButterchurn: primeForButterchurn,
     applyReactivityProfile: applyReactivityProfile,
-    effectiveGain: effectiveGain
+    effectiveGain: effectiveGain,
+    installMeterWorkletIfPossible: installMeterWorkletIfPossible
   };
 })();

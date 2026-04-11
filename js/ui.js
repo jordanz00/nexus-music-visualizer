@@ -1077,6 +1077,7 @@
     buildShowcaseSelect();
     buildProSelect();
     wireEvents();
+    if (NX.HomageBridge && NX.HomageBridge.init) NX.HomageBridge.init();
     if (window.NXShell && NXShell.init) NXShell.init();
     syncControls();
     setActiveScene(S.curS);

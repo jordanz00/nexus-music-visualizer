@@ -134,7 +134,17 @@ window.NX = window.NX || {};
     procHue: 0, procSat: 0.5, procLift: 0.55, procPhase: 0,
     /** Hybrid stack recipe: layer opacities 0–1 (SceneManager). */
     hybridBcOpacity: 1,
-    hybridShaderOpacity: 1
+    hybridShaderOpacity: 1,
+    /** Homage shaders: [0]=YNI click state, [1]=MITD breath, [2]=echo phase, [3]=unused — see HM in scenes.js + nexus-homage-bridge.js */
+    homageHM: [0, 0, 0, 0],
+    /** AudioWorklet RMS 0–1 (smoothed) — see audio.js + js/audio-meter-processor.js */
+    workletRms: 0,
+    /** AudioWorklet crest proxy 0–1 (smoothed) — drives WM/WC uniforms */
+    workletCrest: 0,
+    _workletRmsTarget: 0,
+    _workletCrestTarget: 0,
+    _audioMeterWorkletNode: null,
+    _audioMeterWorkletReady: false
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -363,6 +373,22 @@ window.NX = window.NX || {};
       ld *= 0.92;
     }
     gl.uniform1f(u(prog, 'LD'), Math.max(0.38, Math.min(1, ld)));
+    var wmLoc = u(prog, 'WM');
+    if (wmLoc) {
+      var wr = typeof S.workletRms === 'number' ? S.workletRms : 0;
+      gl.uniform1f(wmLoc, wr < 0 ? 0 : (wr > 1 ? 1 : wr));
+    }
+    var wcLoc = u(prog, 'WC');
+    if (wcLoc) {
+      var wcc = typeof S.workletCrest === 'number' ? S.workletCrest : 0;
+      gl.uniform1f(wcLoc, wcc < 0 ? 0 : (wcc > 1 ? 1 : wcc));
+    }
+    var hmLoc = u(prog, 'HM');
+    if (hmLoc) {
+      var hm = S.homageHM;
+      if (!hm || hm.length < 4) hm = [0, 0, 0, 0];
+      gl.uniform4f(hmLoc, hm[0], hm[1], hm[2], hm[3]);
+    }
   }
 
   /* ---- Vertex shader (shared) -------------------------------------- */
@@ -388,7 +414,7 @@ window.NX = window.NX || {};
 
   /* ---- Pre-warm uniform cache after programs are compiled ---------- */
   function prewarmCache(sceneProgs, postProgs) {
-    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD', 'PROC', 'DNA'];
+    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD', 'WM', 'WC', 'PROC', 'DNA', 'HM'];
     sceneProgs.forEach(function (prog) { if (!prog) return; sn.forEach(function (n) { u(prog, n); }); });
     postProgs.forEach(function (prog) {
       if (!prog) return;
@@ -535,6 +561,7 @@ window.NX = window.NX || {};
       try {
         showName(S.curS);
         if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.curS);
+        if (NX.HomageBridge && NX.HomageBridge.applyForScene) NX.HomageBridge.applyForScene(S.curS);
       } catch (eUi) { /* ignore */ }
       return;
     }
@@ -668,6 +695,7 @@ window.NX = window.NX || {};
     if (NX.demo && NX.demo.tick) NX.demo.tick();
     if (NX.autoDirector && NX.autoDirector.tick) NX.autoDirector.tick(dt);
     if (NX.watermark && NX.watermark.tick) NX.watermark.tick();
+    if (NX.HomageBridge && NX.HomageBridge.tick) NX.HomageBridge.tick(dt);
     if (window.NexusEngine && NexusEngine.update) NexusEngine.update(dt);
 
     if (S.autoMorph) {
@@ -679,7 +707,12 @@ window.NX = window.NX || {};
       var mdur = typeof S._activeMorphDur === 'number' ? S._activeMorphDur : S.morphDurationSec;
       S.morphBlend += dt / (mdur / spdBoost);
       S._morphFrame++;
-      if (S.morphBlend >= 1) { S.morphBlend = 1; S.morphing = false; S.curS = S.nxtS; S._activeMorphDur = null; }
+      if (S.morphBlend >= 1) {
+        S.morphBlend = 1; S.morphing = false; S.curS = S.nxtS; S._activeMorphDur = null;
+        try {
+          if (NX.HomageBridge && NX.HomageBridge.applyForScene) NX.HomageBridge.applyForScene(S.curS);
+        } catch (eHm) { /* ignore */ }
+      }
     }
 
     var hw = Math.max(1, Math.floor(S.FW / 2)), hh = Math.max(1, Math.floor(S.FH / 2));

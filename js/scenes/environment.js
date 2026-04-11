@@ -1,6 +1,6 @@
 'use strict';
 /*  environment.js — Environment / world scenes.
-    NEON GRID, NEBULA FLYTHROUGH (STARSHIP BRIDGE culled)           */
+    NEON GRID only (STARSHIP BRIDGE culled; NEBULA FLYTHROUGH removed) */
 
 (function () {
   var H = NX.HEAD;
@@ -47,43 +47,6 @@
       '  float fog=1.-exp(-t*.012);col=mix(col,vec3(.0,.03,.01),fog);',
       '  vec2 fuv=feedUV(1.004,0.,vec2(0));',
       '  col=mix(texture2D(PV,fuv).rgb*.87,col,.28+BT*.06);',
-      '  gl_FragColor=vec4(col,1.);',
-      '}'
-    ].join('\n')
-  });
-
-  /* ---------------------------------------------------------------
-     2. NEBULA FLYTHROUGH  (#ff6d00)
-     Volumetric nebula — ray march through fbm density field,
-     scatter/emission via pal(), star background, beat flash.
-  --------------------------------------------------------------- */
-  NX.registerScene({
-    n: 'NEBULA FLYTHROUGH', c: '#ff6d00',
-    fs: H + [
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  vec3 ro=vec3(0,0,T*.4*SP);',
-      '  mat3 cm=camMat(ro,ro+vec3(MX*.3,1.),sin(T*.03)*.02);',
-      '  vec3 rd=cm*normalize(vec3(st,1.5));',
-      '  vec3 col=vec3(0.);float acc=0.;',
-      '  for(int i=0;i<76;i++){',
-      '    vec3 p=ro+rd*float(i)*.15;',
-      '    float dens=fbm((p.xz+p.y*vec2(3.7,1.3))*.4+T*.04)-.42+B*.12;',
-      '    if(dens>0.){',
-      '      float d=dens*.08;',
-      '      vec3 em=pal(dens*2.5+p.z*.03+T*.005)*d*3.;',
-      '      em+=vec3(1.,.4,.05)*d*sat(dens-.1)*2.;',
-      '      em*=1.+BT*.9+FL*.35;',
-      '      col+=em*(1.-acc);acc+=d*(1.-acc);',
-      '      if(acc>.95)break;',
-      '    }',
-      '  }',
-      '  vec2 sg=floor(st*100.);',
-      '  float star=step(.985,h21(sg))*h21(sg+99.)*(1.-acc);',
-      '  col+=vec3(1.,.95,.85)*star*.8;',
-      '  col+=vec3(1.,.35,.05)*BT*.12;',
-      '  vec2 fuv=feedUV(1.008,.001,vec2(0,-.002));',
-      '  col=mix(texture2D(PV,fuv).rgb*.88,col,.32+BT*.08);',
       '  gl_FragColor=vec4(col,1.);',
       '}'
     ].join('\n')

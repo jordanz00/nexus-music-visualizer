@@ -102,8 +102,7 @@
       s.tags = CALM_NAMES.indexOf(s.n) >= 0 ? ['calm'] : ['intense'];
     }
     if (nm.indexOf('MANDEL') >= 0 || nm.indexOf('FRACTAL') >= 0 || nm.indexOf('BULB') >= 0 ||
-        nm.indexOf('APOLLON') >= 0 ||
-        nm.indexOf('INFLECT') >= 0) {
+        nm.indexOf('APOLLON') >= 0) {
       if (s.tags.indexOf('fractal') < 0) s.tags.push('fractal');
     }
     if (nm.indexOf('TUNNEL') >= 0 || nm.indexOf('WORM') >= 0 || nm.indexOf('HYPER') >= 0 ||

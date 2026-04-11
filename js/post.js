@@ -124,6 +124,9 @@
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
     '  float shp=(.1+BT*.07+FL*.1+H*.07)*(1.-.35*PC.x);',
     '  col+=lap*shp;',
+    /* soft highlight knee — broadcast rolloff before bloom add */
+    '  float mxHi=max(max(col.r,col.g),col.b);',
+    '  if(mxHi>0.88){float hk=sat((mxHi-0.88)/0.14);col*=mix(1.,0.9/mxHi,hk*.62);}',
     /* bloom + anamorphic (BM = master bloom mix, performance toggle) */
     '  vec3 blm=texture2D(bloom,uv).rgb*2.45*(1.-.4*PC.y)*(1.+BT*.26+B*.24+M*.1+FL*.12);',
     '  vec3 stk=texture2D(streak,uv).rgb*.4*(1.-.35*PC.y)*(1.+BT*.2+B*.16);',
@@ -147,6 +150,10 @@
     /* grain */
     '  float grain=fract(sin(dot(uv+T*.13,vec2(12.99,78.23)))*43758.)-0.5;',
     '  col+=grain*(.015+BT*.012+H*.014)*(1.-.62*PC.w);',
+    /* interleaved gradient dither — reduces banding in gradients (grade on) */
+    '  vec2 fgd=gl_FragCoord.xy;',
+    '  float igd=(mod(fgd.x+fgd.y*3.,6.)-2.5)*.00315;',
+    '  col+=igd*(1.-.4*PC.x)*(1.08-L);',
     /* hue (MIDI / UI color shift) */
     '  vec3 hsv=rgb2hsv(col); hsv.x=fract(hsv.x+HS); col=hsv2rgb(hsv);',
     /* vignette */
