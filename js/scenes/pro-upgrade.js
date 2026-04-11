@@ -1,54 +1,9 @@
 'use strict';
-/*  pro-upgrade.js — Concert-grade additions: loopable corridors, wormhole, cheap fractal fold.
+/*  pro-upgrade.js — Concert-grade additions: wormhole passage, fractal mirror, cheap fold.
     Ray march steps scaled by LD (from engine setCommonUniforms). */
 
 (function () {
   var H = NX.HEAD;
-
-  NX.registerScene({
-    n: 'AURORA CORRIDOR', c: '#7c4dff',
-    tags: ['tunnel', 'intense'],
-    cost: 'med',
-    rx: 1,
-    fs: H + [
-      'float cor(vec3 p){',
-      '  float z=mod(p.z+T*2.2*SP,14.)-7.;',
-      '  vec3 q=vec3(p.x,p.y,z);',
-      '  float tube=length(q.xy)-2.1-M*.15;',
-      '  vec2 id=floor(q.xy*3.);',
-      '  float rib=abs(fract(dot(id,vec2(1.7,2.3))+T*.5)-.5)*2.;',
-      '  float str=sdBox(q-vec3(0,0,rib*.4),vec3(1.85,.08,.06));',
-      '  return max(tube,-str+.15);',
-      '}',
-      'vec3 ncor(vec3 p){vec2 e=vec2(.008,0);return normalize(vec3(cor(p+e.xyy)-cor(p-e.xyy),cor(p+e.yxy)-cor(p-e.yxy),cor(p+e.yyx)-cor(p-e.yyx)));}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  float a=T*.12;',
-      '  vec3 ro=vec3(sin(a)*.35,MX.y*.4,cos(a)*.35+T*1.8*SP);',
-      '  vec3 ta=ro+vec3(0,0,1.);',
-      '  mat3 cm=camMat(ro,ta,sin(T*.08)*.04);',
-      '  vec3 rd=cm*normalize(vec3(st,1.35));',
-      '  float t=0.;vec3 col=vec3(.02,.01,.06);',
-      '  float ls=mix(1.35,.88,LD);',
-      '  for(int i=0;i<52;i++){',
-      '    vec3 p=ro+rd*t;',
-      '    float d=cor(p)*ls;',
-      '    if(d<.018){',
-      '      vec3 n=ncor(p);',
-      '      float em=pow(sat(1.-abs(n.z)),3.)*(.6+BT*.9);',
-      '      vec3 base=mix(vec3(.25,.08,.45),vec3(.1,.4,.9),.5+.5*sin(p.z*.4+T));',
-      '      col=blinnPhong(n,rd,normalize(vec3(.2,.5,.4)),base+em*vec3(.5,.7,1.),.12);',
-      '      break;',
-      '    }',
-      '    if(t>55.)break; t+=max(.012,d*.85);',
-      '  }',
-      '  col+=vec3(.4,.2,.8)*.06*exp(-abs(rd.y)*2.5)*(1.+FL*.4);',
-      '  vec2 fuv=feedUV(1.003,0.,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.86,col,.32+BT*.05);',
-      '  gl_FragColor=vec4(col,1.);',
-      '}'
-    ].join('\n')
-  });
 
   NX.registerScene({
     n: 'WORMHOLE PASSAGE', c: '#00e676',

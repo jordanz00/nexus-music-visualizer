@@ -2,6 +2,10 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.10 — 2026-04-10
+
+- Removed **AURORA CORRIDOR** WebGL scene from `js/scenes/pro-upgrade.js`.
+
 ## 1.1.9 — 2026-04-10
 
 - Removed **INFLECT CORRIDOR** WebGL scene from `js/scenes/vision.js`.
