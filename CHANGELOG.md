@@ -2,6 +2,11 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.1 — 2026-04-10
+
+- Removed **DEEP SEA** WebGL scene from `js/scenes/fluid.js` (19 shader scenes total).
+- Reindexed `demo-director.js` scene jumps for the removed slot.
+
 ## 1.1.0 — 2026-04-10
 
 - Added **third-party**, **privacy**, and **pro output** docs; root **`THIRD_PARTY_NOTICES.md`** and **`LICENSE`**.

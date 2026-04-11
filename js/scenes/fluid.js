@@ -1,6 +1,6 @@
 'use strict';
-/*  fluid.js — Fluid / liquid / underwater scenes.
-    INK & OIL, LIQUID METAL, DEEP SEA                */
+/*  fluid.js — Fluid / liquid scenes.
+    INK & OIL, LIQUID METAL                          */
 
 (function () {
   var H = NX.HEAD;
@@ -76,53 +76,6 @@
       '  }',
       '  vec2 fuv=feedUV(1.008,0.,vec2(0));',
       '  col=mix(texture2D(PV,fuv).rgb*.88,col,.38+BT*.08);',
-      '  gl_FragColor=vec4(col,1.);',
-      '}'
-    ].join('\n')
-  });
-
-  /* ---------------------------------------------------------------
-     3. DEEP SEA  (#1de9b6)
-     Underwater bioluminescent jellyfish — 5 orbiting SDFs
-     (pulsing bell + tentacles), inner glow + fresnel,
-     caustic shimmer, volumetric particle trails.
-  --------------------------------------------------------------- */
-  NX.registerScene({
-    n: 'DEEP SEA', c: '#1de9b6',
-    fs: H + [
-      'float jf(vec3 p,float ph){',
-      '  float pulse=.35+sin(T*2.+ph)*.06*(.5+B*.5);',
-      '  float bell=sdSph(p,pulse);bell=max(bell,p.y+.05);',
-      '  float t1=sdCap(p,vec3(.08,-.08,0),vec3(.15+sin(T+ph)*.1,-.55,sin(T*.7+ph)*.08),.02);',
-      '  float t2=sdCap(p,vec3(-.08,-.08,0),vec3(-.12+sin(T*.8+ph+1.)*.1,-.5,cos(T*.6+ph)*.08),.02);',
-      '  return min(bell,min(t1,t2));',
-      '}',
-      'float mp(vec3 p){float d=1e5;',
-      '  for(int i=0;i<5;i++){float fi=float(i),a=fi*1.2566+T*.12;',
-      '    d=min(d,jf(p-vec3(cos(a)*2.5,sin(fi*1.8+T*.18)*.8,sin(a)*2.5),fi*2.1));}',
-      '  return d;}',
-      'vec3 nm(vec3 p){vec2 e=vec2(.003,0);return normalize(vec3(mp(p+e.xyy)-mp(p-e.xyy),mp(p+e.yxy)-mp(p-e.yxy),mp(p+e.yyx)-mp(p-e.yyx)));}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  vec3 ro=vec3(cos(T*.08)*4.5,1.+sin(T*.06),sin(T*.08)*4.5)+vec3(MX*.4,0.);',
-      '  mat3 cm=camMat(ro,vec3(0,-.3,0),0.);',
-      '  vec3 rd=cm*normalize(vec3(st,1.6));',
-      '  float t=0.;vec3 col=vec3(.01,.035,.05);',
-      '  for(int i=0;i<72;i++){',
-      '    vec3 p=ro+rd*t;float d=mp(p);',
-      '    col+=vec3(.04,.22,.18)*exp(-t*.35)*.003*(.5+FL*.5);',
-      '    if(d<.002){',
-      '      vec3 n=nm(p);float fres=pow(1.-sat(dot(-rd,n)),2.5);',
-      '      vec3 glow=vec3(.1,.9,.7)*(.5+B*.5)+vec3(.2,.5,1.)*fres;',
-      '      col+=glow*(1.+BT*.8)+vec3(.1,.92,.72)*fres*.5;',
-      '      col+=(.5+.5*sin(p.x*8.+T*3.))*(.5+.5*sin(p.z*7.+T*2.))*.12*H*vec3(.1,.6,.5);',
-      '      break;',
-      '    }',
-      '    if(t>16.)break;t+=d*.7;',
-      '  }',
-      '  if(t>=16.)col=vec3(.01,.04,.06)+vec3(.02,.08,.06)*(.5+.5*sin(st.x*12.+T*2.+sin(st.y*8.+T)));',
-      '  vec2 fuv=feedUV(1.004,0.,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.93,col,.22+BT*.08);',
       '  gl_FragColor=vec4(col,1.);',
       '}'
     ].join('\n')
