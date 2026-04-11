@@ -2,6 +2,11 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.6 — 2026-04-10
+
+- Removed **MERGER SPONGE** WebGL scene from `js/scenes/vision.js` (black / non-hit raymarch in practice on common GPUs).
+- Dropped **MERGER** name checks in `js/scenes.js` (`normalizeScene` fractal tag + high-cost regex).
+
 ## 1.1.5 — 2026-04-10
 
 - Removed **ECHO LATTICE** WebGL scene from `js/scenes/unique.js` (18 shader scenes in roster).

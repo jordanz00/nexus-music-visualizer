@@ -4,7 +4,7 @@
  */
 (function () {
   window.NexusRelease = window.NexusRelease || {};
-  NexusRelease.version = '1.1.5';
+  NexusRelease.version = '1.1.6';
 
   NexusRelease.initUi = function () {
     var el = document.getElementById('nx-version-chip');
