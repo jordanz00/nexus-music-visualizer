@@ -1,59 +1,14 @@
 'use strict';
 /*  environment.js — Environment / world scenes.
-    NEON CITY, STARSHIP BRIDGE, NEON GRID, NEBULA FLYTHROUGH  */
+    NEON GRID, NEBULA FLYTHROUGH (STARSHIP BRIDGE culled)           */
 
 (function () {
   var H = NX.HEAD;
 
-  /* ---------------------------------------------------------------
-     1. NEON CITY  (#00e5ff)
-     Procedural city flyover — hash-based building heights,
-     window emission grid, road gaps, horizon glow, distance fog.
-  --------------------------------------------------------------- */
-  NX.registerScene({
-    n: 'NEON CITY', c: '#00e5ff',
-    fs: H + [
-      'float mp(vec3 p){',
-      '  vec2 id=floor(p.xz/2.5);float ht=h21(id)*6.+1.5+B*2.;',
-      '  vec3 lp=vec3(mod(p.x,2.5)-1.25,p.y,mod(p.z,2.5)-1.25);',
-      '  return min(p.y,sdBox(lp-vec3(0,ht*.5,0),vec3(.9,ht*.5,.9)));',
-      '}',
-      'vec3 nm(vec3 p){vec2 e=vec2(.01,0);return normalize(vec3(mp(p+e.xyy)-mp(p-e.xyy),mp(p+e.yxy)-mp(p-e.yxy),mp(p+e.yyx)-mp(p-e.yyx)));}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  float ca=T*.05;',
-      '  vec3 ro=vec3(sin(ca)*15.+T*.4,8.+sin(T*.1)*3.+MX.y*3.,cos(ca)*15.+T*.4);',
-      '  vec3 ta=ro+vec3(sin(ca+.5)*5.,-4.+MX.y*2.,cos(ca+.5)*5.);',
-      '  mat3 cm=camMat(ro,ta,sin(T*.04)*.03);',
-      '  vec3 rd=cm*normalize(vec3(st,1.5));',
-      '  float t=0.;vec3 col=vec3(.01,.01,.03);',
-      '  for(int i=0;i<64;i++){float d=mp(ro+rd*t);',
-      '    if(d<.05){',
-      '      vec3 p=ro+rd*t,n=nm(p);',
-      '      float isW=step(.3,1.-abs(n.y));',
-      '      vec2 wg=fract(vec2(p.x+p.z,p.y)*4.);',
-      '      float win=step(.2,wg.x)*step(.2,wg.y)*(1.-step(.8,wg.x))*(1.-step(.8,wg.y));',
-      '      float lit=step(.42,h21(floor(vec2(p.x+p.z,p.y)*4.)));',
-      '      vec3 emit=mix(vec3(0,.85,1.),vec3(1.,.5,.15),h21(floor(p.xz*2.)))*win*lit*isW;',
-      '      emit*=1.+BT*.8+FL*.3;',
-      '      col=blinnPhong(n,rd,normalize(vec3(.3,1.,.2)),vec3(.03,.04,.06)+emit,.1);',
-      '      break;',
-      '    }if(t>80.)break;t+=d;}',
-      '  col+=vec3(0,.3,.5)*.15*exp(-abs(rd.y)*3.)*(1.+B*.5);',
-      '  col+=vec3(0,.6,.8)*.04*(1.+BT*.4)*exp(-abs(rd.y)*5.);',
-      '  float fog=1.-exp(-t*.008);',
-      '  col=mix(col,vec3(.02,.03,.08)+vec3(0,.15,.2)*(.5+BT*.5),fog);',
-      '  vec2 fuv=feedUV(1.005,0.,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.85,col,.3+BT*.05);',
-      '  gl_FragColor=vec4(col,1.);',
-      '}'
-    ].join('\n')
-  });
-
   /* (STARSHIP BRIDGE culled — less visually striking) */
 
   /* ---------------------------------------------------------------
-     2. NEON GRID  (#39ff14)
+     1. NEON GRID  (#39ff14)
      Tron-style infinite ground plane, audio-column heights from
      AU texture, scanning line, grid glow, horizon.
   --------------------------------------------------------------- */
@@ -98,7 +53,7 @@
   });
 
   /* ---------------------------------------------------------------
-     4. NEBULA FLYTHROUGH  (#ff6d00)
+     2. NEBULA FLYTHROUGH  (#ff6d00)
      Volumetric nebula — ray march through fbm density field,
      scatter/emission via pal(), star background, beat flash.
   --------------------------------------------------------------- */

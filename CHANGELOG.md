@@ -2,6 +2,11 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.2 — 2026-04-10
+
+- Removed **NEON CITY** WebGL scene from `js/scenes/environment.js` (18 shader scenes total).
+- Reindexed `demo-director.js` scene jumps for indices ≥ 11.
+
 ## 1.1.1 — 2026-04-10
 
 - Removed **DEEP SEA** WebGL scene from `js/scenes/fluid.js` (19 shader scenes total).
