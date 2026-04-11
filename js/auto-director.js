@@ -35,22 +35,32 @@
   }
 
   function randomFrom(pool) {
-    var idx = pool[Math.floor(Math.random() * pool.length)];
+    var rnd = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
+    var idx = pool[Math.floor(rnd() * pool.length)];
     if (idx === S.curS && pool.length > 1) return randomFrom(pool);
     return idx;
   }
 
+  function bcPickKeys() {
+    if (NX.BcMorphConductor && NX.BcMorphConductor.isGigPoolActive && NX.BcMorphConductor.isGigPoolActive()) {
+      var g = NX.BcMorphConductor.getGigPoolKeys();
+      if (g && g.length) return g;
+    }
+    return NX.PresetLibrary && NX.PresetLibrary.getKeys ? NX.PresetLibrary.getKeys() : [];
+  }
+
   function loadRandomButterchurn(blend) {
     if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
-    var keys = NX.PresetLibrary.getKeys();
+    var keys = bcPickKeys();
     if (!keys || !keys.length) return;
-    var k = keys[Math.floor(Math.random() * keys.length)];
+    var rnd = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
+    var k = keys[Math.floor(rnd() * keys.length)];
     var p = NX.PresetLibrary.getPreset(k);
     if (p) NX.VisualEngineManager.loadPreset(p, blend == null ? 2 : blend, k);
   }
 
   function switchVisual(intensePool, calmPool, blendHint) {
-    var mode = S.visualMode || 'shader';
+    var mode = S.visualMode || 'hybrid';
     if (mode === 'butterchurn') {
       loadRandomButterchurn(blendHint);
       return;
@@ -104,7 +114,7 @@
       _calmTimer += dt;
       if (_calmTimer > 8 && sinceLast > 6) {
         S.morphDurationSec = 3.0;
-        if ((S.visualMode || 'shader') === 'butterchurn') loadRandomButterchurn(3.5);
+        if ((S.visualMode || 'hybrid') === 'butterchurn') loadRandomButterchurn(3.5);
         else NX.goNext(randomFrom(calmScenes));
         _lastSwitch = now; _calmTimer = 0;
       }
@@ -127,7 +137,7 @@
     /* PERIODIC: if nothing else triggers, switch every 15-25s */
     if (sinceLast > 15 + Math.random() * 10) {
       S.morphDurationSec = 1.8;
-      if ((S.visualMode || 'shader') === 'butterchurn') loadRandomButterchurn(2.5);
+      if ((S.visualMode || 'hybrid') === 'butterchurn') loadRandomButterchurn(2.5);
       else NX.goNext(randomFrom(_smoothEnergy > 0.25 ? intenseScenes : calmScenes));
       _lastSwitch = now;
     }

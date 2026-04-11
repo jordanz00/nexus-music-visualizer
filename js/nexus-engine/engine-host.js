@@ -16,6 +16,8 @@
   }
 
   function update(dt) {
+    if (NX.ProceduralDrive && NX.ProceduralDrive.tick) NX.ProceduralDrive.tick(dt);
+    if (NX.ProcParticles && NX.ProcParticles.tick) NX.ProcParticles.tick(dt);
     if (NX.ShowClock && NX.ShowClock.tick) NX.ShowClock.tick(dt);
     if (NX.CueEngine && NX.CueEngine.tick) NX.CueEngine.tick(dt);
     if (NX.ModernVisualStack && NX.ModernVisualStack.tick) NX.ModernVisualStack.tick();

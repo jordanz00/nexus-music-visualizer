@@ -4,15 +4,92 @@
 
 (function () {
   var S = NX.S, P = NX.P;
-  var access = null, inputs = [], mappings = {}, learnTarget = null;
+  var access = null, inputs = [], learnTarget = null;
   var _sceneFamilyBucket = -1;
   var _nextRandomPrev = 0;
+  var PROFILES_KEY = 'nx_midi_profiles';
+  var ACTIVE_KEY = 'nx_midi_profile';
+  var LEGACY_KEY = 'nx_midi';
+  var profiles = {};
+  var activeName = 'Default';
+  var mappings = {};
 
-  function loadMappings() {
-    try { var s = localStorage.getItem('nx_midi'); if (s) mappings = JSON.parse(s); } catch (e) { }
+  function flushActiveToProfiles() {
+    profiles[activeName] = mappings && typeof mappings === 'object' ? mappings : {};
   }
+
+  function loadProfiles() {
+    profiles = {};
+    activeName = 'Default';
+    mappings = {};
+    try {
+      var raw = localStorage.getItem(PROFILES_KEY);
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (p && typeof p === 'object') profiles = p;
+        var an = localStorage.getItem(ACTIVE_KEY);
+        if (an && profiles[an]) activeName = an;
+        else activeName = Object.keys(profiles)[0] || 'Default';
+        if (!profiles[activeName]) profiles[activeName] = {};
+        mappings = profiles[activeName] && typeof profiles[activeName] === 'object' ? profiles[activeName] : {};
+        return;
+      }
+    } catch (e0) { /* migrate */ }
+    try {
+      var leg = localStorage.getItem(LEGACY_KEY);
+      if (leg) mappings = JSON.parse(leg) || {};
+    } catch (e1) { mappings = {}; }
+    if (!mappings || typeof mappings !== 'object') mappings = {};
+    profiles = { Default: mappings };
+    activeName = 'Default';
+    saveProfiles();
+  }
+
+  function saveProfiles() {
+    flushActiveToProfiles();
+    try {
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+      localStorage.setItem(ACTIVE_KEY, activeName);
+    } catch (e) { /* ignore */ }
+  }
+
   function saveMappings() {
-    try { localStorage.setItem('nx_midi', JSON.stringify(mappings)); } catch (e) { }
+    profiles[activeName] = mappings;
+    saveProfiles();
+  }
+
+  function setActiveProfile(name) {
+    if (!name || !profiles[name]) return;
+    flushActiveToProfiles();
+    activeName = name;
+    mappings = profiles[activeName] && typeof profiles[activeName] === 'object'
+      ? Object.assign({}, profiles[activeName])
+      : {};
+    profiles[activeName] = mappings;
+    saveProfiles();
+    refreshProfileSelect();
+  }
+
+  function panic() {
+    learnTarget = null;
+    mappings = {};
+    profiles[activeName] = mappings;
+    saveProfiles();
+  }
+
+  function refreshProfileSelect() {
+    var sel = document.getElementById('nx-midi-profile-sel');
+    if (!sel) return;
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    var names = Object.keys(profiles).sort();
+    if (!names.length) names = ['Default'];
+    names.forEach(function (nm) {
+      var o = document.createElement('option');
+      o.value = nm;
+      o.textContent = nm;
+      if (nm === activeName) o.selected = true;
+      sel.appendChild(o);
+    });
   }
 
   /* Map a CC channel → a param */
@@ -29,7 +106,8 @@
       if (!NX.PresetLibrary || !NX.VisualEngineManager) return;
       var keys = NX.PresetLibrary.getKeys();
       if (!keys || !keys.length) return;
-      var k = keys[Math.floor(Math.random() * keys.length)];
+      var rnd = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
+      var k = keys[Math.floor(rnd() * keys.length)];
       var p = NX.PresetLibrary.getPreset(k);
       if (p) NX.VisualEngineManager.loadPreset(p, 1.8, k);
     } },
@@ -67,10 +145,11 @@
       var pool = [];
       for (var i = 0; i < NX.scenes.length; i++) if (NX.sceneHasTag(i, tag)) pool.push(i);
       if (!pool.length) return;
-      var pick = pool[Math.floor(Math.random() * pool.length)];
+      var rnd2 = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
+      var pick = pool[Math.floor(rnd2() * pool.length)];
       if (pick === S.curS && pool.length > 1) {
         var j = pool.indexOf(pick);
-        pick = pool[(j + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length];
+        pick = pool[(j + 1 + Math.floor(rnd2() * (pool.length - 1))) % pool.length];
       }
       NX.goNext(pick);
     } },
@@ -129,7 +208,8 @@
   }
 
   async function init() {
-    loadMappings();
+    loadProfiles();
+    refreshProfileSelect();
     if (!navigator.requestMIDIAccess) { console.log('WebMIDI not available'); return; }
     try {
       access = await navigator.requestMIDIAccess({ sysex: false });
@@ -169,6 +249,7 @@
 
   NX.midi = {
     init: init, startLearn: startLearn, clearMappings: clearMappings, getMappings: getMappings,
-    getMappingList: getMappingList, getParamCatalog: getParamCatalog, paramDefs: paramDefs
+    getMappingList: getMappingList, getParamCatalog: getParamCatalog, paramDefs: paramDefs,
+    setActiveProfile: setActiveProfile, panic: panic, refreshProfileSelect: refreshProfileSelect
   };
 })();

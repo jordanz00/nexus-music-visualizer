@@ -133,6 +133,14 @@
       rg.max = '100';
       rg.value = String(Math.round(node.intensity * 100));
       rg.title = 'Intensity';
+      var bp = document.createElement('label');
+      bp.className = 'nx-inline nx-wgpu-bypass';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.title = 'Bypass node';
+      cb.checked = !!node.bypass;
+      bp.appendChild(cb);
+      bp.appendChild(document.createTextNode(' bypass'));
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'sm-btn nx-wgpu-rm';
@@ -140,6 +148,7 @@
       rm.setAttribute('aria-label', 'Remove node');
       sel.addEventListener('change', pushChainFromUI);
       rg.addEventListener('input', pushChainFromUI);
+      cb.addEventListener('change', pushChainFromUI);
       rm.addEventListener('click', function () {
         if (box.querySelectorAll('.nx-wgpu-row').length <= 1) return;
         row.remove();
@@ -147,6 +156,7 @@
       });
       row.appendChild(sel);
       row.appendChild(rg);
+      row.appendChild(bp);
       row.appendChild(rm);
       box.appendChild(row);
     });
@@ -166,13 +176,38 @@
           ? 'WebGPU ready — enable layer to composite over WebGL.'
           : 'WebGPU unavailable (use a supported browser or disable).';
       }
+      if (!ok && NX.ui && typeof NX.ui.setAppBanner === 'function') {
+        NX.ui.setAppBanner('WebGPU unavailable — WGSL rack disabled.', 'warn');
+      }
       if (en) en.disabled = !ok;
     });
     rebuildWgpuChainList();
+    var rackSel = document.getElementById('nx-wgpu-rack-preset');
+    var rackBtn = document.getElementById('nx-wgpu-rack-apply');
+    if (rackSel && NX.WgslGraph && NX.WgslGraph.CHAIN_PRESET_KEYS) {
+      var cur = rackSel.value;
+      while (rackSel.options.length > 1) rackSel.remove(1);
+      NX.WgslGraph.CHAIN_PRESET_KEYS.forEach(function (k) {
+        var o = document.createElement('option');
+        o.value = k;
+        o.textContent = k.replace(/_/g, ' ');
+        rackSel.appendChild(o);
+      });
+      if (cur && rackSel.querySelector('option[value="' + cur + '"]')) rackSel.value = cur;
+    }
+    if (rackBtn && NX.WgslGraph && NX.WgslGraph.applyRackPreset && !rackBtn.dataset.nxWired) {
+      rackBtn.dataset.nxWired = '1';
+      rackBtn.addEventListener('click', function () {
+        var id = rackSel ? rackSel.value : '';
+        if (!id) return;
+        NX.WgslGraph.applyRackPreset(id);
+        rebuildWgpuChainList();
+      });
+    }
     if (add) {
       add.addEventListener('click', function () {
         var ch = NX.WgslGraph.getChain().slice();
-        ch.push({ type: 'passthrough', intensity: 0.45 });
+        ch.push({ type: 'passthrough', intensity: 0.45, bypass: false });
         NX.WgslGraph.setChain(ch.slice(0, 8));
         rebuildWgpuChainList();
       });
@@ -285,6 +320,9 @@
         }).catch(function (err) {
           console.warn('NEXUS clip load failed', err);
           setClipStatus('Could not decode that file. Try MP4 (H.264), WebM, or JPEG/PNG.', true);
+          if (NX.ui && typeof NX.ui.setAppBanner === 'function') {
+            NX.ui.setAppBanner('Clip decode failed — pick another file.', 'warn');
+          }
         });
       });
     }

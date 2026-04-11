@@ -21,8 +21,8 @@
   var initTried = false;
   var enabled = false;
   var halfResChain = false;
-  /** @type {{type:string,intensity:number}[]} */
-  var chain = [{ type: 'warm', intensity: 0.35 }, { type: 'vignette', intensity: 0.4 }];
+  /** @type {{type:string,intensity:number,bypass?:boolean}[]} */
+  var chain = [{ type: 'warm', intensity: 0.35, bypass: false }, { type: 'vignette', intensity: 0.4, bypass: false }];
 
   var WGSL = `
 struct U { intensity: f32, time_s: f32, bass: f32, flux: f32 }
@@ -130,6 +130,62 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
   return acc / max(tw, 0.001);
 }
+
+@fragment
+fn fs_grain(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var c = textureSampleLevel(texIn, samp, uv, 0.0);
+  let w = clamp(u.intensity, 0.0, 1.0);
+  let n = fract(sin(dot(uv * vec2f(1200.0, 900.0) + vec2f(u.time_s * 13.7, u.flux * 4.2), vec2f(12.9898, 78.233))) * 43758.5453);
+  let g = (n - 0.5) * 0.09 * w;
+  return vec4f(clamp(c.rgb + vec3f(g), vec3f(0.0), vec3f(1.0)), c.a);
+}
+
+@fragment
+fn fs_sharp(@location(0) uv: vec2f) -> @location(0) vec4f {
+  let w = clamp(u.intensity, 0.0, 1.0);
+  let dx = vec2f(0.0016, 0.0);
+  let dy = vec2f(0.0, 0.0016);
+  var c = textureSampleLevel(texIn, samp, uv, 0.0);
+  let uu = textureSampleLevel(texIn, samp, uv + dx, 0.0);
+  let dd = textureSampleLevel(texIn, samp, uv - dx, 0.0);
+  let rr = textureSampleLevel(texIn, samp, uv + dy, 0.0);
+  let ll = textureSampleLevel(texIn, samp, uv - dy, 0.0);
+  let blur = (uu + dd + rr + ll) * 0.25;
+  let o = c.rgb + (c.rgb - blur.rgb) * w * 1.15;
+  return vec4f(clamp(o, vec3f(0.0), vec3f(1.15)), c.a);
+}
+
+@fragment
+fn fs_soften(@location(0) uv: vec2f) -> @location(0) vec4f {
+  let w = clamp(u.intensity, 0.0, 1.0);
+  let dx = vec2f(0.0024, 0.0);
+  let dy = vec2f(0.0, 0.0024);
+  var c = textureSampleLevel(texIn, samp, uv, 0.0);
+  let uu = textureSampleLevel(texIn, samp, uv + dx, 0.0);
+  let dd = textureSampleLevel(texIn, samp, uv - dx, 0.0);
+  let rr = textureSampleLevel(texIn, samp, uv + dy, 0.0);
+  let ll = textureSampleLevel(texIn, samp, uv - dy, 0.0);
+  let blur = (c + uu + dd + rr + ll) * 0.2;
+  return vec4f(mix(c.rgb, blur.rgb, w), c.a);
+}
+
+@fragment
+fn fs_filmic(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var col = textureSampleLevel(texIn, samp, uv, 0.0);
+  let w = clamp(u.intensity, 0.0, 1.0);
+  let a = col.rgb * 1.06;
+  let b = a * a * (3.0 - 2.0 * a);
+  return vec4f(mix(col.rgb, b, w * 0.62), col.a);
+}
+
+@fragment
+fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var c = textureSampleLevel(texIn, samp, uv, 0.0);
+  let w = clamp(u.intensity, 0.0, 1.0);
+  let pulse = sin(u.time_s * 6.283 + u.bass * 2.5) * 0.028 + 1.0;
+  let k = mix(1.0, clamp(pulse, 0.95, 1.05), w);
+  return vec4f(c.rgb * k, c.a);
+}
 `;
 
   var ENTRY = {
@@ -140,13 +196,59 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     chroma: 'fs_chroma',
     poster: 'fs_poster',
     fractal2d: 'fs_fract2d',
-    smear: 'fs_smear'
+    smear: 'fs_smear',
+    grain: 'fs_grain',
+    sharpen: 'fs_sharp',
+    soften: 'fs_soften',
+    filmic: 'fs_filmic',
+    pulseSafe: 'fs_pulse_safe'
   };
+
+  var CHAIN_PRESETS = {
+    broadcast_clean: [
+      { type: 'soften', intensity: 0.22, bypass: false },
+      { type: 'filmic', intensity: 0.35, bypass: false },
+      { type: 'vignette', intensity: 0.28, bypass: false }
+    ],
+    club_punch: [
+      { type: 'warm', intensity: 0.42, bypass: false },
+      { type: 'sharpen', intensity: 0.38, bypass: false },
+      { type: 'vignette', intensity: 0.45, bypass: false },
+      { type: 'chroma', intensity: 0.18, bypass: false }
+    ],
+    filmic: [
+      { type: 'filmic', intensity: 0.55, bypass: false },
+      { type: 'grain', intensity: 0.28, bypass: false },
+      { type: 'vignette', intensity: 0.32, bypass: false }
+    ],
+    minimal: [
+      { type: 'warm', intensity: 0.32, bypass: false },
+      { type: 'vignette', intensity: 0.38, bypass: false }
+    ]
+  };
+
+  function applyRackPreset(name, opts) {
+    opts = opts || {};
+    var p = CHAIN_PRESETS[name];
+    if (!p || !p.length) return;
+    setChain(p.map(function (n) {
+      return { type: n.type, intensity: n.intensity, bypass: !!n.bypass };
+    }), { persist: opts.persist !== false });
+  }
 
   function loadHalfResFlag() {
     try {
-      halfResChain = localStorage.getItem('nexus.wgpu.halfRes') === '1';
-    } catch (e) { halfResChain = false; }
+      var v = localStorage.getItem('nexus.wgpu.halfRes');
+      if (v === null || v === '') {
+        var coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
+        var narrow = typeof innerWidth === 'number' && innerWidth < 900;
+        halfResChain = coarse || narrow;
+      } else {
+        halfResChain = v === '1';
+      }
+    } catch (e) {
+      halfResChain = false;
+    }
   }
 
   function saveHalfResFlag() {
@@ -155,25 +257,47 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     } catch (e2) { /* ignore */ }
   }
 
+  /**
+   * @returns {boolean} true if a non-empty chain was read from storage
+   */
   function loadChainFromStorage() {
     try {
       var raw = localStorage.getItem('nexus.wgpu.chain');
-      if (!raw) return;
+      if (!raw) return false;
       var j = JSON.parse(raw);
       if (Array.isArray(j) && j.length) {
         chain = j.map(function (n) {
           return {
             type: ENTRY[n.type] ? n.type : 'passthrough',
-            intensity: typeof n.intensity === 'number' ? Math.max(0, Math.min(1, n.intensity)) : 0.5
+            intensity: typeof n.intensity === 'number' ? Math.max(0, Math.min(1, n.intensity)) : 0.5,
+            bypass: n.bypass === true
           };
         }).slice(0, 8);
+        return true;
       }
     } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  function applySeededStarterChain() {
+    var keys = Object.keys(CHAIN_PRESETS);
+    if (!keys.length) return;
+    var seed = (window.NX && NX.SessionSeed && typeof NX.SessionSeed.getSeed === 'function')
+      ? NX.SessionSeed.getSeed() >>> 0
+      : 1;
+    var name = keys[seed % keys.length];
+    var p = CHAIN_PRESETS[name];
+    if (!p || !p.length) return;
+    chain = p.map(function (n) {
+      return { type: n.type, intensity: n.intensity, bypass: !!n.bypass };
+    });
   }
 
   function saveChainToStorage() {
     try {
-      localStorage.setItem('nexus.wgpu.chain', JSON.stringify(chain));
+      localStorage.setItem('nexus.wgpu.chain', JSON.stringify(chain.map(function (n) {
+        return { type: n.type, intensity: n.intensity, bypass: !!n.bypass };
+      })));
     } catch (e2) { /* ignore */ }
   }
 
@@ -240,7 +364,9 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     if (initTried) return Promise.resolve(ready);
     initTried = true;
     loadHalfResFlag();
-    loadChainFromStorage();
+    if (!loadChainFromStorage()) {
+      applySeededStarterChain();
+    }
     if (!navigator.gpu) return Promise.resolve(false);
     var canvas = document.getElementById('nx-wgpu');
     if (!canvas) return Promise.resolve(false);
@@ -314,17 +440,26 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     return chain.slice();
   }
 
-  function setChain(next) {
+  /**
+   * @param {{type:string,intensity?:number,bypass?:boolean}[]} next
+   * @param {{persist?:boolean}} [opts]
+   */
+  function setChain(next, opts) {
+    opts = opts || {};
     if (!Array.isArray(next)) return;
     chain = next.slice(0, 8).map(function (n) {
       var t = n.type && ENTRY[n.type] ? n.type : 'passthrough';
-      return { type: t, intensity: typeof n.intensity === 'number' ? Math.max(0, Math.min(1, n.intensity)) : 0 };
+      return {
+        type: t,
+        intensity: typeof n.intensity === 'number' ? Math.max(0, Math.min(1, n.intensity)) : 0,
+        bypass: n.bypass === true
+      };
     });
-    saveChainToStorage();
+    if (opts.persist !== false) saveChainToStorage();
   }
 
   function activeNodes() {
-    return chain.filter(function (n) { return n.intensity > 0.002; });
+    return chain.filter(function (n) { return !n.bypass && n.intensity > 0.002; });
   }
 
   function renderFrame() {
@@ -345,6 +480,8 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     var bass = S && typeof S.sBass === 'number' ? S.sBass : 0;
     var flux = S && typeof S.sFlux === 'number' ? S.sFlux : 0;
     var timeS = performance.now() / 1000;
+    var reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var beatV = S && typeof S.beatVisual === 'number' ? Math.min(1, Math.max(0, S.beatVisual)) : 0;
 
     var encoder = device.createCommandEncoder();
     encoder.copyExternalImageToTexture(
@@ -368,7 +505,11 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
         }]
       });
       pass.setPipeline(pl);
-      pass.setBindGroup(0, makeBindGroup(input.createView(), node.intensity, timeS, bass, flux));
+      var inten = node.intensity;
+      if (!reduceMotion && node.type === 'pulseSafe') {
+        inten = Math.max(0.02, Math.min(1, inten * (0.88 + beatV * 0.18)));
+      }
+      pass.setBindGroup(0, makeBindGroup(input.createView(), inten, timeS, bass, flux));
       pass.draw(3);
       pass.end();
       if (i < nodes.length - 1) {
@@ -425,6 +566,8 @@ fn fs_smear(@location(0) uv: vec2f) -> @location(0) vec4f {
     isReady: isReady,
     setHalfResChain: setHalfResChain,
     getHalfResChain: getHalfResChain,
-    NODE_TYPES: Object.keys(ENTRY)
+    NODE_TYPES: Object.keys(ENTRY),
+    applyRackPreset: applyRackPreset,
+    CHAIN_PRESET_KEYS: Object.keys(CHAIN_PRESETS)
   };
 })();

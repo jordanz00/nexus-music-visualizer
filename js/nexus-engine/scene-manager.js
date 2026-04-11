@@ -5,13 +5,13 @@
 (function () {
   var S = NX.S;
   var queue = [];
-  var fade = { active: false, t: 0, dur: 0.8, from: 'shader', to: 'shader' };
+  var fade = { active: false, t: 0, dur: 0.8, from: 'hybrid', to: 'hybrid' };
 
   function syncDOM() {
     var bc = document.getElementById('c-bc');
     var c = document.getElementById('c');
     if (!bc || !c) return;
-    var mode = S.visualMode || 'shader';
+    var mode = S.visualMode || 'hybrid';
     if (fade.active) {
       var k = Math.min(1, fade.t / Math.max(0.001, fade.dur));
       k = k * k * (3 - 2 * k);
@@ -28,13 +28,19 @@
     } else {
       if (mode === 'shader') { bc.style.opacity = '0'; c.style.opacity = '1'; c.classList.remove('nexus-hybrid'); }
       else if (mode === 'butterchurn') { bc.style.opacity = '1'; c.style.opacity = '0'; c.classList.remove('nexus-hybrid'); }
-      else { bc.style.opacity = '1'; c.style.opacity = '1'; c.classList.add('nexus-hybrid'); }
+      else {
+        var oBc = typeof S.hybridBcOpacity === 'number' ? Math.max(0.12, Math.min(1, S.hybridBcOpacity)) : 1;
+        var oSh = typeof S.hybridShaderOpacity === 'number' ? Math.max(0.18, Math.min(1, S.hybridShaderOpacity)) : 1;
+        bc.style.opacity = String(oBc);
+        c.style.opacity = String(oSh);
+        c.classList.add('nexus-hybrid');
+      }
     }
   }
 
   function setMode(mode, opts) {
     opts = opts || {};
-    var prev = S.visualMode || 'shader';
+    var prev = S.visualMode || 'hybrid';
     if (mode === prev && !opts.force) { syncDOM(); return; }
     var useFade = opts.crossfade !== false && !opts.force && prev !== mode &&
       (prev === 'butterchurn' || mode === 'butterchurn' || prev === 'hybrid' || mode === 'hybrid');
@@ -49,7 +55,8 @@
       function pickSeedBcKey(ks) {
         var pin = typeof window !== 'undefined' && window.NXBcShowcase && window.NXBcShowcase.defaultButterchurnKey;
         if (pin && NX.PresetLibrary.getPreset(pin)) return pin;
-        return ks[Math.floor(Math.random() * ks.length)];
+        var rnd = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
+        return ks[Math.floor(rnd() * ks.length)];
       }
       function seedFirstPreset() {
         setTimeout(function () {
@@ -109,12 +116,12 @@
   }
 
   function shouldRenderShader() {
-    var m = S.visualMode || 'shader';
+    var m = S.visualMode || 'hybrid';
     return m === 'shader' || m === 'hybrid';
   }
 
   function shouldRenderButterchurn() {
-    var m = S.visualMode || 'shader';
+    var m = S.visualMode || 'hybrid';
     return m === 'butterchurn' || m === 'hybrid';
   }
 

@@ -25,6 +25,7 @@
   <meta name="description" content="NEXUS Engine Pro — professional live DJ/VJ suite for the browser: WebGL scenes, Aurora Field spectrum visuals (full MilkDrop-class library), hybrid stacks, MIDI, adaptive quality, and recording.">
   <title>NEXUS Engine Pro — Live VJ Suite</title>
   <link rel="stylesheet" href="css/nexus.css">
+  <link rel="stylesheet" href="css/nexus-tokens.css">
 </head>
 <body>
 
@@ -34,6 +35,7 @@
 <canvas id="nx-wgpu" aria-hidden="true"></canvas>
 <!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
 <div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
+<canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
 <div id="nx-clip-under" class="nx-clip-stack nx-clip-under" aria-hidden="true"></div>
 <div id="nx-clip-over" class="nx-clip-stack nx-clip-over" aria-hidden="true"></div>
 <div id="fps-badge" aria-hidden="true"></div>
@@ -101,6 +103,7 @@
     <button type="button" class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
     <button type="button" class="top-btn top-btn-present" id="presentbtn" title="Clean output: hide chrome (keyboard P)" aria-pressed="false">Present</button>
   </div>
+  <div id="nx-app-status" class="nx-app-status" role="status" aria-live="polite"></div>
 </div>
 
 <!-- ── INPUT PANEL (mic device selector) ──────────────────────────── -->
@@ -110,6 +113,10 @@
   <div class="ip-row">
     <span class="sm-btn" id="midi-learn">MIDI Learn</span>
     <span id="midi-status">MIDI: —</span>
+  </div>
+  <div class="ip-row">
+    <label class="nx-inline">MIDI profile <select id="nx-midi-profile-sel" class="preset-select" title="Mapping bank" aria-label="MIDI profile"><option value="Default">Default</option></select></label>
+    <button type="button" class="sm-btn" id="nx-midi-panic" title="Clear mappings for this profile">Panic</button>
   </div>
 </div>
 
@@ -132,6 +139,7 @@
   <div class="nx-panel-scroll">
 
     <section id="nx-tab-live" class="nx-tab-panel nx-tab-active" role="tabpanel" aria-hidden="false">
+      <p class="nx-panel-eyebrow">Perform · live</p>
       <p class="nx-tab-lead">Live perform — mic drives WebGL and Aurora. Use <strong>Punchy</strong> for maximum snap; <strong>Smooth</strong> for calmer rooms.</p>
       <p class="nx-transport-hint"><strong>Cycle</strong> (top bar) = timed <em>next</em> scene in order. <strong>Random</strong> = one <em>jump</em> to any scene now. Use the <strong>Hide controls</strong> button at the bottom of the screen anytime (or press H).</p>
       <button type="button" class="nx-panel-hide-inline" id="panel-hide-inline">Hide controls</button>
@@ -151,6 +159,7 @@
     </section>
 
     <section id="nx-tab-audio" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <p class="nx-panel-eyebrow">Perform · engine</p>
       <h3 class="nx-section-title">Engine</h3>
       <div class="panel-row">
         <div class="ctrl-group">
@@ -200,14 +209,21 @@
     </section>
 
     <section id="nx-tab-scenes" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <p class="nx-panel-eyebrow">Perform · scenes</p>
       <h3 class="nx-section-title">WebGL scenes</h3>
       <div class="panel-row pad-toolbar">
         <label class="nx-inline"><input type="checkbox" id="pad-compact"> First 16 only</label>
+        <label class="nx-inline">View <select id="scene-list-mode" class="preset-select" title="Grid or list" aria-label="Scene pad layout">
+          <option value="grid" selected>Grid</option>
+          <option value="list">List</option>
+        </select></label>
+        <label class="nx-inline">Filter <input type="search" id="scene-grid-search" class="nx-scene-search" placeholder="Search name…" enterkeyhint="search" autocomplete="off"></label>
       </div>
       <div id="scene-grid" class="scene-grid-wrap"></div>
     </section>
 
     <section id="nx-tab-aurora" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <p class="nx-panel-eyebrow">Mix · Aurora &amp; stack</p>
       <h3 class="nx-section-title">Aurora Field <span class="nx-acc-tag">Hybrid</span></h3>
       <div class="panel-row nexus-row">
         <div class="ctrl-group nexus-group">
@@ -235,6 +251,9 @@
             <option value="64">64 beats</option>
             <option value="96">96 beats</option>
           </select>
+          <label class="nx-inline" title="Morph cadence and crossfade muscle (100% = default)">Conductor <input type="range" id="nx-conductor-motion" min="65" max="135" value="100" step="1"></label>
+          <label class="nx-inline" title="Hybrid: Aurora (#c-bc) canvas opacity">Aurora layer <input type="range" id="nx-hybrid-bc-opacity" min="15" max="100" value="100"></label>
+          <label class="nx-inline" title="Hybrid: WebGL (#c) canvas opacity">WebGL layer <input type="range" id="nx-hybrid-shader-opacity" min="25" max="100" value="100"></label>
           <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
           <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
           <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
@@ -257,9 +276,21 @@
           <button type="button" class="sm-btn nx-touch-btn" id="bc-random" title="Random spectrum preset from library">Random</button>
         </div>
       </div>
+      <details class="nx-acc nx-acc-inline" style="margin-top:8px">
+        <summary class="nx-acc-sum">Gig pool (JSON preset keys)</summary>
+        <div class="nx-acc-body">
+          <p class="nx-tab-lead" style="margin:0 0 8px">Paste a JSON <strong>array of strings</strong> (Butterchurn preset keys from the library). Auto-morph and random Aurora only pick from this list when applied. Invalid keys are dropped.</p>
+          <textarea id="nx-bc-gig-pool-json" class="nx-gig-pool-text" rows="4" style="width:100%;max-width:520px;font-family:monospace;font-size:11px" placeholder='[&quot;Flexi - alien fish pond&quot;, &quot;Geiss - Spiral 2&quot;]'></textarea>
+          <div class="panel-row" style="margin-top:8px">
+            <button type="button" class="sm-btn" id="nx-bc-gig-pool-apply">Apply gig pool</button>
+            <button type="button" class="sm-btn" id="nx-bc-gig-pool-clear">Use full library</button>
+          </div>
+        </div>
+      </details>
     </section>
 
     <section id="nx-tab-show" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <p class="nx-panel-eyebrow">I/O · composition</p>
       <h3 class="nx-section-title">Composition</h3>
       <p class="nx-tab-lead">Everything lives in this app: clip layers, effect bypass chain, timecode cues, DMX, and clock. WebGL + Aurora keep rendering — load clips with <strong>Load &amp; play</strong> (tap first on iOS/Android).</p>
       <div class="nx-compose-map" role="navigation" aria-label="Jump to composition sections">
@@ -294,8 +325,13 @@
         <button type="button" class="sm-btn" id="nx-wgpu-add-node">Add node</button>
       </div>
       <div id="nx-wgpu-chain-list" class="nx-wgpu-chain-list" aria-label="WGSL node chain"></div>
+      <div class="panel-row nx-show-row">
+        <label class="nx-inline">Rack preset <select id="nx-wgpu-rack-preset" class="preset-select" title="Curated multi-pass look" aria-label="WGSL rack preset"><option value="">— Preset —</option></select></label>
+        <button type="button" class="sm-btn" id="nx-wgpu-rack-apply">Apply rack</button>
+      </div>
       <h3 class="nx-section-title" id="nx-compose-clips">Clip layers</h3>
       <p class="nx-show-status">Up to 4 slots each for <strong>under</strong> (plate under WebGL) and <strong>over</strong> (overlay). Uses <code class="nx-code-inline">playsInline</code> + muted for mobile autoplay after your tap.</p>
+      <p class="nx-show-status" id="nx-clip-status" aria-live="polite"></p>
       <div class="panel-row nx-show-row">
         <input type="file" id="nx-clip-file" accept="video/*,image/*" class="nx-clip-file">
         <label class="nx-inline">Slot <select id="nx-clip-slot" class="preset-select" title="Clip slot 0–3"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
@@ -412,7 +448,15 @@
     </section>
 
     <section id="nx-tab-more" class="nx-tab-panel" role="tabpanel" aria-hidden="true">
+      <p class="nx-panel-eyebrow">System · output</p>
       <h3 class="nx-section-title">Output &amp; presets</h3>
+      <div class="panel-row nx-show-row">
+        <span class="g-label" style="width:auto">Session</span>
+        <code id="nx-seed-display" class="nx-seed-display meta" title="Deterministic randomness; copy URL with ?seed=">—</code>
+        <button type="button" class="sm-btn" id="nx-seed-reroll" title="New random seed">Reroll seed</button>
+        <button type="button" class="sm-btn" id="nx-seed-copy" title="Copy URL with ?seed=">Copy link</button>
+        <button type="button" class="sm-btn" id="nx-debug-export" title="Download JSON for support">Export debug</button>
+      </div>
       <div class="panel-row">
         <div class="ctrl-group">
           <span class="g-label">Output</span>
@@ -464,12 +508,12 @@
   </div>
 
   <nav class="nx-tabbar" role="tablist" aria-label="Main sections">
-    <button type="button" class="nx-tab-btn nx-tab-on" role="tab" data-tab="live" aria-selected="true">Live</button>
-    <button type="button" class="nx-tab-btn" role="tab" data-tab="audio" aria-selected="false">Audio</button>
+    <button type="button" class="nx-tab-btn nx-tab-on" role="tab" data-tab="live" aria-selected="true">Perform</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="audio" aria-selected="false">Engine</button>
     <button type="button" class="nx-tab-btn" role="tab" data-tab="scenes" aria-selected="false">Scenes</button>
-    <button type="button" class="nx-tab-btn" role="tab" data-tab="aurora" aria-selected="false">Aurora</button>
-    <button type="button" class="nx-tab-btn" role="tab" data-tab="show" aria-selected="false">Show</button>
-    <button type="button" class="nx-tab-btn" role="tab" data-tab="more" aria-selected="false">More</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="aurora" aria-selected="false">Mix</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="show" aria-selected="false">I/O</button>
+    <button type="button" class="nx-tab-btn" role="tab" data-tab="more" aria-selected="false">System</button>
   </nav>
 </div>
 
@@ -482,6 +526,9 @@
 <script src="vendor/butterchurnPresets.min.js"></script>
 <!-- More MilkDrop packs: run vendor/fetch-extra-presets.sh, add sibling <script src=…> lines before engine.js (see README). -->
 <script src="js/engine.js"></script>
+<script src="js/nexus-engine/session-seed.js"></script>
+<script src="js/nexus-engine/procedural-visual-drive.js"></script>
+<script src="js/nexus-engine/procedural-particles.js"></script>
 <script src="js/nexus-engine/modern-visual-stack.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/scenes.js"></script>
@@ -536,6 +583,10 @@
   }
   if (NX._fatalNoWebGL) return;
   try {
+    try {
+      var _nxBootUrl = new URL(location.href);
+      if (_nxBootUrl.searchParams.get('soak') === '1') window.__NX_SOAK__ = true;
+    } catch (_eSoak) { /* ignore */ }
     if (typeof NX.compileScenes !== 'function') {
       throw new Error('compileScenes missing — is js/scenes.js loading?');
     }
@@ -543,9 +594,18 @@
       throw new Error('post pipeline missing — is js/post.js loading?');
     }
     var ok = NX.compileScenes();
+    if (typeof NX.applySessionSceneStart === 'function') NX.applySessionSceneStart();
     console.log('Scenes compiled:', ok, '/', NX.scenes.length);
+    if (typeof console !== 'undefined' && console.info) {
+      console.info('[NEXUS] boot', {
+        scenes: NX.scenes.length,
+        compiled: ok,
+        seed: NX.SessionSeed && NX.SessionSeed.getSeed ? NX.SessionSeed.getSeed() : null
+      });
+    }
     NX.post.compile();
     NX.resize();
+    if (NX.ProcParticles && NX.ProcParticles.init) NX.ProcParticles.init();
     /* iOS WebKit: first layout pass sometimes reports 0×0 until after first paint */
     if (NX.S && NX.S._iosCoarsePointer) {
       requestAnimationFrame(function () { NX.resize(); });
@@ -569,7 +629,7 @@
     if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
     if (NX.WgslGraph && NX.WgslGraph.tryInit) NX.WgslGraph.tryInit().catch(function () { });
     if (NX.midi) NX.midi.init();
-    NX.showName(0);
+    NX.showName(NX.S && typeof NX.S.curS === 'number' ? NX.S.curS : 0);
     NX.loop();
   } catch (err) {
     console.error('NEXUS bootstrap failed:', err);

@@ -1,0 +1,64 @@
+/**
+ * NEXUS design tokens — surfaces, chrome, semantic accents (broadcast-style).
+ * Loaded after nexus.css; overrides use var(--nx-*).
+ */
+:root {
+  --nx-bg-deep: #050508;
+  --nx-bg-panel: rgba(12, 14, 22, 0.92);
+  --nx-border-subtle: rgba(255, 255, 255, 0.08);
+  --nx-text-primary: rgba(245, 247, 255, 0.94);
+  --nx-text-muted: rgba(200, 210, 230, 0.72);
+  --nx-accent: #00d4aa;
+  --nx-accent-soft: rgba(0, 212, 170, 0.22);
+  --nx-warn: #ffb74d;
+  --nx-danger: #ff8a80;
+  --nx-radius-card: 12px;
+  --nx-space-sm: 8px;
+  --nx-space-md: 14px;
+}
+
+.nx-app-status {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--nx-text-muted);
+  padding: 4px 10px 0;
+  min-height: 1.25em;
+}
+
+.nx-app-status.nx-banner-warn {
+  color: var(--nx-warn);
+}
+
+.nx-app-status.nx-banner-err {
+  color: var(--nx-danger);
+}
+
+.nx-panel-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+  margin: 0 0 6px;
+}
+
+.scene-grid-wrap.scene-grid-list {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  max-width: none;
+}
+
+.scene-grid-list .scene-pad {
+  width: 100%;
+  min-height: 44px;
+}
+
+.nx-scene-search {
+  min-width: 120px;
+  max-width: 220px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.nx-seed-display {
+  font-size: 12px;
+}

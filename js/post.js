@@ -75,7 +75,7 @@
   var OUTPUT_FS = [
     'precision mediump float;varying vec2 uv;',
     'uniform sampler2D tex,bloom,streak;uniform vec2 R;',
-    'uniform float BT,T,B,M,H,FL,BM,HS,KA,GL,STK,ACES;',
+    'uniform float BT,T,B,M,H,FL,BM,HS,KA,GL,STK,ACES;uniform vec4 PC;',
     'vec3 rgb2hsv(vec3 c){',
     ' vec4 K=vec4(0.,-1./3.,2./3.,-1.);',
     ' vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));',
@@ -91,6 +91,7 @@
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
     'vec2 nxKale(vec2 u,float k){',
     ' if(k<.0005)return u;',
+    ' k*=1.-.38*PC.z;',
     ' vec2 p=u-.5;',
     ' float sl=max(3.,floor(4.+k*11.));',
     ' float ag=atan(p.y,p.x);',
@@ -100,15 +101,16 @@
     '}',
     'vec2 nxGli(vec2 u,float g,float tim){',
     ' if(g<.0005)return u;',
+    ' float g2=g*(1.-.55*PC.z);',
     ' float row=floor(u.y*130.);',
-    ' float f=fract(sin(row*19.123+tim*4.2)*43758.5453);',
-    ' float chop=step(.9,f);',
-    ' return u+vec2(chop*g*.07*sin(tim*25.+row*1.7),0.);',
+    ' float f=fract(sin(row*19.123+tim*1.75)*43758.5453);',
+    ' float chop=step(.935,f);',
+    ' return u+vec2(chop*g2*.03*sin(tim*7.4+row*.95),0.);',
     '}',
     'void main(){',
     '  vec2 uvo=nxGli(nxKale(uv,KA),GL,T);',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
-    '  float ca=.0024+BT*.0035+B*.0034+H*.0022+FL*.002;',
+    '  float ca=(.0024+BT*.0035+B*.0034+H*.0022+FL*.002)*(1.-.42*PC.x);',
     '  vec3 cM=texture2D(tex,uvo).rgb;',
     '  float r=texture2D(tex,vec2(uvo.x+ca,uvo.y)).r;',
     '  float g=cM.g;',
@@ -120,18 +122,18 @@
     '  vec3 lf=texture2D(tex,uvo-vec2(px.x,0.)).rgb;',
     '  vec3 rt=texture2D(tex,uvo+vec2(px.x,0.)).rgb;',
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
-    '  float shp=.1+BT*.07+FL*.1+H*.07;',
+    '  float shp=(.1+BT*.07+FL*.1+H*.07)*(1.-.35*PC.x);',
     '  col+=lap*shp;',
     /* bloom + anamorphic (BM = master bloom mix, performance toggle) */
-    '  vec3 blm=texture2D(bloom,uv).rgb*2.45*(1.+BT*.42+B*.38+M*.15+FL*.18);',
-    '  vec3 stk=texture2D(streak,uv).rgb*.4*(1.+BT*.32+B*.22);',
+    '  vec3 blm=texture2D(bloom,uv).rgb*2.45*(1.-.4*PC.y)*(1.+BT*.26+B*.24+M*.1+FL*.12);',
+    '  vec3 stk=texture2D(streak,uv).rgb*.4*(1.-.35*PC.y)*(1.+BT*.2+B*.16);',
     '  col+=(blm+stk*STK)*BM;',
     /* lift / gamma / gain  — warm shadows, cool highlights */
     '  vec3 lift=vec3(.025,.018,.01);',
     '  vec3 gain=vec3(.97,.98,1.02);',
     '  col=col*gain+lift;',
     /* brightness pump */
-    '  col*=1.+B*.32+BT*.48+M*.14+H*.14+FL*.11;',
+    '  col*=1.+(B*.32+BT*.48+M*.14+H*.14+FL*.11)*(1.-.55*PC.x);',
     /* beat lift — kept subtle (BT is pre-smoothed in JS) */
     '  col+=vec3(1.)*BT*.042*smoothstep(.2,.88,BT);',
     /* S-curve contrast */
@@ -140,11 +142,11 @@
     '  if(ACES>.5) col=ACES(col);',
     /* saturation pump */
     '  float L=dot(col,vec3(.299,.587,.114));',
-    '  float satm=1.06+BT*.06+H*.09+M*.06+FL*.07;',
+    '  float satm=1.04+BT*.045+H*.07+M*.05+FL*.055;',
     '  col=mix(vec3(L),col,satm);',
     /* grain */
     '  float grain=fract(sin(dot(uv+T*.13,vec2(12.99,78.23)))*43758.)-0.5;',
-    '  col+=grain*(.015+BT*.012+H*.014);',
+    '  col+=grain*(.015+BT*.012+H*.014)*(1.-.62*PC.w);',
     /* hue (MIDI / UI color shift) */
     '  vec3 hsv=rgb2hsv(col); hsv.x=fract(hsv.x+HS); col=hsv2rgb(hsv);',
     /* vignette */
@@ -272,6 +274,18 @@
     var acesOn = !pc || pc.grade !== false ? 1 : 0;
     gl.uniform1f(u(outProg, 'STK'), streakOn);
     gl.uniform1f(u(outProg, 'ACES'), acesOn);
+    var pcLoc = u(outProg, 'PC');
+    if (pcLoc) {
+      var arr = (NX.ProceduralDrive && NX.ProceduralDrive.getPostColorVec) ? NX.ProceduralDrive.getPostColorVec() : null;
+      var px = 0.18, py = 0.2, pz = 0.22, pw = 0.42;
+      if (arr && arr.length >= 4) {
+        px = arr[0];
+        py = arr[1];
+        pz = arr[2];
+        pw = arr[3];
+      }
+      gl.uniform4f(pcLoc, px, py, pz, pw);
+    }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 

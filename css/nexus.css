@@ -94,6 +94,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);co
         transparent 74%);
   }
 }
+/* Procedural particle sheet: same stack band as ambient, above gradient, still under WebGL */
+.nx-proc-particles{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.2;transition:opacity .5s ease}
+.nx-proc-particles.nx-proc-dim{opacity:.07}
+@media (prefers-reduced-motion:reduce){
+  .nx-proc-particles{opacity:0!important;visibility:hidden}
+}
 /* touch-action: none — camera drag without page scroll / pinch stealing on iOS */
 #c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;display:block;touch-action:none;-webkit-user-select:none;user-select:none}
 /* Normal blend: screen() composites dark shader output (~black) with #07070c → effectively invisible. */

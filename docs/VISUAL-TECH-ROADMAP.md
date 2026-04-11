@@ -1,6 +1,6 @@
 # NEXUS — Visual technology roadmap
 
-High-level browser directions for the NEXUS stack (WebGL fragment scenes + Aurora Field / Butterchurn + post). **NEXUS today targets WebGL 1** (`getContext('webgl')` in `js/engine.js`). This doc is planning guidance, not a commitment to ship every item in one release.
+High-level browser directions for the NEXUS stack (WebGL fragment scenes + Aurora Field / Butterchurn + post). **NEXUS today targets WebGL 1** (`getContext('webgl')` in `js/engine.js`). This doc is planning guidance, not a commitment to ship every item in one release. For AI/human workflow on this codebase (including strict `MODE:` phases), see [`AI-COLLABORATION.md`](AI-COLLABORATION.md).
 
 | # | Direction | One-line summary | Safari / iOS | Fit: WebGL1 now vs WebGPU later |
 |---|-----------|------------------|--------------|----------------------------------|
@@ -20,3 +20,9 @@ High-level browser directions for the NEXUS stack (WebGL fragment scenes + Auror
 1. Keep diversifying **WebGL1** scenes and post presets (low risk, immediate visual payoff).  
 2. Document and test **Safari / iOS** on each new technique (float textures, loop counts, feedback stability).  
 3. Treat **WebGPU** as a deliberate Phase 2 renderer, not a silent swap — dual maintenance until parity is proven.
+
+## Related docs
+
+- `PRODUCT-ROADMAP.md` — vision, journeys, phased releases.
+- `SHIP-CRITERIA.md` / `QA-MATRIX.md` — ship bar and manual matrix.
+- `AI-COLLABORATION.md` — how to work on this codebase with AI assistants.

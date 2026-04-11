@@ -72,7 +72,7 @@ window.NX = window.NX || {};
     /** 0–1 visual Aurora drive — not gated like raw BC audio tap. */
     _visualBcDrive: 0,
     /** punchy | balanced | smooth — mic reactivity preset. */
-    reactivityProfile: 'punchy',
+    reactivityProfile: 'balanced',
     /** 0–1 smoothed: how much motion/post follows live input (calm when silent / no mic). */
     _visualDrive: 0,
     curDev: '',
@@ -80,11 +80,11 @@ window.NX = window.NX || {};
     /** Hysteresis for AUTO Q renderScale steps (consecutive slow/fast windows). */
     _adaptiveLowStreak: 0, _adaptiveHighStreak: 0,
     curS: 0, nxtS: 1, morphing: false, morphBlend: 0,
-    autoMorph: true, presTimer: 0, presInterval: 14, _morphFrame: 0,
-    morphDurationSec: 1.4, showFpsOverlay: false, presentMode: false,
+    autoMorph: true, presTimer: 0, presInterval: 28, _morphFrame: 0,
+    morphDurationSec: 2.45, showFpsOverlay: false, presentMode: false,
     adaptiveGpu: false, uiHide: false, recording: false,
-    /* Default shader: hybrid stack used mix-blend screen + dark rays → “no WebGL” for many scenes. Enable hybrid in UI when desired. */
-    visualMode: 'shader',
+    /* Default: hybrid WebGL + Aurora Field (matches index.html + engine-host). */
+    visualMode: 'hybrid',
     nexusPerfLock: false,
     nexusPostBloom: true,
     /** Effect chain bypass flags (Show tab); consumed by post.js */
@@ -93,7 +93,12 @@ window.NX = window.NX || {};
     postBloomMul: 1,
     hueShift: 0,
     bcIntensity: 1,
-    bcSpeed: 1,
+    bcSpeed: 0.68,
+    /** 0.65–1.35: Aurora morph conductor cadence + crossfade response (Mix tab). */
+    bcConductorMotion: 1,
+    /** Session RNG identity (see nexus-engine/session-seed.js). */
+    sessionSeed: 0,
+    dnaX: 0.5, dnaY: 0.5, dnaZ: 0.5, dnaW: 0.5,
     /** When set, main loop composites layers into #c-rec for export resolution */
     recCompositeDims: null,
     /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
@@ -119,14 +124,19 @@ window.NX = window.NX || {};
     /** Composite REC only (#c-rec): draw cheap gradient under layers (default off; UI + localStorage) */
     recAmbientUnderlay: false,
     /** Show tab: WebGPU WGSL chain samples #c into #nx-wgpu */
-    wgpuGraphEnabled: false
+    wgpuGraphEnabled: false,
+    /** Procedural visual drive (see procedural-visual-drive.js) — feeds `PROC` uniform + post `PC`. */
+    procHue: 0, procSat: 0.5, procLift: 0.55, procPhase: 0,
+    /** Hybrid stack recipe: layer opacities 0–1 (SceneManager). */
+    hybridBcOpacity: 1,
+    hybridShaderOpacity: 1
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
     S.presInterval = Math.max(S.presInterval, 38);
   }
 
-  var P = { SPD: 5, RCT: 7, WRP: 5, PAL: 0, GAIN: 1.0, SMTH: 58, TRIM: 100 };
+  var P = { SPD: 3.5, RCT: 5, WRP: 4, PAL: 0, GAIN: 1.0, SMTH: 58, TRIM: 100 };
 
   /* ---- canvas / resize --------------------------------------------- */
   var rawW = 0, rawH = 0, maxDpr = 2, renderScale = 0.78, pendingRenderScale = null;
@@ -295,29 +305,46 @@ window.NX = window.NX || {};
     var vd = typeof S._visualDrive === 'number' ? S._visualDrive : 0;
     if (vd < 0) vd = 0;
     if (vd > 1) vd = 1;
-    var audW = 0.12 + 0.88 * vd;
-    var tSlow = 0.36 + 0.64 * vd;
+    var audW = 0.22 + 0.78 * vd;
+    var tSlow = 0.48 + 0.52 * vd;
     gl.uniform2f(u(prog, 'R'), S.FW, S.FH);
     var bv = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
     var tr = typeof S.sTransient === 'number' ? S.sTransient : 0;
-    var wig = (S.sBass * 0.078 + bv * 0.028 + S.sFlux * 0.032 + tr * 0.065) * (0.18 + 0.82 * vd);
+    var wigRaw = (S.sBass * 0.028 + bv * 0.011 + S.sFlux * 0.011 + tr * 0.016) * (0.28 + 0.72 * vd);
+    var wig = Math.min(0.065, Math.max(0, wigRaw));
     gl.uniform1f(u(prog, 'T'), S.GT * tSlow * (1 + wig));
-    var Bd = shapeDrive(S.sBass, 1.84) * audW + bv * 0.28 * audW;
+    var Bd = shapeDrive(S.sBass, 1.84) * audW + bv * 0.2 * audW;
     gl.uniform1f(u(prog, 'B'), Bd);
     gl.uniform1f(u(prog, 'M'), shapeDrive(S.sMid, 1.72) * audW);
     gl.uniform1f(u(prog, 'H'), shapeDrive(S.sHigh, 1.78) * audW);
     gl.uniform1f(u(prog, 'V'), shapeDrive(S.sVol, 1.55) * audW);
-    gl.uniform1f(u(prog, 'BT'), Math.min(1.22, (bv * 1.02 + S.sBass * 0.06) * audW));
+    gl.uniform1f(u(prog, 'BT'), Math.min(0.72, (bv * 0.52 + S.sBass * 0.038) * audW));
     gl.uniform1f(u(prog, 'EX'), S.explode);
-    gl.uniform1f(u(prog, 'SP'), (P.SPD / 5) * (0.34 + 0.66 * vd));
-    gl.uniform1f(u(prog, 'WP'), (P.WRP / 5) * (0.4 + 0.6 * vd));
+    gl.uniform1f(u(prog, 'SP'), (P.SPD / 5) * (0.26 + 0.54 * vd));
+    gl.uniform1f(u(prog, 'WP'), (P.WRP / 5) * (0.3 + 0.5 * vd));
     gl.uniform1f(u(prog, 'PAL'), P.PAL);
-    gl.uniform1f(u(prog, 'FL'), Math.min(1.35, (S.sFlux * 1.12 + bv * 0.16 + tr * 0.48) * audW));
+    gl.uniform1f(u(prog, 'FL'), Math.min(0.82, (S.sFlux * 0.48 + bv * 0.065 + tr * 0.12) * audW));
     gl.uniform1f(u(prog, 'SC'), S.sCent);
     var bpm = typeof S.bpm === 'number' ? S.bpm : 0;
     gl.uniform1f(u(prog, 'BP'), Math.min(1, Math.max(0, bpm / 175)));
     gl.uniform1f(u(prog, 'PH'), typeof S.beatPhase === 'number' ? S.beatPhase : 0);
     gl.uniform1f(u(prog, 'BC'), typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0);
+    var procLoc = u(prog, 'PROC');
+    if (procLoc) {
+      gl.uniform4f(procLoc,
+        typeof S.procHue === 'number' ? S.procHue : 0,
+        typeof S.procSat === 'number' ? S.procSat : 0.5,
+        typeof S.procLift === 'number' ? S.procLift : 0.55,
+        typeof S.procPhase === 'number' ? S.procPhase : 0);
+    }
+    var dnaLoc = u(prog, 'DNA');
+    if (dnaLoc) {
+      gl.uniform4f(dnaLoc,
+        typeof S.dnaX === 'number' ? S.dnaX : 0.5,
+        typeof S.dnaY === 'number' ? S.dnaY : 0.5,
+        typeof S.dnaZ === 'number' ? S.dnaZ : 0.5,
+        typeof S.dnaW === 'number' ? S.dnaW : 0.5);
+    }
     var ld = 1;
     if (S.nexusVizPerformance) ld *= 0.62;
     else if (S.nexusPerfLock) ld *= 0.74;
@@ -356,11 +383,11 @@ window.NX = window.NX || {};
 
   /* ---- Pre-warm uniform cache after programs are compiled ---------- */
   function prewarmCache(sceneProgs, postProgs) {
-    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD'];
+    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD', 'PROC', 'DNA'];
     sceneProgs.forEach(function (prog) { if (!prog) return; sn.forEach(function (n) { u(prog, n); }); });
     postProgs.forEach(function (prog) {
       if (!prog) return;
-      ['tex', 'bloom', 'streak', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2', 'BM', 'HS', 'KA', 'GL'].forEach(function (n) { u(prog, n); });
+      ['tex', 'bloom', 'streak', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2', 'BM', 'HS', 'KA', 'GL', 'PC'].forEach(function (n) { u(prog, n); });
     });
   }
 
@@ -368,8 +395,12 @@ window.NX = window.NX || {};
   function getAutoMorphIntervalSec() {
     var base = S.presInterval;
     var me = typeof S.micEnergy === 'number' ? S.micEnergy : 0;
-    if (!S.micOn && me < 0.02) return base * 1.48;
-    if (S.micOn && me > 0.07) return base * 0.9;
+    var phase = (typeof S.dnaY === 'number' ? S.dnaY : 0.37) * 6.2831853;
+    var breathe = 1 + 0.11 * Math.sin((S.GT || 0) * 0.041 + phase);
+    breathe = Math.max(0.9, Math.min(1.18, breathe));
+    base *= breathe;
+    if (!S.micOn && me < 0.02) return base * 1.58;
+    if (S.micOn && me > 0.07) return base * 0.97;
     return base;
   }
 
@@ -454,6 +485,22 @@ window.NX = window.NX || {};
   }
 
   /* ---- Scene manager ----------------------------------------------- */
+  /**
+   * Bias starting scene index from `S.sessionSeed` so cold loads differ.
+   * Call after `NX.compileScenes()` and before first `NX.showName`.
+   * @returns {void}
+   */
+  function applySessionSceneStart() {
+    var scenes = NX.scenes;
+    if (!scenes || !scenes.length) return;
+    var len = scenes.length;
+    var seed = (S.sessionSeed >>> 0) || 1;
+    var x = Math.imul(seed, 1103515245) + 12345 >>> 0;
+    var idx = x % len;
+    S.curS = idx;
+    S.nxtS = (idx + 1) % len;
+  }
+
   function showName(idx) {
     if (!NX.scenes || !NX.scenes[idx]) return;
     if (NX.ui && NX.ui.showName) { NX.ui.showName(idx); return; }
@@ -543,8 +590,9 @@ window.NX = window.NX || {};
       tw += w;
     }
     var r = S.curS;
+    var rndPick = typeof NX.randomUnit === 'function' ? NX.randomUnit : Math.random;
     for (var attempt = 0; attempt < 24 && r === S.curS; attempt++) {
-      var pick = Math.random() * tw;
+      var pick = rndPick() * tw;
       var acc = 0;
       for (var j = 0; j < n; j++) {
         acc += weights[j];
@@ -561,13 +609,29 @@ window.NX = window.NX || {};
   function loop(now) {
     requestAnimationFrame(loop);
     try {
+    if (window.__NX_SOAK__) {
+      if (!S._soak) S._soak = { t0: now || performance.now(), frames: 0, lastLog: 0 };
+      S._soak.frames++;
+      var tNow = now || performance.now();
+      if (tNow - S._soak.lastLog > 60000) {
+        if (typeof console !== 'undefined' && console.info) {
+          console.info('[NEXUS][soak]', {
+            seconds: Math.round((tNow - S._soak.t0) / 1000),
+            frames: S._soak.frames,
+            fpsEma: Math.round(S._emaFps)
+          });
+        }
+        S._soak.lastLog = tNow;
+      }
+    }
     if (gl.isContextLost && gl.isContextLost()) return;
     if (!now) now = performance.now();
     var dt = Math.min((now - _lastTime) / 1000, 0.05);
     if (dt <= 0 || dt > 0.05) dt = 0.016;
     _lastTime = now;
 
-    S.GT += dt * 5 * (P.SPD / 5); S.frame++;
+    S.GT += dt * P.SPD * 0.34;
+    S.frame++;
     var instFps = 1 / Math.max(dt, 0.001);
     S._emaFps += 0.15 * (instFps - S._emaFps);
     tickAdaptiveFps(dt);
@@ -602,7 +666,7 @@ window.NX = window.NX || {};
       if (S.presTimer >= getAutoMorphIntervalSec() && !S.morphing) goNext();
     }
     if (S.morphing) {
-      var spdBoost = Math.max(0.35, P.SPD / 5);
+      var spdBoost = Math.max(0.22, (P.SPD / 5) * 0.68);
       var mdur = typeof S._activeMorphDur === 'number' ? S._activeMorphDur : S.morphDurationSec;
       S.morphBlend += dt / (mdur / spdBoost);
       S._morphFrame++;
@@ -686,7 +750,7 @@ window.NX = window.NX || {};
           x2d.fillStyle = '#000';
         }
         x2d.fillRect(0, 0, d.w, d.h);
-        var vm = S.visualMode || 'shader';
+        var vm = S.visualMode || 'hybrid';
         if (vm !== 'shader') {
           var cbc = document.getElementById('c-bc');
           if (cbc) try { x2d.drawImage(cbc, 0, 0, d.w, d.h); } catch (eR) { }
@@ -782,6 +846,7 @@ window.NX = window.NX || {};
   NX.goPrev = goPrev;
   NX.goRandom = goRandom;
   NX.showName = showName;
+  NX.applySessionSceneStart = applySessionSceneStart;
   NX.loop = loop;
   NX.getAutoMorphIntervalSec = getAutoMorphIntervalSec;
 

@@ -40,7 +40,11 @@
       visualMode: S.visualMode || 'hybrid',
       visualMacro: S.visualMacro || '',
       postFxKaleido: S.postFxKaleido,
-      postFxGlitch: S.postFxGlitch
+      postFxGlitch: S.postFxGlitch,
+      bcConductorMotion: typeof S.bcConductorMotion === 'number' ? S.bcConductorMotion : 1,
+      sessionSeed: typeof S.sessionSeed === 'number' ? (S.sessionSeed >>> 0) : 0,
+      hybridBcOpacity: typeof S.hybridBcOpacity === 'number' ? S.hybridBcOpacity : 1,
+      hybridShaderOpacity: typeof S.hybridShaderOpacity === 'number' ? S.hybridShaderOpacity : 1
     };
   }
 
@@ -68,7 +72,21 @@
     if (preset.visualMacro != null) S.visualMacro = preset.visualMacro;
     if (preset.postFxKaleido != null) S.postFxKaleido = preset.postFxKaleido;
     if (preset.postFxGlitch != null) S.postFxGlitch = preset.postFxGlitch;
+    if (preset.bcConductorMotion != null) {
+      S.bcConductorMotion = Math.max(0.65, Math.min(1.35, preset.bcConductorMotion));
+    }
+    if (preset.sessionSeed != null && NX.SessionSeed && NX.SessionSeed.applyFromStoredPreset) {
+      NX.SessionSeed.applyFromStoredPreset(preset.sessionSeed);
+    }
+    if (preset.hybridBcOpacity != null) {
+      S.hybridBcOpacity = Math.max(0.12, Math.min(1, preset.hybridBcOpacity));
+    }
+    if (preset.hybridShaderOpacity != null) {
+      S.hybridShaderOpacity = Math.max(0.18, Math.min(1, preset.hybridShaderOpacity));
+    }
+    if (NX.SceneManager && NX.SceneManager.syncDOM) NX.SceneManager.syncDOM();
     if (NX.ui && NX.ui.syncControls) NX.ui.syncControls();
+    if (NX.ui && NX.ui.refreshSeedHud) NX.ui.refreshSeedHud();
   }
 
   function save(name) {

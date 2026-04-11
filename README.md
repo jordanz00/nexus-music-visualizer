@@ -10,6 +10,8 @@
 
 **User presets** (Save / Preset dropdown) now also store **hue, bloom, trails, visual mode** (shader / Butterchurn / hybrid) for full recall.
 
+**Pro PWA polish (this tree):** `session-seed.js` + `NX.randomUnit()` (session DNA for shaders/camera), **Mix** Aurora **Conductor** slider, WGSL **rack presets** + per-node **bypass**, seeded default WGSL chain when none saved, scene **search/list/grid**, **MIDI profiles** (`nx_midi_profiles`), **`?soak=1`** long-run console markers, **Export debug** JSON (System tab), docs under `NEXUS/docs/` (`AGENT-MESH`, `SOAK-*`, `SCENE-AUTHORING`).
+
 > **Live:** [jordanz00.github.io/nexus-music-visualizer](https://jordanz00.github.io/nexus-music-visualizer)  
 > **Marketing / demos:** [landing.html](landing.html) (open locally or host alongside `index.html`)
 
@@ -174,6 +176,12 @@ cd NEXUS
 python3 -m http.server 8888
 # Open http://localhost:8888
 ```
+
+---
+
+## AI-assisted development (Nexus Pro)
+
+- **Playbook (pair-programming, edit/search discipline, strict MODE workflow):** [`docs/AI-COLLABORATION.md`](docs/AI-COLLABORATION.md) — use human-directed phases **`MODE: RESEARCH`**, **`MODE: INNOVATE`**, **`MODE: PLAN`**, **`MODE: EXECUTE`** so scope stays controlled; details and checklists are in that doc.
 
 ---
 

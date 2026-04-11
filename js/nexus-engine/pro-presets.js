@@ -72,7 +72,8 @@
 
     var S = NX.S;
     var P = NX.P;
-    var seed = entry.seed | 0;
+    var sessionMix = (NX.SessionSeed && typeof NX.SessionSeed.getSeed === 'function') ? (NX.SessionSeed.getSeed() >>> 0) : 0;
+    var seed = ((entry.seed | 0) ^ sessionMix) >>> 0;
 
     P.PAL = seed % 6;
     P.WRP = 2 + (seed % 8);

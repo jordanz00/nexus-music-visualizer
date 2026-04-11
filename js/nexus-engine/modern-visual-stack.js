@@ -56,6 +56,18 @@
     l *= 0.5 + 0.5 * vd;
     c = Math.min(0.28, c);
     l = Math.min(0.22, l);
+    if (NX.ProceduralDrive && typeof NX.ProceduralDrive.getAmbientDeltas === 'function') {
+      var ad = NX.ProceduralDrive.getAmbientDeltas();
+      if (ad) {
+        h += typeof ad.dh === 'number' ? ad.dh : 0;
+        c += typeof ad.dc === 'number' ? ad.dc : 0;
+        l += typeof ad.dl === 'number' ? ad.dl : 0;
+      }
+    }
+    while (h > 360) h -= 360;
+    while (h < 0) h += 360;
+    c = Math.max(0, Math.min(0.32, c));
+    l = Math.max(0, Math.min(0.26, l));
     root.style.setProperty('--nx-amb-h', String(h));
     root.style.setProperty('--nx-amb-c', String(c));
     root.style.setProperty('--nx-amb-l', String(l));

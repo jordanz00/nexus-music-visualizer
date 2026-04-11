@@ -1,6 +1,7 @@
 'use strict';
 /**
- * nexus-shell.js — Mobile-first tab navigation (Live / Audio / Scenes / Aurora / Show / More).
+ * nexus-shell.js — Mobile-first tab navigation (`data-tab`: live, audio, scenes, aurora, show, more).
+ * Tab *labels* in index.html read Perform / Engine / Scenes / Mix / I/O / System.
  * Desktop: same routes, horizontal tab bar becomes top-aligned strip inside panel.
  */
 (function () {

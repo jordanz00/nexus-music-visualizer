@@ -7,7 +7,8 @@
 
   var modes = {
     orbit: function (t, az, el, dist, mx) {
-      az += t * 0.2 + mx[0] * 3.14159;
+      var dnaX = typeof S.dnaX === 'number' ? S.dnaX : 0.5;
+      az += t * 0.2 + mx[0] * 3.14159 + dnaX * 0.85;
       el = Math.max(-1.35, Math.min(1.35, el + mx[1] * 0.9));
       var ro = [
         dist * Math.cos(el) * Math.cos(az),
