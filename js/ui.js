@@ -249,6 +249,13 @@
     var tcEl = document.getElementById('show-timecode');
     if (tcEl && NX.ShowClock && NX.ShowClock.getDisplayString) tcEl.textContent = NX.ShowClock.getDisplayString();
 
+    var bpmHint = document.getElementById('nx-cue-bpm-hint');
+    if (bpmHint && st.hudTick % 54 === 0 && NX.CueEngine && NX.CueEngine.getBpmConfidenceHint) {
+      var bh = NX.CueEngine.getBpmConfidenceHint();
+      bpmHint.textContent = 'BPM confidence ' + Math.round(bh.bpmConfidence * 100) + '% — ' +
+        (bh.suggestQuantize ? 'Beat-divided cues should align.' : bh.note);
+    }
+
     var bcHud = document.getElementById('bc-preset-hud');
     if (bcHud) {
       var vm = st.visualMode || 'hybrid';
@@ -1078,6 +1085,7 @@
     buildProSelect();
     wireEvents();
     if (NX.HomageBridge && NX.HomageBridge.init) NX.HomageBridge.init();
+    if (NX.HomageDOM && NX.HomageDOM.init) NX.HomageDOM.init();
     if (window.NXShell && NXShell.init) NXShell.init();
     syncControls();
     setActiveScene(S.curS);

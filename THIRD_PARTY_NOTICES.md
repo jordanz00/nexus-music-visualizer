@@ -37,6 +37,10 @@ WebGL raymarching / SDF scenes may cite common literature (e.g. Inigo Quilez’s
 | `js/nexus-engine/hybrid-layer-registry.js` | Layer-stack metadata only; no external code. |
 | `js/nexus-engine/nexus-homage-bridge.js` | Scene-driven hybrid presets + HM uniform drivers; project code. |
 | `js/nexus-engine/nexus-audio-procedural-bus.js` | Documentation helper for audio→uniform mapping; project code. |
+| `js/nexus-engine/nexus-isf-loader.js` | Parses ISF-style JSON metadata only; **does not** ship ISF sample packs. Spec reference: [ISF_Spec](https://github.com/mrRay/ISF_Spec). |
+| `js/nexus-engine/nexus-cables-lite.js` | Whitelist “mini graph” helpers inspired by [cables.gl](https://cables.gl/) topology; **no** cables.gl runtime embedded. |
+| `js/nexus-engine/nexus-homage-dom-overlays.js` | Original DOM HUD strings only (CYBR / YNI / MAZE / T00); no third-party prose or iframes. |
+| `js/nexus-engine/nexus-maze-three.js` | Original maze generator + Three.js on `#c-three`; optional `vendor/three.min.js` (MIT). |
 
 ## Trademarks
 

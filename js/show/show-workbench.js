@@ -175,6 +175,10 @@
         st.textContent = ok
           ? 'WebGPU ready — enable layer to composite over WebGL.'
           : 'WebGPU unavailable (use a supported browser or disable).';
+        if (ok && NX.WgslGraph.getComputeParticleStage) {
+          var stg = NX.WgslGraph.getComputeParticleStage();
+          st.textContent += stg.storageLayoutOk ? ' · Compute storage probe OK (particle path staged).' : ' · Compute storage probe limited.';
+        }
       }
       if (!ok && NX.ui && typeof NX.ui.setAppBanner === 'function') {
         NX.ui.setAppBanner('WebGPU unavailable — WGSL rack disabled.', 'warn');

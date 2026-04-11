@@ -2,6 +2,8 @@
 /**
  * preset-pack-2026.js — PRESET_PACK_2026: 30 new WebGL scenes (15 particle-field, 15 2D/hybrid).
  * Registered after roadmap-scenes.js. Names align with product plan IDs P3D-* / P2D-*.
+ * Dense Three/WebGPU instancing for each P3D id is deferred to shared guest layers + VIZ PERF;
+ * these quads stay WebGL1-safe for iOS and black-screen fallback.
  */
 (function () {
   var H = NX.HEAD;
@@ -196,4 +198,11 @@
     ' float pulse=.12+.08*sin(T*6.28*2.+PH*6.28)*(.2+BC); pulse*=1.-smoothstep(.4,1.3,r);',
     ' vec3 c=vec3(.08,.02,.06)+vec3(.4,.1,.25)*pulse; c+=pal(r+T*.05)*.08;',
     ' gl_FragColor=vec4(sat(c),1.);}'].join('\n'));
+
+  NX.PresetPack2026 = {
+    id: 'PRESET_PACK_2026',
+    count: 30,
+    /** WebMIDI: unmapped Note On uses note index as scene index (see js/midi.js). Order = load order in index.html. */
+    midiNoteMapsToSceneIndex: true
+  };
 })();

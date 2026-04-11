@@ -156,6 +156,22 @@
     return cues.slice();
   }
 
+  /**
+   * Hint for beat-triggered cues when BPM detector is uncertain (phrase boundaries).
+   * @returns {{ bpmConfidence: number, suggestQuantize: boolean, note: string }}
+   */
+  function getBpmConfidenceHint() {
+    var S = window.NX && NX.S;
+    var bc = S && typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0;
+    return {
+      bpmConfidence: bc,
+      suggestQuantize: bc >= 0.45,
+      note: bc < 0.25
+        ? 'Low BPM confidence — prefer timecode triggers or longer everyBeats windows.'
+        : 'BPM confidence usable for beat cues; align phaseBeats with ShowClock if drift appears.'
+    };
+  }
+
   load();
 
   window.NX = window.NX || {};
@@ -170,6 +186,7 @@
     armAll: armAll,
     bindExecutor: bindExecutor,
     fireExecutor: fireExecutor,
-    getExecutors: function () { return executors.slice(); }
+    getExecutors: function () { return executors.slice(); },
+    getBpmConfidenceHint: getBpmConfidenceHint
   };
 })();

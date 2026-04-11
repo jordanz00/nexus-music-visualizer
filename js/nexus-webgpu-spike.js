@@ -7,11 +7,13 @@
   function probe() {
     var gpu = typeof navigator !== 'undefined' && navigator.gpu;
     var wg = window.NX && NX.WgslGraph;
+    var comp = wg && typeof wg.getComputeParticleStage === 'function' ? wg.getComputeParticleStage() : null;
     return {
       navigatorGpu: !!gpu,
       wgslGraphPresent: !!wg,
       wgslReady: !!(wg && typeof wg.isReady === 'function' && wg.isReady()),
       wgslEnabled: !!(wg && typeof wg.getEnabled === 'function' && wg.getEnabled()),
+      computeParticleStage: comp,
       note: 'WgslGraph.renderFrame copies #c into a WebGPU texture chain; see js/nexus-engine/wgsl-graph.js'
     };
   }

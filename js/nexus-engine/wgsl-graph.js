@@ -204,6 +204,9 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
     pulseSafe: 'fs_pulse_safe'
   };
 
+  /** True if GPU allows a storage buffer in a compute bind group layout (particle path staging). */
+  var computeParticleStorageLayoutOk = false;
+
   var CHAIN_PRESETS = {
     broadcast_clean: [
       { type: 'soften', intensity: 0.22, bypass: false },
@@ -396,6 +399,21 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
       }
       blitPipeline = makeBlitPipeline();
       ready = true;
+      computeParticleStorageLayoutOk = false;
+      try {
+        if (typeof GPUShaderStage !== 'undefined' && GPUShaderStage.COMPUTE) {
+          device.createBindGroupLayout({
+            entries: [{
+              binding: 0,
+              visibility: GPUShaderStage.COMPUTE,
+              buffer: { type: 'storage' }
+            }]
+          });
+          computeParticleStorageLayoutOk = true;
+        }
+      } catch (eComputeProbe) {
+        computeParticleStorageLayoutOk = false;
+      }
       resize();
       return true;
     }).catch(function () {
@@ -555,6 +573,21 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
     return halfResChain;
   }
 
+  /**
+   * WebGPU compute particle pass: capability probe only (no extra queue work per frame yet).
+   * Disabled when VIZ PERF or iOS coarse path — keeps #c WebGL as fallback.
+   */
+  function getComputeParticleStage() {
+    var S = window.NX && NX.S;
+    var viz = S && S.nexusVizPerformance;
+    var ios = S && S._iosCoarsePointer;
+    return {
+      storageLayoutOk: !!computeParticleStorageLayoutOk,
+      enabledForDensePass: !!(ready && computeParticleStorageLayoutOk && !viz && !ios),
+      note: 'Dense compute particles: staged; fragment WGSL chain remains default overlay.'
+    };
+  }
+
   NX.WgslGraph = {
     tryInit: tryInit,
     resize: resize,
@@ -568,6 +601,7 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
     getHalfResChain: getHalfResChain,
     NODE_TYPES: Object.keys(ENTRY),
     applyRackPreset: applyRackPreset,
-    CHAIN_PRESET_KEYS: Object.keys(CHAIN_PRESETS)
+    CHAIN_PRESET_KEYS: Object.keys(CHAIN_PRESETS),
+    getComputeParticleStage: getComputeParticleStage
   };
 })();

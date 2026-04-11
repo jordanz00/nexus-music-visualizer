@@ -517,6 +517,23 @@ window.NX = window.NX || {};
 
   /* ---- Scene manager ----------------------------------------------- */
   /**
+   * Homage hybrid presets + Three maze layer + safe DOM overlays (plan: MITD/MAZE/CYBR/YNI/T00).
+   * @param {number} idx — NX.scenes index
+   */
+  function applyHomageSceneExtensions(idx) {
+    try {
+      if (NX.HomageBridge && NX.HomageBridge.applyForScene) NX.HomageBridge.applyForScene(idx);
+    } catch (eH0) { /* ignore */ }
+    try {
+      if (NX.MazeThree && NX.MazeThree.applyForScene) NX.MazeThree.applyForScene(idx);
+    } catch (eH1) { /* ignore */ }
+    try {
+      if (NX.HomageDOM && NX.HomageDOM.applyForScene) NX.HomageDOM.applyForScene(idx);
+    } catch (eH2) { /* ignore */ }
+  }
+  NX.applyHomageSceneExtensions = applyHomageSceneExtensions;
+
+  /**
    * Bias starting scene index from `S.sessionSeed` so cold loads differ.
    * Call after `NX.compileScenes()` and before first `NX.showName`.
    * @returns {void}
@@ -561,7 +578,7 @@ window.NX = window.NX || {};
       try {
         showName(S.curS);
         if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.curS);
-        if (NX.HomageBridge && NX.HomageBridge.applyForScene) NX.HomageBridge.applyForScene(S.curS);
+        applyHomageSceneExtensions(S.curS);
       } catch (eUi) { /* ignore */ }
       return;
     }
@@ -680,6 +697,9 @@ window.NX = window.NX || {};
     S._emaFps += 0.15 * (instFps - S._emaFps);
     tickAdaptiveFps(dt);
     if (NX.audio && NX.audio.tick) NX.audio.tick();
+    if (NX.ProceduralAudioBus && NX.ProceduralAudioBus.reducedMotionPostCaps) {
+      try { NX.ProceduralAudioBus.reducedMotionPostCaps(S); } catch (eRm) { /* ignore */ }
+    }
     var mxAlpha = S._iosCoarsePointer ? 0.11 : 0.05;
     S.mouseSmooth[0] += (S.mouseRaw[0] - S.mouseSmooth[0]) * mxAlpha;
     S.mouseSmooth[1] += (S.mouseRaw[1] - S.mouseSmooth[1]) * mxAlpha;
@@ -696,6 +716,10 @@ window.NX = window.NX || {};
     if (NX.autoDirector && NX.autoDirector.tick) NX.autoDirector.tick(dt);
     if (NX.watermark && NX.watermark.tick) NX.watermark.tick();
     if (NX.HomageBridge && NX.HomageBridge.tick) NX.HomageBridge.tick(dt);
+    if (NX.HomageDOM && NX.HomageDOM.tick) NX.HomageDOM.tick(dt);
+    if (NX.CueEngine && NX.CueEngine.tick) {
+      try { NX.CueEngine.tick(dt); } catch (eCue) { /* ignore */ }
+    }
     if (window.NexusEngine && NexusEngine.update) NexusEngine.update(dt);
 
     if (S.autoMorph) {
@@ -710,7 +734,7 @@ window.NX = window.NX || {};
       if (S.morphBlend >= 1) {
         S.morphBlend = 1; S.morphing = false; S.curS = S.nxtS; S._activeMorphDur = null;
         try {
-          if (NX.HomageBridge && NX.HomageBridge.applyForScene) NX.HomageBridge.applyForScene(S.curS);
+          applyHomageSceneExtensions(S.curS);
         } catch (eHm) { /* ignore */ }
       }
     }

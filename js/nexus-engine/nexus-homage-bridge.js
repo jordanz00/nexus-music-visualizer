@@ -63,9 +63,17 @@
     if (n.indexOf('MITD BREATH') === 0) {
       var r = typeof S.workletRms === 'number' ? S.workletRms : (typeof S.sVol === 'number' ? S.sVol : 0);
       S.homageHM[1] = Math.max(0, Math.min(1, r));
-    } else if (n.indexOf('MITD DISTANT') === 0) {
+    } else     if (n.indexOf('MITD DISTANT') === 0) {
       var ph = typeof S.beatPhase === 'number' ? S.beatPhase : 0;
       S.homageHM[2] = Math.max(0, Math.min(1, ph));
+    } else if (n.indexOf('YNI BEAT') === 0) {
+      var bc = typeof S.bpmConfidence === 'number' ? S.bpmConfidence : 0;
+      var ph2 = typeof S.beatPhase === 'number' ? S.beatPhase : 0;
+      if (typeof S._hmBeatPrevPh !== 'number') S._hmBeatPrevPh = 1;
+      if (bc > 0.45 && ph2 < 0.07 && S._hmBeatPrevPh > 0.45) {
+        S.homageHM[0] = (Math.floor(S.homageHM[0]) + 1) % 3;
+      }
+      S._hmBeatPrevPh = ph2;
     }
   }
 

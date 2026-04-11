@@ -10,7 +10,10 @@
 
   function ensureSlots(arr) {
     while (arr.length < maxSlots) {
-      arr.push({ video: null, url: '', opacity: 0, blend: 'normal', playing: false, fileName: '' });
+      arr.push({
+        video: null, url: '', opacity: 0, blend: 'normal', playing: false, fileName: '',
+        decodeOk: true, lastError: ''
+      });
     }
   }
   ensureSlots(slotsBelow);
@@ -94,8 +97,18 @@
     var v = st.video;
     var isVid = file.type.indexOf('video') === 0;
     return new Promise(function (resolve, reject) {
-      v.onerror = function () { reject(new Error('decode')); };
-      v.onloadeddata = function () { resolve(v); };
+      v.onerror = function () {
+        st.decodeOk = false;
+        st.lastError = 'video_decode';
+        try { st.opacity = 0; applyStyle(st, below, idx); } catch (e0) { /* ignore */ }
+        try { revoke(st); mountIfNeeded(below, idx); } catch (e1) { /* ignore */ }
+        reject(new Error('decode'));
+      };
+      v.onloadeddata = function () {
+        st.decodeOk = true;
+        st.lastError = '';
+        resolve(v);
+      };
       v.src = url;
       if (isVid) {
         v.style.display = '';
@@ -109,7 +122,13 @@
           st.wrap.insertBefore(st.img, v);
         }
         st.img.onload = function () { resolve(st.img); };
-        st.img.onerror = function () { reject(new Error('img')); };
+        st.img.onerror = function () {
+          st.decodeOk = false;
+          st.lastError = 'image_decode';
+          try { st.opacity = 0; applyStyle(st, below, idx); } catch (eI0) { /* ignore */ }
+          try { revoke(st); } catch (eI1) { /* ignore */ }
+          reject(new Error('img'));
+        };
         st.img.src = url;
         st.opacity = st.opacity > 0 ? st.opacity : 1;
         applyStyle(st, below, idx);
@@ -210,7 +229,9 @@
       opacity: st.opacity,
       playing: !!st.playing,
       blend: st.blend || 'normal',
-      fileName: st.fileName || ''
+      fileName: st.fileName || '',
+      decodeOk: st.decodeOk !== false,
+      lastError: st.lastError || ''
     };
   }
 

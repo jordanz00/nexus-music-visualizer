@@ -374,6 +374,7 @@
       </div>
       <h3 class="nx-section-title" id="nx-compose-cues">Cues &amp; executors</h3>
       <p class="nx-show-status">Time cues use the master clock. <strong>Beat</strong> cues fire on bass-transient pulses (mic on) every N beats. <strong>Re-arm all</strong> resets beat phase tracking and time flags.</p>
+      <p class="nx-show-status" id="nx-cue-bpm-hint" aria-live="polite"></p>
       <div class="panel-row nx-show-row">
         <label class="nx-inline">Trigger <select id="nx-cue-trigger" class="preset-select" title="Cue trigger mode" aria-label="Cue trigger">
           <option value="time" selected>Time (clock s)</option>
@@ -602,6 +603,10 @@
 <script src="js/nexus-engine/shader-scene.js"></script>
 <script src="js/nexus-engine/scene-manager.js"></script>
 <script src="js/nexus-engine/nexus-homage-bridge.js"></script>
+<script src="js/nexus-engine/nexus-homage-dom-overlays.js"></script>
+<script src="js/nexus-engine/nexus-maze-three.js"></script>
+<script src="js/nexus-engine/nexus-isf-loader.js"></script>
+<script src="js/nexus-engine/nexus-cables-lite.js"></script>
 <script src="js/nexus-engine/wgsl-graph.js"></script>
 <script src="js/nexus-engine/ui-manager.js"></script>
 <script src="js/nexus-engine/midi-manager.js"></script>
@@ -650,12 +655,12 @@
       throw new Error('post pipeline missing — is js/post.js loading?');
     }
     var ok = NX.compileScenes();
-    if (NX.HomageBridge && NX.HomageBridge.applyForScene) {
-      try { NX.HomageBridge.applyForScene(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm0) { /* ignore */ }
+    if (typeof NX.applyHomageSceneExtensions === 'function') {
+      try { NX.applyHomageSceneExtensions(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm0) { /* ignore */ }
     }
     if (typeof NX.applySessionSceneStart === 'function') NX.applySessionSceneStart();
-    if (NX.HomageBridge && NX.HomageBridge.applyForScene) {
-      try { NX.HomageBridge.applyForScene(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm1) { /* ignore */ }
+    if (typeof NX.applyHomageSceneExtensions === 'function') {
+      try { NX.applyHomageSceneExtensions(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm1) { /* ignore */ }
     }
     if (NX.ShipDefaults && typeof NX.ShipDefaults.applyColdStartVisuals === 'function') {
       NX.ShipDefaults.applyColdStartVisuals();
@@ -697,6 +702,7 @@
       try {
         var want = NX.ThreeGuest && typeof NX.ThreeGuest.wantsThreeFromEnv === 'function' && NX.ThreeGuest.wantsThreeFromEnv();
         if (!want) return;
+        if (NX.MazeThree && typeof NX.MazeThree.isActive === 'function' && NX.MazeThree.isActive()) return;
         if (window.THREE && NX.ThreeGuest && NX.ThreeGuest.bootstrapFromUrl) {
           NX.ThreeGuest.bootstrapFromUrl();
           return;

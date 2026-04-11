@@ -1,6 +1,8 @@
 'use strict';
 /*  midi.js — WebMIDI support with learn mode, scene triggers, CC mapping.
-    Falls back gracefully when MIDI is unavailable.                        */
+    Falls back gracefully when MIDI is unavailable.
+    Scene select: unmapped Note On → NX.goNext(note) when note < scene count
+    (includes PRESET_PACK_2026 + homage scenes per index.html script order). */
 
 (function () {
   var S = NX.S, P = NX.P;

@@ -40,6 +40,7 @@
   }
 
   function tick() {
+    if (NX.MazeThree && typeof NX.MazeThree.isActive === 'function' && NX.MazeThree.isActive()) return;
     if (!enabled || !renderer || !scene || !camera) return;
     rafId = requestAnimationFrame(tick);
     var S = window.NX && NX.S;
