@@ -18,7 +18,7 @@ Exit code **0** = required files and bootstrap markers present.
 | 2 | WebGL | Launch | Canvas shows motion (not `nx-fatal-no-webgl`) |
 | 3 | Scene advance | Space / Next | Scene name updates; no black freeze |
 | 4 | Random | R twice | Different scene index (high probability) |
-| 5 | Session seed | More → New seed (if exposed) or URL `?seed=12345` | Deterministic behavior per seed contract |
+| 5 | Session seed | More → **Reroll seed** or URL `?seed=12345` | Seed display updates; deterministic behavior per seed contract |
 | 6 | Mic | M, allow mic | Meters move; Aurora reacts when in BC/hybrid |
 | 7 | Present | P | UI hidden; canvas fills |
 | 8 | OBS hint | `?obs=1` | Auto-present per README |
