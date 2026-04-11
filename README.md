@@ -35,7 +35,7 @@
 | **Performance** | 3 GPU quality presets, adaptive FPS; **Perf lock** caps DPR and internal resolution; `prefers-reduced-motion` support |
 | **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` |
 | **AI Director** | Energy + drop detection for automatic scene switches — **AI DIR** (turns off auto-morph while active) |
-| **Free / Pro** | Free tier shows a subtle corner watermark; Pro unlock in dev: `NX.watermark.unlock('NEXUS_MK4_PRO')` or `earlyaccess2026` (stored in `localStorage`) |
+| **Free / Pro** | Free tier: corner watermark. **More → Unlock Pro** (or console): `NX.watermark.unlock('NEXUS_MK4_PRO')` or `earlyaccess2026` → stored in `localStorage` on this device |
 
 ---
 
@@ -133,6 +133,26 @@ VOID CATHEDRAL · SACRED GEOMETRY · NEURAL SWARM · DARK MONOLITH · LASER CATH
 - Click **Save** next to the preset dropdown to save your current settings
 - Presets store: speed, reactivity, warp, morph time, palette, gain, smooth, quality, scene, **hue shift, bloom multiplier, bloom on/off, trails, visual stack mode**
 - Stored in localStorage — clear browser data to reset
+
+---
+
+## Documentation & ship bar
+
+| Doc | Purpose |
+|-----|---------|
+| [`docs/PRODUCT-ROADMAP.md`](docs/PRODUCT-ROADMAP.md) | Vision, user journeys, phased roadmap |
+| [`docs/SHIP-CRITERIA.md`](docs/SHIP-CRITERIA.md) | What “shipped” means (browsers, FPS, OBS, Pro/Free) |
+| [`docs/QA-MATRIX.md`](docs/QA-MATRIX.md) | Manual QA matrix + recording checks |
+| [`docs/VISUAL-TECH-ROADMAP.md`](docs/VISUAL-TECH-ROADMAP.md) | WebGL / WebGPU technology directions |
+| [`docs/AI-COLLABORATION.md`](docs/AI-COLLABORATION.md) | How to pair-program this codebase with AI assistants |
+
+**Automated smoke** (from parent folder that contains `NEXUS/`):
+
+```bash
+python3 NEXUS/scripts/nexus_smoke.py
+```
+
+**In-app:** **More** tab → **Nexus Pro — operator guide** (OBS, seed, FPS, MIDI) and **Unlock Pro** (watermark removal on this device).
 
 ---
 

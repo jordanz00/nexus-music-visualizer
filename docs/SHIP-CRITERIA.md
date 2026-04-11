@@ -44,7 +44,7 @@ What **shipped** means for the static-site build (GitHub Pages or local `python3
 - [ ] `python3 NEXUS/scripts/nexus_smoke.py` from monorepo root (or `cd NEXUS && …` per README).
 - [ ] Manual pass: Launch → mic → scene change → Aurora preset → REC 10s → stop.
 - [ ] Safari iOS: Launch → no permanent black canvas after rotate.
-- [ ] Credits links match `THIRD_PARTY_NOTICES.md`.
+- [ ] Credits panel (More → Credits) links resolve and match shipped OSS attributions.
 
 ## 7. Versioning
 

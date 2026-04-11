@@ -318,6 +318,20 @@ body.letterbox #c,body.letterbox #c-bc{top:50%;transform:translateY(-50%);height
 .pro-badge.free{color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.1);background:transparent}
 .pro-badge.pro{color:#00e676;border:1px solid rgba(0,230,118,.3);background:rgba(0,230,118,.06)}
 
+/* More tab — Nexus Pro operator guide + unlock (safe text-only status) */
+.nx-pro-guide-body{padding:0 4px 10px}
+.nx-pro-guide-lead{font-size:11px;line-height:1.45;color:rgba(255,255,255,.72);margin:0 0 8px;max-width:40em}
+.nx-pro-guide-list{margin:0;padding-left:1.15em;font-size:11px;line-height:1.5;color:rgba(255,255,255,.65);max-width:42em}
+.nx-pro-guide-list li{margin:6px 0}
+.nx-pro-guide-docs{font-size:10px;color:rgba(255,255,255,.45);margin:10px 0 0;line-height:1.4;max-width:42em}
+.nx-pro-unlock-body{padding:0 4px 10px}
+.nx-pro-unlock-lead{font-size:11px;line-height:1.45;color:rgba(255,255,255,.65);margin:0 0 10px;max-width:38em}
+.nx-pro-unlock-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.nx-pro-unlock-input{min-width:160px;max-width:100%;flex:1;padding:8px 10px;border-radius:4px;border:1px solid var(--border-subtle);background:rgba(0,0,0,.35);color:#e0f7fa;font-family:ui-monospace,monospace;font-size:12px}
+.nx-pro-unlock-msg{min-height:1.2em;font-size:11px;margin:0;color:rgba(255,255,255,.5)}
+.nx-pro-unlock-msg.nx-pro-unlock-ok{color:#69f0ae}
+.nx-pro-unlock-msg.nx-pro-unlock-bad{color:#ff8a80}
+
 /* -- Accordion panels ----------------------------------------------- */
 .nx-acc{border-bottom:1px solid rgba(255,255,255,.04)}
 .nx-acc-sum{cursor:pointer;list-style:none;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:.14em;color:var(--accent-dim);padding:12px 14px;min-height:44px;user-select:none;transition:color .2s,background .2s;display:flex;align-items:center;gap:10px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}

@@ -988,7 +988,33 @@
       this.value = '';
     });
 
-    /* Pro unlock (hidden: type code in console or use NX.watermark.unlock) */
+    /* Pro unlock — More tab (text-only status; codes in README / license) */
+    var unlockBtn = document.getElementById('nx-pro-unlock-btn');
+    var unlockInput = document.getElementById('nx-pro-unlock-input');
+    var unlockMsg = document.getElementById('nx-pro-unlock-msg');
+    function setUnlockMsg(text, ok) {
+      if (!unlockMsg) return;
+      unlockMsg.textContent = text || '';
+      unlockMsg.className = 'nx-pro-unlock-msg' + (ok ? ' nx-pro-unlock-ok' : (text ? ' nx-pro-unlock-bad' : ''));
+    }
+    function applyProUnlock() {
+      if (!unlockInput || !NX.watermark || typeof NX.watermark.unlock !== 'function') return;
+      var code = String(unlockInput.value || '').trim();
+      if (!code) { setUnlockMsg('Enter a code.', false); return; }
+      if (NX.watermark.unlock(code)) {
+        setUnlockMsg('Pro unlocked — watermark off.', true);
+        unlockInput.value = '';
+        if (NX.watermark.tick) NX.watermark.tick();
+      } else {
+        setUnlockMsg('Code not recognized.', false);
+      }
+    }
+    if (unlockBtn) unlockBtn.addEventListener('click', applyProUnlock);
+    if (unlockInput) {
+      unlockInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); applyProUnlock(); }
+      });
+    }
 
     /* OBS mode via URL param */
     if (location.search.indexOf('obs=1') !== -1) {

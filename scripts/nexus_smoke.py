@@ -30,7 +30,6 @@ REQUIRED_FILES = [
     "docs/SHIP-CRITERIA.md",
     "docs/QA-MATRIX.md",
     "docs/VISUAL-TECH-ROADMAP.md",
-    "THIRD_PARTY_NOTICES.md",
 ]
 
 

@@ -1,7 +1,7 @@
 'use strict';
 /*  watermark.js — Free tier watermark overlay + Pro unlock system.
-    Draws a subtle "NEXUS MARK IV" watermark on the canvas for free
-    users. Pro unlock via localStorage key removes it.                 */
+    Shows the subtle #watermark corner label for free users.
+    Pro unlock via localStorage removes it (see README + More tab).   */
 
 (function () {
   var S = NX.S;

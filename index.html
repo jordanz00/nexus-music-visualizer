@@ -490,6 +490,31 @@
           <option value="psychedelic">Psychedelic</option>
         </select>
       </div>
+      <details class="nx-acc nx-acc-pro-guide nx-acc-inline">
+        <summary class="nx-acc-sum">Nexus Pro — operator guide</summary>
+        <div class="nx-acc-body nx-pro-guide-body">
+          <p class="nx-pro-guide-lead">Show-first path: <strong>Launch</strong> → enable <strong>mic</strong> (M or Live tab) → drive <strong>WebGL</strong> and/or <strong>Aurora</strong> hybrid → <strong>Present</strong> (P) for clean output.</p>
+          <ul class="nx-pro-guide-list">
+            <li><strong>OBS:</strong> add <code class="nx-code-inline">?obs=1</code> to the URL for auto-present after load (see README).</li>
+            <li><strong>Repeatable looks:</strong> URL <code class="nx-code-inline">?seed=</code> plus <strong>Save</strong> on a preset locks DNA / random picks for that session.</li>
+            <li><strong>FPS under load:</strong> use <strong>PERF</strong> (perf lock) and <strong>VIZ PERF</strong>; lower quality preset if needed.</li>
+            <li><strong>MIDI + REC:</strong> Chrome or Edge for WebMIDI and the most predictable MediaRecorder path.</li>
+            <li><strong>Free tier:</strong> subtle corner watermark; <strong>Unlock Pro</strong> below removes it when you enter a licensed code (stored on this device).</li>
+          </ul>
+          <p class="nx-pro-guide-docs">Repo docs: <code class="nx-code-inline">docs/PRODUCT-ROADMAP.md</code>, <code class="nx-code-inline">docs/SHIP-CRITERIA.md</code>, <code class="nx-code-inline">docs/AI-COLLABORATION.md</code>.</p>
+        </div>
+      </details>
+      <details class="nx-acc nx-acc-pro-unlock nx-acc-inline">
+        <summary class="nx-acc-sum">Unlock Pro (this device)</summary>
+        <div class="nx-acc-body nx-pro-unlock-body">
+          <p class="nx-pro-unlock-lead">Removes the corner watermark. Codes are issued with your license; see README for developer unlock strings.</p>
+          <div class="nx-pro-unlock-row">
+            <input type="password" class="nx-pro-unlock-input" id="nx-pro-unlock-input" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Pro unlock code">
+            <button type="button" class="sm-btn nx-touch-btn" id="nx-pro-unlock-btn">Apply</button>
+          </div>
+          <p class="nx-pro-unlock-msg" id="nx-pro-unlock-msg" role="status" aria-live="polite"></p>
+        </div>
+      </details>
       <details class="nx-acc nx-acc-credits nx-acc-inline">
         <summary class="nx-acc-sum">Credits &amp; open source</summary>
         <div class="nx-acc-body nx-credits-body">
