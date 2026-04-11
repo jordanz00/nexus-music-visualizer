@@ -15,6 +15,8 @@
     'uniform vec4 PROC;',
     '/** Homage / UI meta: x=YNI step 0..2, y=MITD breath drive, z=phase echo, w=reserved */',
     'uniform vec4 HM;',
+    '/** Pro audio science: x=chroma centroid 0–1, y=mid energy, z=stereo width, w=structure perc/harm blend */',
+    'uniform vec4 PRO;',
     'uniform sampler2D AU,PV;',
     '#define PI  3.14159265359',
     '#define TAU 6.28318530718',
@@ -116,7 +118,7 @@
     if (!s.cost) {
       if (nm === 'TUNNEL GRID') s.cost = 'low';
       else if (s.rx >= 2) s.cost = 'high';
-      else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|APOLLON|WORMHOLE/i.test(nm)) s.cost = 'high';
+      else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|APOLLON/i.test(nm)) s.cost = 'high';
       else if (/GRID|TUNNEL|NEBULA|INK|DEEP|VOID|SACRED|AFTERLIFE|MONOLITH/i.test(nm)) s.cost = 'med';
       else s.cost = 'med';
     }

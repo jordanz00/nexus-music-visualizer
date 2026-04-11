@@ -2,6 +2,11 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.11 — 2026-04-10
+
+- Removed **WORMHOLE PASSAGE** WebGL scene from `js/scenes/pro-upgrade.js`.
+- Dropped **WORMHOLE** from the high-cost name regex in `js/scenes.js` (`normalizeScene`).
+
 ## 1.1.10 — 2026-04-10
 
 - Removed **AURORA CORRIDOR** WebGL scene from `js/scenes/pro-upgrade.js`.

@@ -1,51 +1,9 @@
 'use strict';
-/*  pro-upgrade.js — Concert-grade additions: wormhole passage, fractal mirror, cheap fold.
+/*  pro-upgrade.js — Concert-grade additions: fractal mirror, geometric abyss, cheap fold.
     Ray march steps scaled by LD (from engine setCommonUniforms). */
 
 (function () {
   var H = NX.HEAD;
-
-  NX.registerScene({
-    n: 'WORMHOLE PASSAGE', c: '#00e676',
-    tags: ['tunnel', 'fractal', 'intense'],
-    cost: 'high',
-    rx: 2,
-    fs: H + [
-      'float wh(vec3 p){',
-      '  float ang=atan(p.y,p.x)+T*.35*SP+p.z*.08;',
-      '  float rr=length(p.xy)-2.4-sin(ang*3.+p.z*.5+T)*.25-B*.12;',
-      '  float tor=length(vec2(rr,p.z*1.1))-.55-M*.08;',
-      '  float core=length(p)-.35;',
-      '  return min(tor,core*.6);',
-      '}',
-      'vec3 nwh(vec3 p){vec2 e=vec2(.01,0);return normalize(vec3(wh(p+e.xyy)-wh(p-e.xyy),wh(p+e.yxy)-wh(p-e.yxy),wh(p+e.yyx)-wh(p-e.yyx)));}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  float ca=T*.18;',
-      '  vec3 ro=vec3(sin(ca)*1.2,cos(ca*1.3)*.6,T*.55*SP);',
-      '  vec3 ta=vec3(0,0,ro.z+4.);',
-      '  mat3 cm=camMat(ro,ta,0.);',
-      '  vec3 rd=cm*normalize(vec3(st,1.15));',
-      '  float t=.1;vec3 col=vec3(0.,.02,.03);',
-      '  float ls=mix(1.28,.9,LD);',
-      '  for(int i=0;i<56;i++){',
-      '    vec3 p=ro+rd*t;',
-      '    float d=wh(p)*ls;',
-      '    if(d<.015){',
-      '      vec3 n=nwh(p);',
-      '      vec3 em=pal(length(p)*.2+T*.02)*(.35+BT*.5);',
-      '      col=blinnPhong(n,rd,normalize(vec3(.4,.2,.8)),vec3(.05,.12,.08)+em,.08);',
-      '      break;',
-      '    }',
-      '    if(t>70.)break; t+=max(.01,d*.82);',
-      '  }',
-      '  col+=vec3(0,.8,.5)*.05*(1.+B*.4)*exp(-t*.04);',
-      '  vec2 fuv=feedUV(1.002,0.,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.84,col,.3+BT*.06);',
-      '  gl_FragColor=vec4(col,1.);',
-      '}'
-    ].join('\n')
-  });
 
   NX.registerScene({
     n: 'FRACTAL MIRROR CORE', c: '#ff4081',
