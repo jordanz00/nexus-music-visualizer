@@ -13,6 +13,8 @@
     'uniform float BP,PH,BC,LD,WM,WC;',
     'uniform vec4 DNA;',
     'uniform vec4 PROC;',
+    '/** Homage / UI meta: x=YNI step 0..2, y=MITD breath drive, z=phase echo, w=reserved */',
+    'uniform vec4 HM;',
     'uniform sampler2D AU,PV;',
     '#define PI  3.14159265359',
     '#define TAU 6.28318530718',
@@ -100,7 +102,7 @@
       s.tags = CALM_NAMES.indexOf(s.n) >= 0 ? ['calm'] : ['intense'];
     }
     if (nm.indexOf('MANDEL') >= 0 || nm.indexOf('FRACTAL') >= 0 || nm.indexOf('BULB') >= 0 ||
-        nm.indexOf('APOLLON') >= 0 || nm.indexOf('KALI') >= 0 ||
+        nm.indexOf('APOLLON') >= 0 ||
         nm.indexOf('INFLECT') >= 0) {
       if (s.tags.indexOf('fractal') < 0) s.tags.push('fractal');
     }
@@ -115,7 +117,7 @@
     if (!s.cost) {
       if (nm === 'TUNNEL GRID') s.cost = 'low';
       else if (s.rx >= 2) s.cost = 'high';
-      else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|APOLLON|KALI|WORMHOLE/i.test(nm)) s.cost = 'high';
+      else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|APOLLON|WORMHOLE/i.test(nm)) s.cost = 'high';
       else if (/GRID|TUNNEL|NEBULA|INK|DEEP|VOID|SACRED|AFTERLIFE|MONOLITH/i.test(nm)) s.cost = 'med';
       else s.cost = 'med';
     }

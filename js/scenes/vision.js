@@ -56,44 +56,6 @@
   });
 
   NX.registerScene({
-    n: 'KALI ABYSS', rx: 2, c: '#d500f9',
-    fs: H + [
-      'float kal(vec3 p){',
-      '  p=abs(p)-vec3(.4+B*.15,.3,.4+M*.1);',
-      '  p.xz*=rot2(T*SP*.05+p.y*1.5);',
-      '  return length(p)-.55*sin(p.y*3.+T*.8+H*2.);',
-      '}',
-      'void main(){',
-      '  vec2 st=(gl_FragCoord.xy-.5*R)/R.y;',
-      '  vec3 ro=vec3(0.,-1.2+sin(T*.06)*.4,2.8);',
-      '  ro.x+=MX.x*.5;ro.y+=MX.y*.35;',
-      '  vec3 rd=normalize(vec3(st,1.2));',
-      '  rd=rotX(.25+sin(T*.04)*.1)*rotY(T*SP*.04+PH)*rd;',
-      '  float t=0.;vec3 col=vec3(.01,0.,.03);',
-      '  int steps=int(mix(28.,72.,LD));',
-      '  for(int i=0;i<76;i++){',
-      '    if(i>=steps)break;',
-      '    vec3 p=ro+rd*t;',
-      '    float d=kal(p);',
-      '    if(d<.01){',
-      '      vec2 e=vec2(.003,0);',
-      '      vec3 n=normalize(vec3(kal(p+e.xyy)-kal(p-e.xyy),kal(p+e.yxy)-kal(p-e.yxy),kal(p+e.yyx)-kal(p-e.yyx)));',
-      '      vec3 c0=pal(length(p)*.4+atan(p.x,p.z)*.15);',
-      '      col=c0*(.25+BT*.65)+vec3(1.,.3,.9)*pow(sat(dot(-rd,n)),4.)*.6;',
-      '      break;',
-      '    }',
-      '    t+=d*.85;',
-      '    if(t>18.)break;',
-      '  }',
-      '  col=mix(col,vec3(.02,0.,.05),1.-exp(-t*.09));',
-      '  vec2 fuv=feedUV(1.005,FL*.015,vec2(0));',
-      '  col=mix(texture2D(PV,fuv).rgb*.86,col,.32);',
-      '  gl_FragColor=vec4(sat(col),1.);',
-      '}'
-    ].join('\n')
-  });
-
-  NX.registerScene({
     n: 'SACRED MANDALA', rx: 1, c: '#ffd740',
     fs: H + [
       'void main(){',

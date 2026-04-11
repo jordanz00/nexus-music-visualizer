@@ -2,6 +2,11 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.8 — 2026-04-10
+
+- Removed **KALI ABYSS** WebGL scene from `js/scenes/vision.js` (often blank / weak hit).
+- Dropped **KALI** name checks in `js/scenes.js` (`normalizeScene` fractal tag + high-cost regex).
+
 ## 1.1.7 — 2026-04-10
 
 - Removed **WORMHOLE VOID** WebGL scene from `js/scenes/vision.js` (often blank / miss on common ray budgets).

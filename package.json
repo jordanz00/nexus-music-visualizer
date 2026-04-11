@@ -1,7 +1,7 @@
 {
   "name": "nexus-engine-pro",
   "private": true,
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "NEXUS Engine Pro — static browser VJ suite (tests only; no bundler for the app)",
   "scripts": {
     "test": "vitest run --config vitest.nexus.config.mjs",
