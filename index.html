@@ -59,6 +59,7 @@
 <div id="topbar">
   <div class="topbar-row topbar-brand-row">
     <div class="brand">NEXUS<span>ENGINE</span><span class="ver-mark">Pro</span></div>
+    <span id="nx-version-chip" class="nx-version-chip meta" title="Build version" aria-label="Version"></span>
     <span id="pro-badge" class="pro-badge free">FREE</span>
     <div class="meta scene-name-truncate" id="scene-name">&mdash;</div>
     <div class="meta bc-preset-hud" id="bc-preset-hud" style="display:none" title="Current Aurora preset"></div>
@@ -75,8 +76,8 @@
     <button type="button" class="top-btn" id="micbtn" title="Toggle mic (M)">MIC</button>
     <button type="button" class="top-btn" id="inputbtn" title="Audio input device">IN</button>
     <select class="top-btn top-select" id="rec-profile" title="Record resolution" aria-label="Record resolution">
-      <option value="native" selected>Native</option>
-      <option value="1080">1080p</option>
+      <option value="native">Native</option>
+      <option value="1080" selected>1080p</option>
       <option value="stream">Stream 1080p</option>
       <option value="4k">4K</option>
     </select>
@@ -457,6 +458,19 @@
         <button type="button" class="sm-btn" id="nx-seed-copy" title="Copy URL with ?seed=">Copy link</button>
         <button type="button" class="sm-btn" id="nx-debug-export" title="Download JSON for support">Export debug</button>
       </div>
+      <div class="panel-row nx-show-row">
+        <button type="button" class="sm-btn" id="nx-showfile-export">Export showfile</button>
+        <button type="button" class="sm-btn" id="nx-showfile-import">Import showfile…</button>
+        <input type="file" id="nx-showfile-file" accept="application/json,.json" hidden aria-hidden="true">
+      </div>
+      <div class="panel-row nx-show-row nx-rec-brand-row">
+        <label class="nx-inline"><input type="checkbox" id="nx-rec-brand-open"> REC title (composite)</label>
+        <input type="text" id="nx-rec-brand-title" class="nx-rec-brand-title-input" maxlength="80" placeholder="NEXUS Engine Pro" aria-label="Recording title text">
+        <label class="nx-inline nx-rec-brand-logo-lab">Logo <input type="file" id="nx-rec-brand-logo" accept="image/png,image/jpeg,image/webp" aria-label="Recording corner logo"></label>
+      </div>
+      <div class="panel-row nx-show-row">
+        <button type="button" class="sm-btn" id="nx-onboard-reset">Show tour again</button>
+      </div>
       <div class="panel-row">
         <div class="ctrl-group">
           <span class="g-label">Output</span>
@@ -525,7 +539,7 @@
             <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
             <li>WebGL scenes use common SDF / raymarch patterns (e.g. <a href="https://iquilezles.org/articles/distfunctions/" target="_blank" rel="noopener noreferrer">Inigo Quilez</a> articles) as engineering references.</li>
           </ul>
-          <p class="nx-credits-note">Internal mode values may still read <code>butterchurn</code> for compatibility.</p>
+          <p class="nx-credits-note">Full vendor list and license notes: <a href="THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener noreferrer">THIRD_PARTY_NOTICES.md</a>. Internal mode values may still read <code>butterchurn</code> for compatibility.</p>
         </div>
       </details>
     </section>
@@ -552,6 +566,9 @@
 <!-- More MilkDrop packs: run vendor/fetch-extra-presets.sh, add sibling <script src=…> lines before engine.js (see README). -->
 <script src="js/engine.js"></script>
 <script src="js/nexus-engine/session-seed.js"></script>
+<script src="js/nexus-bootstrap-query.js"></script>
+<script src="js/nexus-ship-defaults.js"></script>
+<script src="js/nexus-version.js"></script>
 <script src="js/nexus-engine/procedural-visual-drive.js"></script>
 <script src="js/nexus-engine/procedural-particles.js"></script>
 <script src="js/nexus-engine/modern-visual-stack.js"></script>
@@ -597,6 +614,9 @@
 <script src="js/watermark.js"></script>
 <script src="js/auto-director.js"></script>
 <script src="js/demo-director.js"></script>
+<script src="js/nexus-onboard.js"></script>
+<script src="js/nexus-showfile.js"></script>
+<script src="js/nexus-rec-brand.js"></script>
 <script src="js/nexus-shell.js"></script>
 <script src="js/ui.js"></script>
 <script>
@@ -620,6 +640,9 @@
     }
     var ok = NX.compileScenes();
     if (typeof NX.applySessionSceneStart === 'function') NX.applySessionSceneStart();
+    if (NX.ShipDefaults && typeof NX.ShipDefaults.applyColdStartVisuals === 'function') {
+      NX.ShipDefaults.applyColdStartVisuals();
+    }
     console.log('Scenes compiled:', ok, '/', NX.scenes.length);
     if (typeof console !== 'undefined' && console.info) {
       console.info('[NEXUS] boot', {

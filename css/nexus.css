@@ -411,3 +411,15 @@ body.nexus-perf-top #perfbtn.on{background:rgba(0,255,213,.2);border-color:var(-
   #topbar .brand{font-size:11px}
   .sm-btn{min-height:44px;padding:8px 12px;display:inline-flex;align-items:center;justify-content:center}
 }
+
+/* -- Version chip + onboarding + showfile row ----------------------- */
+.nx-version-chip{font-size:9px;letter-spacing:.06em;color:rgba(255,255,255,.45);margin-left:6px;flex-shrink:0}
+.nx-onboard-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top));background:rgba(2,4,10,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.nx-onboard-card{max-width:min(420px,100%);width:100%;padding:22px;border-radius:var(--nx-radius-lg);border:1px solid var(--nx-border-strong);background:var(--nx-bg-elev);box-shadow:var(--nx-shadow-lg)}
+.nx-onboard-title{font-family:var(--nx-font-display);font-size:15px;letter-spacing:.08em;color:var(--accent-color);margin:0 0 12px}
+.nx-onboard-body{font-size:12px;line-height:1.55;color:rgba(255,255,255,.78);margin:0 0 18px}
+.nx-onboard-nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.nx-onboard-primary{font-weight:600}
+.nx-rec-brand-row{align-items:center;gap:8px}
+.nx-rec-brand-title-input{flex:1;min-width:0;max-width:220px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:#111;color:#fff;font-size:11px}
+.nx-rec-brand-logo-lab{font-size:10px;color:rgba(255,255,255,.55)}

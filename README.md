@@ -185,7 +185,9 @@ NEXUS/
   NEXUS_v3_Final.html     ← Legacy standalone (original monolith)
 ```
 
-No npm, no bundler, no build step. Plain `<script>` tags loaded in order. GitHub Pages serves it directly.
+No bundler for the **app** runtime: plain `<script>` tags loaded in order. GitHub Pages serves it directly. **DevDependencies** (`vitest`, `@playwright/test`) exist only for `npm test` / `npm run test:e2e`.
+
+**Legal / privacy:** [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), [`LICENSE`](LICENSE), [`docs/PRIVACY-DATA.md`](docs/PRIVACY-DATA.md), [`docs/PRO-OUTPUT-WORKFLOWS.md`](docs/PRO-OUTPUT-WORKFLOWS.md).
 
 ---
 
@@ -196,6 +198,19 @@ cd NEXUS
 python3 -m http.server 8888
 # Open http://localhost:8888
 ```
+
+### Automated tests (Vitest + Playwright)
+
+From `NEXUS/` (uses `package.json` in this folder — separate from any parent dashboard repo):
+
+```bash
+npm install
+npm test
+npx playwright install chromium   # first run only
+npm run test:e2e
+```
+
+Vitest covers **pure** URL/bootstrap helpers. Playwright runs a **smoke** path (splash → Launch → no `pageerror`). See `docs/PROFESSIONAL-TEST-OUTLINE.md`.
 
 ---
 
@@ -218,4 +233,4 @@ python3 -m http.server 8888
 
 ## License
 
-MIT — free for personal and commercial use. Attribution appreciated.
+See [`LICENSE`](LICENSE). Third-party bundles under `vendor/` keep their own licenses — [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

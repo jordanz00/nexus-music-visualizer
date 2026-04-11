@@ -62,7 +62,7 @@ Guidance for working on **NEXUS Engine Pro** with an AI coding assistant: clear 
 
 - **No bundler:** plain scripts; preserve order in `index.html` unless you intentionally reorder and verify boot.
 - **WebGL1 + extensions** — `engine.js` owns context and restore path; shaders live under `js/scenes.js` + `js/scenes/*.js`.
-- **Vendor** — Butterchurn / presets live under `vendor/`; respect `THIRD_PARTY_NOTICES.md` when upgrading bundles.
+- **Vendor** — Butterchurn / presets live under `vendor/`; respect [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) when upgrading bundles.
 - **Performance** — avoid extra per-frame allocations; respect existing rAF and adaptive quality patterns.
 - **User data** — presets and MIDI maps use **localStorage**; do not log sensitive values.
 

@@ -172,9 +172,14 @@
   /* ---- URL param auto-start --------------------------------------- */
   function checkURL() {
     var m = location.search.match(/[?&]demo=([^&]+)/);
-    if (m) {
-      setTimeout(function () { play(m[1]); }, 500);
+    if (!m) return;
+    var raw = decodeURIComponent(String(m[1]).replace(/\+/g, ' '));
+    var key = NX.BootstrapQuery && NX.BootstrapQuery.normalizeDemo ? NX.BootstrapQuery.normalizeDemo(raw) : raw;
+    if (!key || !sequences[key]) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: ignoring unknown or unsafe ?demo=', raw);
+      return;
     }
+    setTimeout(function () { play(key); }, 500);
   }
 
   NX.demo = { play: play, stop: stop, tick: tick, checkURL: checkURL, sequences: Object.keys(sequences) };

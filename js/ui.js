@@ -400,12 +400,18 @@
         a.download = 'NEXUS_Pro_' + Date.now() + '.webm';
         a.click(); URL.revokeObjectURL(a.href);
         S.recording = false;
+        S._recT0 = 0;
         document.body.classList.remove('nexus-recording');
         var b = document.getElementById('recbtn'); if (b) b.classList.remove('on');
       };
       /* ~500 ms chunks: steadier memory vs 1s blobs; aligns better with live frame cadence */
       mediaRec.start(500);
       S.recording = true;
+      if (prof === '1080' || prof === 'stream' || prof === '4k') {
+        S._recT0 = performance.now();
+      } else {
+        S._recT0 = 0;
+      }
       document.body.classList.add('nexus-recording');
       var b = document.getElementById('recbtn'); if (b) b.classList.add('on');
     } catch (e) { console.warn('Recording failed:', e.message); S.recCompositeDims = null; document.body.classList.remove('nexus-recording'); }
@@ -555,6 +561,9 @@
         revealApp();
       }
       setTimeout(function () { if (sp) sp.style.display = 'none'; }, 900);
+      setTimeout(function () {
+        if (NX.Onboard && NX.Onboard.maybeOffer) NX.Onboard.maybeOffer();
+      }, 1200);
     }
     if (startBtn) {
       startBtn.addEventListener('click', function (e) { e.stopPropagation(); doLaunchFromSplash(); });
@@ -957,6 +966,17 @@
     var dbgExport = document.getElementById('nx-debug-export');
     if (dbgExport) dbgExport.addEventListener('click', exportDebugBundle);
 
+    if (NX.Showfile && NX.Showfile.wire) NX.Showfile.wire();
+    if (NX.RecBrand && NX.RecBrand.wire) NX.RecBrand.wire();
+
+    var onboardReset = document.getElementById('nx-onboard-reset');
+    if (onboardReset && NX.Onboard) {
+      onboardReset.addEventListener('click', function () {
+        NX.Onboard.resetTour();
+        setAppBanner('Tour reset — use Launch again to see the guide.');
+      });
+    }
+
     var midiProf = document.getElementById('nx-midi-profile-sel');
     if (midiProf && NX.midi && NX.midi.setActiveProfile) {
       midiProf.addEventListener('change', function () {
@@ -1065,6 +1085,7 @@
     refreshSeedHud();
     if (NX.SessionSeed) NX.SessionSeed._onChange = refreshSeedHud;
     if (NX.midi && NX.midi.refreshProfileSelect) NX.midi.refreshProfileSelect();
+    if (window.NexusRelease && NexusRelease.initUi) NexusRelease.initUi();
   }
 
   NX.ui = {

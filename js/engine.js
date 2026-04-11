@@ -101,6 +101,11 @@ window.NX = window.NX || {};
     dnaX: 0.5, dnaY: 0.5, dnaZ: 0.5, dnaW: 0.5,
     /** When set, main loop composites layers into #c-rec for export resolution */
     recCompositeDims: null,
+    /** Composite REC branding (see nexus-rec-brand.js) */
+    recBrandEnabled: false,
+    recBrandTitle: 'NEXUS Engine Pro',
+    /** performance.now() when composite REC started (for title card timing) */
+    _recT0: 0,
     /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
     bcLastPresetKey: '',
     /** True on iPhone/iPad: coarser pointer smoothing + GPU-friendly caps */
@@ -606,6 +611,18 @@ window.NX = window.NX || {};
   /* ---- Main loop --------------------------------------------------- */
   var _lastTime = performance.now();
 
+  /** Reset GL state so fullscreen passes draw reliably (extracted for clarity). */
+  function resetGlStateForCompositePass() {
+    try {
+      gl.disable(gl.DEPTH_TEST);
+      if (typeof gl.STENCIL_TEST === 'number') gl.disable(gl.STENCIL_TEST);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.disable(gl.CULL_FACE);
+      gl.disable(gl.BLEND);
+      gl.colorMask(true, true, true, true);
+    } catch (eGlState) { /* rare: invalid enum on minimal GL */ }
+  }
+
   function loop(now) {
     requestAnimationFrame(loop);
     try {
@@ -645,15 +662,7 @@ window.NX = window.NX || {};
       if (!fbA[0] || !fbB[0]) return;
     }
 
-    /* Other modules share no GL state with us, but reset common pitfalls so fullscreen passes always draw. */
-    try {
-      gl.disable(gl.DEPTH_TEST);
-      if (typeof gl.STENCIL_TEST === 'number') gl.disable(gl.STENCIL_TEST);
-      gl.disable(gl.SCISSOR_TEST);
-      gl.disable(gl.CULL_FACE);
-      gl.disable(gl.BLEND);
-      gl.colorMask(true, true, true, true);
-    } catch (eGlState) { /* rare: invalid enum on minimal GL */ }
+    resetGlStateForCompositePass();
 
     if (NX.ui && NX.ui.tickHud) NX.ui.tickHud(S);
     if (NX.demo && NX.demo.tick) NX.demo.tick();
@@ -750,6 +759,12 @@ window.NX = window.NX || {};
           x2d.fillStyle = '#000';
         }
         x2d.fillRect(0, 0, d.w, d.h);
+        if (NX.RecBrand && typeof NX.RecBrand.drawCompositeOverlay === 'function') {
+          try {
+            NX.RecBrand.syncFromDom();
+            NX.RecBrand.drawCompositeOverlay(x2d, d, S);
+          } catch (eBr) { /* ignore */ }
+        }
         var vm = S.visualMode || 'hybrid';
         if (vm !== 'shader') {
           var cbc = document.getElementById('c-bc');

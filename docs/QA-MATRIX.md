@@ -24,6 +24,10 @@ Exit code **0** = required files and bootstrap markers present.
 | 8 | OBS hint | `?obs=1` | Auto-present per README |
 | 9 | Record | REC 5–10s, stop | WebM downloads; playback acceptable |
 | 10 | iOS / Safari | Repeat 1–3 on iPhone | Rotate portrait/landscape recovers canvas |
+| 11 | Onboarding | Clear tour (`Show tour again`) → reload → Launch | Wizard appears once; Skip/Done persists |
+| 12 | Showfile | System → Export → Import JSON | Visual mode / seed / post flags apply without console errors |
+| 13 | REC brand | System → enable title + optional logo → REC 1080p 5s | Title bar visible at start of composite clip |
+| 14 | Unit / E2E | `cd NEXUS && npm test && npm run test:e2e` | Vitest green; Playwright smoke green |
 
 ## Recording regression (optional)
 
