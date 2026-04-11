@@ -69,10 +69,13 @@ VORTEX ENGINE · PLASMA SPHERE · ALIEN MONOLITH
 INK & OIL · LIQUID METAL
 
 ### Environment
-NEON GRID · NEBULA FLYTHROUGH
+NEON GRID
 
 ### Afterlife
 VOID CATHEDRAL · SACRED GEOMETRY · NEURAL SWARM · DARK MONOLITH · LASER CATHEDRAL · AFTERLIFE RINGS
+
+### Unique / feedback + roadmap add-ons
+TUNNEL GRID · **SPECTRAL HELIX** · **PRISM ORBIT** (`js/scenes/roadmap-scenes.js`; **WM** / **WC** tie to optional AudioWorklet meter)
 
 ---
 
@@ -102,6 +105,14 @@ VOID CATHEDRAL · SACRED GEOMETRY · NEURAL SWARM · DARK MONOLITH · LASER CATH
    https://jordanz00.github.io/nexus-music-visualizer/?obs=1
    ```
 5. For transparent background compositing, use OBS color-key on the black background
+
+### Developer URL flags (optional)
+
+| Query | Effect |
+|-------|--------|
+| `?noworklet=1` | Skip AudioWorklet meter (AnalyserNode-only path). |
+| `?three=1` | Load `vendor/three.min.js` and enable the `#c-three` guest layer (second WebGL context; ~670 KB). |
+| `?wgpu_probe=1` | Log `NX.WebGpuSpike.probe()` to the console (WebGPU / WgslGraph status). |
 
 ### Audio Routing for OBS
 - Use **VoiceMeeter** or **BlackHole** (macOS) to route system audio to a virtual mic device

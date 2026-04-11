@@ -10,7 +10,7 @@
     'uniform vec2 R;',
     'uniform vec2 MX;',
     'uniform float T,B,M,H,V,BT,EX,SP,WP,PAL,FL,SC;',
-    'uniform float BP,PH,BC,LD;',
+    'uniform float BP,PH,BC,LD,WM,WC;',
     'uniform vec4 DNA;',
     'uniform vec4 PROC;',
     'uniform sampler2D AU,PV;',
@@ -113,7 +113,7 @@
       if (s.tags.indexOf('sacred') < 0) s.tags.push('sacred');
     }
     if (!s.cost) {
-      if (nm.indexOf('ECHO LATTICE') >= 0 || nm === 'TUNNEL GRID') s.cost = 'low';
+      if (nm === 'TUNNEL GRID') s.cost = 'low';
       else if (s.rx >= 2) s.cost = 'high';
       else if (/MANDEL|BLACK HOLE|PLASMA|VORTEX|NEURAL|LASER|HYPERSPACE|CHROME|MERGER|APOLLON|KALI|WORMHOLE/i.test(nm)) s.cost = 'high';
       else if (/GRID|TUNNEL|NEBULA|INK|DEEP|VOID|SACRED|AFTERLIFE|MONOLITH/i.test(nm)) s.cost = 'med';

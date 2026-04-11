@@ -2,6 +2,25 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 1.1.5 — 2026-04-10
+
+- Removed **ECHO LATTICE** WebGL scene from `js/scenes/unique.js` (18 shader scenes in roster).
+- Dropped obsolete cost hint for that scene in `js/scenes.js` (`normalizeScene`).
+
+## 1.1.4 — 2026-04-10
+
+- **AudioWorklet** meter (`js/audio-meter-processor.js`) — optional RMS / crest tap in-line before the analyser; `?noworklet=1` disables. Shader uniforms **WM** / **WC** in `js/scenes.js` + `engine.js`.
+- **Scenes:** `SPECTRAL HELIX`, `PRISM ORBIT` in `js/scenes/roadmap-scenes.js` (appended after `pro-upgrade.js` so demo indices stay stable).
+- **Post:** highlight knee + interleaved gradient dither in `js/post.js`.
+- **Three.js guest:** `vendor/three.min.js` + `js/nexus-three-guest.js` — `?three=1` or `localStorage nexus.three.guest=1`; canvas `#c-three` + `css/nexus.css`.
+- **WebGPU diagnostics:** `js/nexus-webgpu-spike.js` (`?wgpu_probe=1`); main path remains `NX.WgslGraph`.
+- **Docs:** `docs/NEXUS-PROJECTM-LGPL-EVALUATION.md`, `docs/PUBLIC-REPO-SYNC.md`; `THIRD_PARTY_NOTICES.md` (Three + Meyda note).
+
+## 1.1.3 — 2026-04-10
+
+- Removed **NEBULA FLYTHROUGH** WebGL scene from `js/scenes/environment.js` (17 shader scenes total).
+- Reindexed `demo-director.js` scene jumps for indices ≥ 12.
+
 ## 1.1.2 — 2026-04-10
 
 - Removed **NEON CITY** WebGL scene from `js/scenes/environment.js` (18 shader scenes total).
