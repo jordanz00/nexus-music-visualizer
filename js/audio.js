@@ -376,6 +376,11 @@
       S.beatPhase = S.beatPhase - Math.floor(S.beatPhase);
       syncVisualDrive(pr);
       smoothWorkletMeters();
+      if (NX.ProAudioScience && typeof NX.ProAudioScience.ingest === 'function') {
+        try {
+          NX.ProAudioScience.ingest(S);
+        } catch (eProA2) { /* ignore */ }
+      }
       gl.bindTexture(gl.TEXTURE_2D, atex);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 512, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, abuf);
       return;
@@ -481,6 +486,12 @@
         abuf[j] = Math.min(255, Math.floor(adj * (1 + S.sBass * 0.32 + bvA * 0.1 + trn * 0.15)));
       }
       for (var j = 0; j < 256; j++) abuf[256 + j] = S.waveArr[j * step] || 128;
+    }
+
+    if (NX.ProAudioScience && typeof NX.ProAudioScience.ingest === 'function') {
+      try {
+        NX.ProAudioScience.ingest(S);
+      } catch (eProA) { /* ignore */ }
     }
 
     gl.bindTexture(gl.TEXTURE_2D, atex);

@@ -1,6 +1,6 @@
 'use strict';
 /*  demo-director.js — Choreographed sequences for filming viral clips.
-    Trigger via URL param (?demo=drop|festival|genres|ai|resolume)
+    Trigger via URL param (?demo=drop|festival|genres|ai|resolume|asura_show)
     or from the UI. Automates scene switches, parameter sweeps, beat
     triggers, and camera moves on a precise timeline.                  */
 
@@ -25,7 +25,20 @@
     if (action.present && NX.ui) NX.ui.togglePresent();
     if (action.autoMorph != null) S.autoMorph = action.autoMorph;
     if (action.beat != null) S.beat = action.beat;
+    if (action.postFxAsura != null) S.postFxAsura = Math.max(0, Math.min(1, action.postFxAsura));
+    if (action.nexusGodRayMix != null) S.nexusGodRayMix = Math.max(0, Math.min(1, action.nexusGodRayMix));
+    if (action.cablesEnabled != null && NX.CablesGuest && typeof NX.CablesGuest.setEnabled === 'function') {
+      NX.CablesGuest.setEnabled(!!action.cablesEnabled, { skipPersist: true });
+    }
+    if (action.cablesOpacity != null && NX.CablesGuest && typeof NX.CablesGuest.setOpacity01 === 'function') {
+      NX.CablesGuest.setOpacity01(Math.max(0, Math.min(1, action.cablesOpacity)));
+    }
     if (action.fn) action.fn();
+    if (NX.ui && NX.ui.syncControls) {
+      try {
+        NX.ui.syncControls();
+      } catch (eSc) { /* ignore */ }
+    }
   }
 
   /* ---- Tick (called from engine loop) ----------------------------- */
@@ -145,6 +158,20 @@
     { t: 22,  explode: true },
     { t: 25,  speed: 3, react: 5 },
     { t: 30,  fn: function () { /* end */ } }
+  ];
+
+  /* ---- 6. ASURA POST + CABLES GUEST (MFX-style + iframe patch) ----- */
+  sequences.asura_show = [
+    { t: 0,   scene: 13, speed: 5, react: 8, warp: 6, palette: 0, morph: 1.4, quality: 'balanced', postFxAsura: 0.28, nexusGodRayMix: 0.28 },
+    { t: 0.1, autoMorph: false },
+    { t: 2,   postFxAsura: 0.52, nexusGodRayMix: 0.38, beat: 0.85 },
+    { t: 4,   cablesEnabled: true, cablesOpacity: 0.42, explode: true },
+    { t: 6,   postFxAsura: 0.68, scene: 4, beat: 1.0 },
+    { t: 9,   cablesOpacity: 0.58, scene: 15 },
+    { t: 12,  postFxAsura: 0.55, explode: true },
+    { t: 15,  cablesOpacity: 0.35, postFxAsura: 0.4 },
+    { t: 18,  cablesEnabled: false, postFxAsura: 0.22, nexusGodRayMix: 0.22 },
+    { t: 21,  autoMorph: true, morph: 1.8 }
   ];
 
   /* ---- 5. RESOLUME KILLER (UI showcase) ---------------------------- */

@@ -69,7 +69,7 @@
     init: init,
     update: update,
     renderButterchurnLayer: renderButterchurnLayer,
-    version: '3.2.3-pro'
+    version: '4.0.0-pro'
   };
 
   NX.NexusEngine = window.NexusEngine;

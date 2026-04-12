@@ -9,6 +9,7 @@ This file summarizes open-source components **shipped** in this repository and h
 | **Butterchurn** (`butterchurn.min.js`) | MIT | WebGL MilkDrop-class preset renderer. Upstream: [jberg/butterchurn](https://github.com/jberg/butterchurn). Do not fork for production fixes without a license review; prefer vendored releases. |
 | **butterchurn-presets** (`butterchurnPresets*.min.js`) | MIT (preset pack per upstream) | Preset JSON and pack tooling from [jberg/butterchurn-presets](https://github.com/jberg/butterchurn-presets). Individual presets retain original MilkDrop / community authorship. |
 | **three.js** (`vendor/three.min.js`) | MIT | Optional guest 3D layer when `?three=1` or `localStorage nexus.three.guest=1` — upstream [mrdoob/three.js](https://github.com/mrdoob/three.js). Loaded dynamically from `index.html` bootstrap; not required for core VJ operation. |
+| **PlayCanvas engine** (`vendor/playcanvas.min.js`) | MIT | Optional guest layer when `?playcanvas=1` or `localStorage nexus.playcanvas.guest=1` — upstream [playcanvas/engine](https://github.com/playcanvas/engine) (vendored UMD `build/playcanvas.min.js`, pinned in `vendor/fetch-playcanvas.sh`). ~2.1 MB; third WebGL context on `#c-playcanvas`. |
 
 Optional extra packs installed via `vendor/fetch-extra-presets.sh` are subject to the same upstream licenses; list any additional filenames here when you add them.
 
@@ -23,6 +24,17 @@ Optional extra packs installed via `vendor/fetch-extra-presets.sh` are subject t
 | Component | Typical license | Status in this repo |
 |-----------|-----------------|---------------------|
 | **projectM** | LGPL | **Not shipped.** Evaluated only for compatibility research. Commercial redistribution of LGPL WASM/native builds requires legal review; overlaps Butterchurn’s role for MilkDrop-class visuals. |
+| **Hydra** (hydra-synth) | AGPL-3.0 (typical for editor line) | **Not shipped.** Research / UX inspiration only; see `docs/NEXUS-BROWSER-VIZ-RESEARCH.md` and Credits. Do not embed without license + bundle review. |
+| **cables.gl** | MIT (project) | **Runtime not vendored** in this repo. `nexus-cables-lite.js` is an original whitelist helper inspired by node-graph topology (no cables player code). **Cables guest:** when the operator enables **Mix → Cables guest**, NEXUS sets an **iframe** `src` to an **allowlisted HTTPS** patch URL (default third-party site **mfx.drastic.net**). That loads **network content and WebGL executed in the third-party origin** — not shipped as our `vendor/` bundle; subject to that site’s availability, headers, and terms. |
+| **MangoWave** | AGPL-3.0 | **Not shipped.** Third-party MilkDrop-class browser player — listed for comparison only; AGPL differs from NEXUS default stack. |
+| **Demoscene / pouët / CSDb links** | n/a | **Not shipped.** Educational links in docs and Credits only. |
+
+## Research documentation (project-authored)
+
+| File | Notes |
+|------|--------|
+| `docs/NEXUS-BROWSER-VIZ-RESEARCH.md` | Curated external links (OSS browser viz, WebGPU, demoscene lessons); no third-party code. |
+| `js/nexus-engine/nexus-research-brief.js` | Read-only `NX.ResearchBrief` metadata for same pointers; optional `?research=1` console hint. |
 
 ## Engineering references
 

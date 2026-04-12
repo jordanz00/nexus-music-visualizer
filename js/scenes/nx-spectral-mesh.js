@@ -1,0 +1,50 @@
+'use strict';
+(function () {
+  var H = NX.HEAD;
+  NX.registerScene({
+    n: 'SPECTRAL MESH',
+    rx: 1,
+    c: '#64b5f6',
+    tags: ['fractal', 'calm'],
+    fs: H + [
+      'float terrH(vec2 xz){',
+      ' float ux=sat(xz.x*.5+.5);',
+      ' float uy=sat(xz.y*.5+.5);',
+      ' float e=texture2D(AU,vec2(ux*.94+.03,.5)).r;',
+      ' float e2=texture2D(AU,vec2(uy*.9+.05,.5)).r;',
+      ' float ring=texture2D(AU,vec2(sat(length(xz)*.18+T*.04+B*.02),.5)).r;',
+      ' return (e*.52+e2*.33+ring*.28)*(.55+B*.55+M*.4+H*.12)-.42;',
+      '}',
+      'void main(){',
+      ' vec2 sc=(uv-.5)*vec2(R.x/R.y,1.)*2.05;',
+      ' vec3 ro=vec3(sc.x*3.15+sin(T*.11)*.12+MX.x*.22,1.85+MX.y*.35+cos(T*.09)*.08,sc.y*3.1+cos(T*.1)*.1);',
+      ' vec3 rd=normalize(vec3(.07*sin(T*.18+M*.4),-1.,.06*cos(T*.15+BT*.3)));',
+      ' float t=0.;',
+      ' vec3 col=vec3(.03,.05,.1)*(1.+M*.25);',
+      ' for(int i=0;i<62;i++){',
+      '  vec3 p=ro+rd*t;',
+      '  float surf=terrH(p.xz);',
+      '  float dh=p.y-surf;',
+      '  if(dh<.032){',
+      '   vec2 e=vec2(.035,0.);',
+      '   float hx0=terrH(p.xz+e.xy)-terrH(p.xz-e.xy);',
+      '   float hz0=terrH(p.xz+e.yx)-terrH(p.xz-e.yx);',
+      '   vec3 n=normalize(vec3(hx0,1.,hz0));',
+      '   float au0=texture2D(AU,vec2(sat(p.x*.5+.5),.5)).r;',
+      '   vec3 base=pal(length(p.xz)*.22+T*.07+au0*.35);',
+      '   col=blinnPhong(n,-rd,normalize(vec3(.45,.82,-.28)),base,.16)*(.42+float(i)/62.*.38);',
+      '   col+=vec3(.15,.4,.95)*exp(-dh*7.)*(.12+BT*.18);',
+      '   break;',
+      '  }',
+      '  t+=max(dh*.52,.038);',
+      '  if(t>22.) break;',
+      ' }',
+      ' col+=vec3(.06,.1,.16)*exp(-length(sc)*.55)*(1.+FL*.12);',
+      ' vec2 fUV=feedUV(1.015+B*.02,.0025+T*.001,vec2(sin(T*.08)*.0012,0.));',
+      ' vec3 prev=texture2D(PV,fUV).rgb*.93;',
+      ' col=mix(prev,col,.22+B*.12+BT*.08);',
+      ' gl_FragColor=vec4(sat(col),1.);',
+      '}'
+    ].join('\n')
+  });
+})();

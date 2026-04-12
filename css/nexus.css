@@ -56,10 +56,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);co
 
 /* -- Canvas --------------------------------------------------------- */
 #c-bc{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block;opacity:0;pointer-events:none;transition:opacity .6s ease}
-/* Optional Three.js guest (vendor/three.min.js + ?three=1): same inset as #c, under main WebGL */
-#c-three{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;display:block;opacity:0;pointer-events:none;touch-action:none;-webkit-user-select:none;user-select:none;mix-blend-mode:screen}
+/* Optional Three.js / PlayCanvas guests (?three=1 / ?playcanvas=1): same inset as #c, under main WebGL */
+#c-three,#c-playcanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;display:block;opacity:0;pointer-events:none;touch-action:none;-webkit-user-select:none;user-select:none;mix-blend-mode:screen}
 @supports (mix-blend-mode: plus-lighter){
-  #c-three{mix-blend-mode:plus-lighter}
+  #c-three,#c-playcanvas{mix-blend-mode:plus-lighter}
 }
 /* Clip stacks: under = plate (z1), ambient z2, WebGL z3, over z4 — iOS/Android friendly */
 .nx-clip-stack{position:fixed;inset:0;pointer-events:none;overflow:hidden;-webkit-transform:translateZ(0);transform:translateZ(0)}
@@ -73,6 +73,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);co
 .nx-clip-cell{pointer-events:none}
 /* Ambient above clip-under, below main WebGL — screen blend works on older iOS; plus-lighter is Safari 17+ */
 .nx-ambient-layer{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.38;transition:opacity .45s ease}
+/* cables.gl / MFX iframe guest — same stack band as ambient / Three guest; no pointer capture */
+.nx-cables-guest-wrap{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .45s ease;mix-blend-mode:screen}
+.nx-cables-guest-wrap.nx-cables-guest-on{pointer-events:none}
+.nx-cables-guest-frame{width:100%;height:100%;border:0;display:block;background:#020204}
+.nx-cables-guest-url{max-width:min(240px,38vw);min-width:120px;font-size:11px;vertical-align:middle}
 @supports (mix-blend-mode: plus-lighter){
   .nx-ambient-layer{mix-blend-mode:plus-lighter;opacity:.52}
 }
@@ -354,6 +359,9 @@ body.letterbox #c,body.letterbox #c-bc{top:50%;transform:translateY(-50%);height
 .nx-acc-sum:hover{color:var(--accent-color);background:rgba(0,255,213,.04)}
 .nx-acc-tag{font-size:8px;letter-spacing:.1em;padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);color:rgba(255,255,255,.45)}
 .nx-acc-body{padding:0 4px 8px}
+.nx-pro-platform-body{font-size:11px;line-height:1.45;color:rgba(255,255,255,.78)}
+.nx-pro-platform-body .nx-code-inline{font-size:10px}
+.nx-pro-ai-hint{width:100%;min-height:48px;margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.35);color:rgba(255,255,255,.88);resize:vertical;box-sizing:border-box;font-family:inherit;font-size:12px}
 
 /* -- MIDI map overlay ----------------------------------------------- */
 .midi-map-panel{position:fixed;left:max(12px,env(safe-area-inset-left));top:calc(env(safe-area-inset-top) + 88px);z-index:70;width:min(380px,92vw);max-height:min(70vh,520px);overflow:auto;background:rgba(8,10,12,.94);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.6);display:none;flex-direction:column}

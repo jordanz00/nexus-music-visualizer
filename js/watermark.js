@@ -1,7 +1,7 @@
 'use strict';
 /*  watermark.js — Free tier watermark overlay + Pro unlock system.
     Shows the subtle #watermark corner label for free users.
-    Pro unlock via localStorage removes it (see README + More tab).   */
+    Pro unlock via NX.Persist removes it (see README + More tab).   */
 
 (function () {
   var S = NX.S;
@@ -11,7 +11,7 @@
 
   function checkPro() {
     try {
-      var key = localStorage.getItem(STORAGE_KEY);
+      var key = NX.Persist && NX.Persist.getItem ? NX.Persist.getItem(STORAGE_KEY) : null;
       isPro = key === 'NEXUS_MK4_UNLOCKED';
     } catch (e) { isPro = false; }
     updateBadge();
@@ -20,7 +20,9 @@
 
   function unlock(code) {
     if (code === 'NEXUS_MK4_PRO' || code === 'earlyaccess2026') {
-      try { localStorage.setItem(STORAGE_KEY, 'NEXUS_MK4_UNLOCKED'); } catch (e) { }
+      try {
+        if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem(STORAGE_KEY, 'NEXUS_MK4_UNLOCKED');
+      } catch (e) { }
       isPro = true; updateBadge();
       return true;
     }
@@ -28,7 +30,9 @@
   }
 
   function lock() {
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { }
+    try {
+      if (NX.Persist && NX.Persist.removeItem) NX.Persist.removeItem(STORAGE_KEY);
+    } catch (e) { }
     isPro = false; updateBadge();
   }
 

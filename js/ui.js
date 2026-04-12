@@ -210,10 +210,21 @@
     if (nk) nk.value = String(Math.round((S.postFxKaleido == null ? 0 : S.postFxKaleido) * 100));
     var ng = document.getElementById('nx-glitch');
     if (ng) ng.value = String(Math.round((S.postFxGlitch == null ? 0 : S.postFxGlitch) * 100));
+    var na = document.getElementById('nx-asura');
+    if (na) na.value = String(Math.round((S.postFxAsura == null ? 0 : S.postFxAsura) * 100));
+    if (NX.CablesGuest && typeof NX.CablesGuest.getState === 'function') {
+      var cg = NX.CablesGuest.getState();
+      var cgOn = document.getElementById('nx-cables-guest-on');
+      var cgOp = document.getElementById('nx-cables-guest-opacity');
+      var cgUrl = document.getElementById('nx-cables-guest-url');
+      if (cgOn) cgOn.checked = !!cg.enabled;
+      if (cgOp) cgOp.value = String(Math.round((cg.opacity != null ? cg.opacity : 0.48) * 100));
+      if (cgUrl) cgUrl.value = cg.url || '';
+    }
     var nsm = document.getElementById('nx-show-macro');
     if (nsm) {
       var vm = S.visualMacro || '';
-      nsm.value = vm === 'club' ? 'club' : (vm === 'ambient' ? 'ambient_show' : (vm === 'psychedelic' ? 'psychedelic' : ''));
+      nsm.value = vm === 'club' ? 'club' : (vm === 'ambient' ? 'ambient_show' : (vm === 'psychedelic' ? 'psychedelic' : (vm === 'asura_mfx' ? 'asura_mfx' : '')));
     }
     var vpb = document.getElementById('vizperfbtn');
     if (vpb) vpb.classList.toggle('on', !!S.nexusVizPerformance);
@@ -267,6 +278,13 @@
         bcHud.textContent = '';
         bcHud.style.display = 'none';
       }
+    }
+
+    var gdisp = document.getElementById('nx-genome-disp');
+    if (gdisp && st.visualGenomeHex) gdisp.textContent = String(st.visualGenomeHex).slice(0, 20) + '…';
+    var mdisp = document.getElementById('nx-structure-mood-disp');
+    if (mdisp && NX.StructureMood && typeof NX.StructureMood.getState === 'function') {
+      mdisp.textContent = NX.StructureMood.getState();
     }
 
     if (st.autoMorph) {
@@ -671,13 +689,13 @@
     var recAmb = document.getElementById('rec-ambient-bg');
     if (recAmb) {
       try {
-        recAmb.checked = localStorage.getItem('nexus.rec.ambientUnderlay') === '1';
+        recAmb.checked = (NX.Persist && NX.Persist.getItem && NX.Persist.getItem('nexus.rec.ambientUnderlay')) === '1';
       } catch (eAmb) { recAmb.checked = false; }
       S.recAmbientUnderlay = !!recAmb.checked;
       recAmb.addEventListener('change', function () {
         S.recAmbientUnderlay = !!recAmb.checked;
         try {
-          localStorage.setItem('nexus.rec.ambientUnderlay', S.recAmbientUnderlay ? '1' : '0');
+          if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem('nexus.rec.ambientUnderlay', S.recAmbientUnderlay ? '1' : '0');
         } catch (eAmb2) { /* ignore */ }
       });
     }
@@ -932,6 +950,29 @@
     if (nxKal) nxKal.addEventListener('input', function () { S.postFxKaleido = parseInt(this.value, 10) / 100; });
     var nxGli = document.getElementById('nx-glitch');
     if (nxGli) nxGli.addEventListener('input', function () { S.postFxGlitch = parseInt(this.value, 10) / 100; });
+    var nxAsu = document.getElementById('nx-asura');
+    if (nxAsu) nxAsu.addEventListener('input', function () { S.postFxAsura = parseInt(this.value, 10) / 100; });
+    var nxCgOn = document.getElementById('nx-cables-guest-on');
+    if (nxCgOn && NX.CablesGuest && typeof NX.CablesGuest.setEnabled === 'function') {
+      nxCgOn.addEventListener('change', function () {
+        NX.CablesGuest.setEnabled(!!this.checked);
+      });
+    }
+    var nxCgOp = document.getElementById('nx-cables-guest-opacity');
+    if (nxCgOp && NX.CablesGuest && typeof NX.CablesGuest.setOpacity01 === 'function') {
+      nxCgOp.addEventListener('input', function () {
+        NX.CablesGuest.setOpacity01(parseInt(this.value, 10) / 100);
+      });
+    }
+    var nxCgApply = document.getElementById('nx-cables-guest-url-apply');
+    if (nxCgApply && NX.CablesGuest && typeof NX.CablesGuest.setPatchUrl === 'function') {
+      nxCgApply.addEventListener('click', function () {
+        var inp = document.getElementById('nx-cables-guest-url');
+        if (!inp) return;
+        var ok = NX.CablesGuest.setPatchUrl(inp.value || '');
+        if (!ok && typeof console !== 'undefined' && console.warn) console.warn('NEXUS: cables guest URL rejected (use https + allowlisted host)');
+      });
+    }
     var nxShow = document.getElementById('nx-show-macro');
     if (nxShow) nxShow.addEventListener('change', function () {
       if (!this.value) { S.visualMacro = ''; syncControls(); return; }
@@ -981,6 +1022,15 @@
       onboardReset.addEventListener('click', function () {
         NX.Onboard.resetTour();
         setAppBanner('Tour reset — use Launch again to see the guide.');
+      });
+    }
+    var hwRecal = document.getElementById('nx-hw-recalibrate');
+    if (hwRecal && NX.HwCalibrate && typeof NX.HwCalibrate.forceRecalibrate === 'function') {
+      hwRecal.addEventListener('click', function () {
+        setAppBanner('Re-calibrating GPU…');
+        NX.HwCalibrate.forceRecalibrate(function () {
+          setAppBanner('Hardware tier updated. Reload if visuals look wrong.');
+        });
       });
     }
 
@@ -1095,6 +1145,18 @@
     if (NX.SessionSeed) NX.SessionSeed._onChange = refreshSeedHud;
     if (NX.midi && NX.midi.refreshProfileSelect) NX.midi.refreshProfileSelect();
     if (window.NexusRelease && NexusRelease.initUi) NexusRelease.initUi();
+    if (NX.ClipPad && NX.ClipPad.mount) NX.ClipPad.mount();
+    var gcopy = document.getElementById('nx-genome-copy');
+    if (gcopy && NX.EvolveStack && NX.EvolveStack.genomeToHex) {
+      gcopy.addEventListener('click', function () {
+        var h = NX.EvolveStack.genomeToHex();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(h).catch(function () { window.prompt('Genome', h); });
+        } else {
+          window.prompt('Genome', h);
+        }
+      });
+    }
   }
 
   NX.ui = {

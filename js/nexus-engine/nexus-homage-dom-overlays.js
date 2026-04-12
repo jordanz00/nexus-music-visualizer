@@ -246,11 +246,11 @@
         return;
       }
       try {
-        localStorage.setItem('nexus.cybr.alias', raw);
+        NX.Persist.setItem('nexus.cybr.alias', raw);
       } catch (e0) { /* ignore */ }
     });
     try {
-      inp.value = localStorage.getItem('nexus.cybr.alias') || '';
+      inp.value = NX.Persist.getItem('nexus.cybr.alias') || '';
     } catch (e1) { /* ignore */ }
     aliasLab.appendChild(inp);
     wrap.appendChild(aliasLab);

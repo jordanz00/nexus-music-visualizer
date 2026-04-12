@@ -33,6 +33,10 @@
     psychedelic: {
       SPD: 5, RCT: 8, WRP: 7, PAL: 3, morphDur: 1.45, mode: 'hybrid', trails: 0.11, bloomMul: 1.1,
       visualMacro: 'psychedelic', postFxKaleido: 0.14, postFxGlitch: 0.055
+    },
+    asura_mfx: {
+      SPD: 5, RCT: 9, WRP: 8, PAL: 0, morphDur: 1.35, mode: 'hybrid', trails: 0.14, bloomMul: 1.22,
+      visualMacro: 'asura_mfx', postFxKaleido: 0.06, postFxGlitch: 0.03, postFxAsura: 0.72, nexusGodRayMix: 0.44
     }
   };
 
@@ -136,6 +140,8 @@
     S.visualMacro = st.visualMacro || '';
     S.postFxKaleido = st.postFxKaleido != null ? st.postFxKaleido : 0;
     S.postFxGlitch = st.postFxGlitch != null ? st.postFxGlitch : 0;
+    S.postFxAsura = st.postFxAsura != null ? Math.max(0, Math.min(1, st.postFxAsura)) : 0;
+    if (st.nexusGodRayMix != null) S.nexusGodRayMix = Math.max(0, Math.min(1, st.nexusGodRayMix));
     if (st.mode && NX.SceneManager) {
       NX.SceneManager.setMode(st.mode, { crossfade: true, fadeSec: 1 });
     }

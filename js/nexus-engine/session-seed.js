@@ -1,7 +1,7 @@
 'use strict';
 /**
  * SessionSeed — 32-bit session identity for DNA uniforms + NX.randomUnit() (seeded PRNG).
- * Supports ?seed=123 or string; optional persistence in localStorage.
+ * Supports ?seed=123 or string; optional persistence via NX.Persist (IndexedDB + mirror).
  */
 (function () {
   if (!window.NX) window.NX = {};
@@ -70,7 +70,8 @@
     applyDnaToState(seedToDna(seed));
     if (opts.persist !== false) {
       try {
-        localStorage.setItem(STORAGE_KEY, String(seed));
+        if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem(STORAGE_KEY, String(seed));
+        else localStorage.setItem(STORAGE_KEY, String(seed));
       } catch (e) { /* ignore */ }
     }
     if (opts.skipUrl !== true && history.replaceState) {
@@ -95,7 +96,7 @@
       }
     } catch (e) { /* ignore */ }
     try {
-      var s = localStorage.getItem(STORAGE_KEY);
+      var s = (NX.Persist && NX.Persist.getItem) ? NX.Persist.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY);
       if (s && /^\d+$/.test(s)) return parseInt(s, 10) >>> 0;
     } catch (e2) { /* ignore */ }
     return ((Date.now() & 0xffff) ^ (Math.floor(Math.random() * 0xffffffff) >>> 0)) >>> 0;
@@ -151,5 +152,4 @@
     return Math.random();
   };
 
-  init();
 })();

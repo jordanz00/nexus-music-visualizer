@@ -14,7 +14,7 @@
 
   function isDone() {
     try {
-      return localStorage.getItem(KEY) === '1';
+      return NX.Persist.getItem(KEY) === '1';
     } catch (e) {
       return false;
     }
@@ -22,13 +22,13 @@
 
   function setDone() {
     try {
-      localStorage.setItem(KEY, '1');
+      NX.Persist.setItem(KEY, '1');
     } catch (e2) { /* ignore */ }
   }
 
   function clearDone() {
     try {
-      localStorage.removeItem(KEY);
+      NX.Persist.removeItem(KEY);
     } catch (e3) { /* ignore */ }
   }
 

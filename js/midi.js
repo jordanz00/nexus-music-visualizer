@@ -20,16 +20,38 @@
     profiles[activeName] = mappings && typeof mappings === 'object' ? mappings : {};
   }
 
+  function storageGet(key) {
+    try {
+      var s = null;
+      if (window.NX_Store && typeof NX_Store.get === 'function') {
+        var v = NX_Store.get(key);
+        if (v != null) s = v;
+      }
+      if (s == null && NX.Persist && NX.Persist.getItem) s = NX.Persist.getItem(key);
+      return s;
+    } catch (eG) { return null; }
+  }
+
+  function storageSet(key, val) {
+    try {
+      if (window.NX_Store && typeof NX_Store.set === 'function') {
+        NX_Store.set(key, val);
+        return;
+      }
+      if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem(key, val);
+    } catch (eS) { /* ignore */ }
+  }
+
   function loadProfiles() {
     profiles = {};
     activeName = 'Default';
     mappings = {};
     try {
-      var raw = localStorage.getItem(PROFILES_KEY);
+      var raw = storageGet(PROFILES_KEY);
       if (raw) {
         var p = JSON.parse(raw);
         if (p && typeof p === 'object') profiles = p;
-        var an = localStorage.getItem(ACTIVE_KEY);
+        var an = storageGet(ACTIVE_KEY);
         if (an && profiles[an]) activeName = an;
         else activeName = Object.keys(profiles)[0] || 'Default';
         if (!profiles[activeName]) profiles[activeName] = {};
@@ -38,7 +60,7 @@
       }
     } catch (e0) { /* migrate */ }
     try {
-      var leg = localStorage.getItem(LEGACY_KEY);
+      var leg = storageGet(LEGACY_KEY);
       if (leg) mappings = JSON.parse(leg) || {};
     } catch (e1) { mappings = {}; }
     if (!mappings || typeof mappings !== 'object') mappings = {};
@@ -50,8 +72,8 @@
   function saveProfiles() {
     flushActiveToProfiles();
     try {
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-      localStorage.setItem(ACTIVE_KEY, activeName);
+      storageSet(PROFILES_KEY, JSON.stringify(profiles));
+      storageSet(ACTIVE_KEY, activeName);
     } catch (e) { /* ignore */ }
   }
 
@@ -129,9 +151,15 @@
     } },
     kaleido: { set: function (v) { S.postFxKaleido = Math.max(0, Math.min(1, v)); } },
     glitch: { set: function (v) { S.postFxGlitch = Math.max(0, Math.min(1, v)); } },
+    asura: { set: function (v) {
+      S.postFxAsura = Math.max(0, Math.min(1, v));
+      var el = document.getElementById('nx-asura');
+      if (el) el.value = String(Math.round(S.postFxAsura * 100));
+    } },
     postFx: { set: function (v) {
       S.postFxKaleido = Math.max(0, Math.min(1, v * 0.55));
       S.postFxGlitch = Math.max(0, Math.min(1, v * 0.45));
+      S.postFxAsura = Math.max(0, Math.min(1, v * 0.38));
     } },
     nextRandom: { set: function (v) {
       if (v > 0.9 && _nextRandomPrev <= 0.9) NX.goRandom();

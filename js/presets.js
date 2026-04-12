@@ -1,5 +1,5 @@
 'use strict';
-/*  presets.js — Save / load engine + UI state to localStorage.
+/*  presets.js — Save / load engine + UI state via NX_Store (IndexedDB `nexus`) + Persist fallback.
     Ships 4 built-in presets: Afterlife Dark, Festival Energy,
     Ambient Chill, Laser Show.                                  */
 
@@ -14,14 +14,40 @@
     'Laser Show': { SPD: 8, RCT: 10, WRP: 8, PAL: 0, GAIN: 1.3, SMTH: 40, morphDur: 0.7, scene: 0, quality: 'ultra' },
     'Club': { SPD: 7, RCT: 8, WRP: 7, PAL: 0, GAIN: 1.15, SMTH: 48, morphDur: 1.05, scene: 0, quality: 'balanced', visualMacro: 'club', postFxKaleido: 0, postFxGlitch: 0.04, nexusPostTrails: 0.03, postBloomMul: 1.12, visualMode: 'hybrid' },
     'Ambient Show': { SPD: 2, RCT: 5, WRP: 3, PAL: 2, GAIN: 0.85, SMTH: 72, morphDur: 3.2, scene: 0, quality: 'balanced', visualMacro: 'ambient', postFxKaleido: 0.05, postFxGlitch: 0, nexusPostTrails: 0.16, postBloomMul: 0.88, visualMode: 'hybrid' },
-    'Psychedelic': { SPD: 5, RCT: 8, WRP: 7, PAL: 3, GAIN: 1.05, SMTH: 52, morphDur: 1.45, scene: 0, quality: 'balanced', visualMacro: 'psychedelic', postFxKaleido: 0.14, postFxGlitch: 0.05, nexusPostTrails: 0.11, postBloomMul: 1.08, visualMode: 'hybrid' }
+    'Psychedelic': { SPD: 5, RCT: 8, WRP: 7, PAL: 3, GAIN: 1.05, SMTH: 52, morphDur: 1.45, scene: 0, quality: 'balanced', visualMacro: 'psychedelic', postFxKaleido: 0.14, postFxGlitch: 0.05, nexusPostTrails: 0.11, postBloomMul: 1.08, visualMode: 'hybrid' },
+    'Asura (MFX)': { SPD: 5, RCT: 9, WRP: 8, PAL: 0, GAIN: 1.08, SMTH: 50, morphDur: 1.35, scene: 0, quality: 'balanced', visualMacro: 'asura_mfx', postFxKaleido: 0.06, postFxGlitch: 0.03, postFxAsura: 0.72, nexusPostTrails: 0.14, postBloomMul: 1.22, nexusGodRayMix: 0.44, visualMode: 'hybrid' }
   };
 
+  function storageGet(key) {
+    try {
+      var s = null;
+      if (window.NX_Store && typeof NX_Store.get === 'function') {
+        var v = NX_Store.get(key);
+        if (v != null) s = v;
+      }
+      if (s == null && NX.Persist && NX.Persist.getItem) s = NX.Persist.getItem(key);
+      return s;
+    } catch (e0) { return null; }
+  }
+
+  function storageSet(key, val) {
+    try {
+      if (window.NX_Store && typeof NX_Store.set === 'function') {
+        NX_Store.set(key, val);
+        return;
+      }
+      if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem(key, val);
+    } catch (e1) { /* ignore */ }
+  }
+
   function getUser() {
-    try { var s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : {}; } catch (e) { return {}; }
+    try {
+      var s = storageGet(STORAGE_KEY);
+      return s ? JSON.parse(s) : {};
+    } catch (e) { return {}; }
   }
   function saveUser(all) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); } catch (e) { }
+    storageSet(STORAGE_KEY, JSON.stringify(all));
   }
 
   function capture() {
@@ -37,10 +63,12 @@
       postBloomMul: S.postBloomMul,
       nexusPostBloom: S.nexusPostBloom,
       nexusPostTrails: S.nexusPostTrails,
+      nexusGodRayMix: typeof S.nexusGodRayMix === 'number' ? S.nexusGodRayMix : 0.32,
       visualMode: S.visualMode || 'hybrid',
       visualMacro: S.visualMacro || '',
       postFxKaleido: S.postFxKaleido,
       postFxGlitch: S.postFxGlitch,
+      postFxAsura: typeof S.postFxAsura === 'number' ? S.postFxAsura : 0,
       bcConductorMotion: typeof S.bcConductorMotion === 'number' ? S.bcConductorMotion : 1,
       sessionSeed: typeof S.sessionSeed === 'number' ? (S.sessionSeed >>> 0) : 0,
       hybridBcOpacity: typeof S.hybridBcOpacity === 'number' ? S.hybridBcOpacity : 1,
@@ -66,12 +94,14 @@
     if (preset.postBloomMul != null) S.postBloomMul = preset.postBloomMul;
     if (preset.nexusPostBloom != null) S.nexusPostBloom = preset.nexusPostBloom;
     if (preset.nexusPostTrails != null) S.nexusPostTrails = preset.nexusPostTrails;
+    if (preset.nexusGodRayMix != null) S.nexusGodRayMix = Math.max(0, Math.min(1, preset.nexusGodRayMix));
     if (preset.visualMode != null && NX.SceneManager) {
       NX.SceneManager.setMode(preset.visualMode, { crossfade: true, fadeSec: 0.75 });
     }
     if (preset.visualMacro != null) S.visualMacro = preset.visualMacro;
     if (preset.postFxKaleido != null) S.postFxKaleido = preset.postFxKaleido;
     if (preset.postFxGlitch != null) S.postFxGlitch = preset.postFxGlitch;
+    if (preset.postFxAsura != null) S.postFxAsura = Math.max(0, Math.min(1, preset.postFxAsura));
     if (preset.bcConductorMotion != null) {
       S.bcConductorMotion = Math.max(0.65, Math.min(1.35, preset.bcConductorMotion));
     }

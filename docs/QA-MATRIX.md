@@ -28,6 +28,12 @@ Exit code **0** = required files and bootstrap markers present.
 | 12 | Showfile | System → Export → Import JSON | Visual mode / seed / post flags apply without console errors |
 | 13 | REC brand | System → enable title + optional logo → REC 1080p 5s | Title bar visible at start of composite clip |
 | 14 | Unit / E2E | `cd NEXUS && npm test && npm run test:e2e` | Vitest green; Playwright smoke green |
+| 15 | Share hash `#nx=` | System → Copy share link → open in new tab | State restores; cold-start spectral mesh does not override imported scene |
+| 16 | HW re-calibrate | System → Re-calibrate hardware | Banner text; quality select may change; `?nocal=1` skips probe |
+| 17 | Evolve panel | System → Evolve & BPM clip pad open | Mood + genome codes update with mic on; Copy genome works |
+| 18 | Clip pad | Shift+click cell to store, plain click to launch another | Stored scene launches; no console errors |
+| 19 | Structure mood | Mic on, music with transients | `nx-structure-mood-disp` changes over time |
+| 20 | God-ray perf | Quality Performance + VIZ PERF | Scene still visible; god-ray strength reduced vs Ultra |
 
 ## Recording regression (optional)
 

@@ -12,6 +12,10 @@
  *   — mid:  1 - exp(-dt * 12) (~palette / hue)
  *   — slow: 1 - exp(-dt * 5)  (~RMS breath, MITD HM.y)
  * BPM hard-quantize: only when BC >= 0.45; else pass through continuous phase.
+ *
+ * Research (browser viz Track 2): OSS stacks often stop at FFT → uniforms; “musical” feel
+ * usually adds onset / phase / BPM on top. For GPU-side audio *processing* as a pattern,
+ * see three.js example https://threejs.org/examples/webgpu_compute_audio.html (not vendored here).
  */
 (function () {
   var NX = window.NX || (window.NX = {});
@@ -70,6 +74,7 @@
     if (!rm) return;
     if (typeof S.postFxGlitch === 'number') S.postFxGlitch = Math.min(S.postFxGlitch, 0.12);
     if (typeof S.postFxKaleido === 'number') S.postFxKaleido = Math.min(S.postFxKaleido, 0.18);
+    if (typeof S.postFxAsura === 'number') S.postFxAsura = Math.min(S.postFxAsura, 0.32);
   }
 
   NX.ProceduralAudioBus = {

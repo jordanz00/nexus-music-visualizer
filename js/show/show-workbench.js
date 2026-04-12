@@ -392,7 +392,7 @@
     var ltcSv = document.getElementById('nx-ltc-cal-save');
     if (ltcTh && ltcSv && NX.LtcDecodeCore && NX.LtcDecodeCore.saveCalibration) {
       try {
-        var cal = JSON.parse(localStorage.getItem('nexus.ltc.cal') || '{}');
+        var cal = JSON.parse(NX.Persist.getItem('nexus.ltc.cal') || '{}');
         if (typeof cal.hi === 'number') ltcTh.value = String(Math.round(cal.hi * 100));
       } catch (eCal) { /* ignore */ }
       ltcSv.addEventListener('click', function () {

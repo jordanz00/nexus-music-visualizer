@@ -19,7 +19,7 @@
       if (new URLSearchParams(location.search).get('three') === '1') return true;
     } catch (e0) { /* ignore */ }
     try {
-      if (localStorage.getItem('nexus.three.guest') === '1') return true;
+      if (NX.Persist.getItem('nexus.three.guest') === '1') return true;
     } catch (e1) { /* ignore */ }
     return false;
   }

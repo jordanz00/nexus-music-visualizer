@@ -15,10 +15,10 @@
 
   function load() {
     try {
-      var j = localStorage.getItem(STORAGE);
+      var j = NX.Persist.getItem(STORAGE);
       cues = j ? JSON.parse(j) : [];
       if (!Array.isArray(cues)) cues = [];
-      var ej = localStorage.getItem(EXEC_STORAGE);
+      var ej = NX.Persist.getItem(EXEC_STORAGE);
       if (ej) {
         var ex = JSON.parse(ej);
         if (Array.isArray(ex) && ex.length === executors.length) {
@@ -34,8 +34,8 @@
 
   function save() {
     try {
-      localStorage.setItem(STORAGE, JSON.stringify(cues));
-      localStorage.setItem(EXEC_STORAGE, JSON.stringify(executors));
+      NX.Persist.setItem(STORAGE, JSON.stringify(cues));
+      NX.Persist.setItem(EXEC_STORAGE, JSON.stringify(executors));
     } catch (e) { }
   }
 

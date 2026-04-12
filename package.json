@@ -1,7 +1,7 @@
 {
   "name": "nexus-engine-pro",
   "private": true,
-  "version": "1.1.11",
+  "version": "4.0.0",
   "description": "NEXUS Engine Pro — static browser VJ suite (tests only; no bundler for the app)",
   "scripts": {
     "test": "vitest run --config vitest.nexus.config.mjs",
@@ -9,8 +9,8 @@
     "test:e2e": "playwright test --config playwright.nexus.config.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.0",
-    "vitest": "^3.0.5"
+    "@playwright/test": "^1.59.1",
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=18"

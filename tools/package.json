@@ -1,0 +1,13 @@
+{
+  "name": "nexus-pro-tools",
+  "private": true,
+  "type": "module",
+  "description": "Optional Node helpers: WebRTC signaling for multiscreen sync; JPEG bridge toward ffmpeg/NDI tooling.",
+  "scripts": {
+    "signaling": "node nexus-webrtc-signaling.mjs",
+    "ndi-bridge": "node nexus-ndi-bridge.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.20.0"
+  }
+}

@@ -5,6 +5,6 @@
 (function () {
   NX.MIDIManager = {
     /** Extended param names handled in midi.js paramDefs */
-    extraParams: ['bloom', 'colorShift', 'bcNext', 'visualMode', 'intensity', 'trailsAmt', 'kaleido', 'glitch', 'postFx', 'nextRandom', 'sceneFamily', 'autoMorphCc', 'explodePulse']
+    extraParams: ['bloom', 'colorShift', 'bcNext', 'visualMode', 'intensity', 'trailsAmt', 'kaleido', 'glitch', 'asura', 'postFx', 'nextRandom', 'sceneFamily', 'autoMorphCc', 'explodePulse']
   };
 })();

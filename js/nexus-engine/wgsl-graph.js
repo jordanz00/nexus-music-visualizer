@@ -241,7 +241,7 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   function loadHalfResFlag() {
     try {
-      var v = localStorage.getItem('nexus.wgpu.halfRes');
+      var v = NX.Persist.getItem('nexus.wgpu.halfRes');
       if (v === null || v === '') {
         var coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
         var narrow = typeof innerWidth === 'number' && innerWidth < 900;
@@ -256,7 +256,7 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   function saveHalfResFlag() {
     try {
-      localStorage.setItem('nexus.wgpu.halfRes', halfResChain ? '1' : '0');
+      NX.Persist.setItem('nexus.wgpu.halfRes', halfResChain ? '1' : '0');
     } catch (e2) { /* ignore */ }
   }
 
@@ -265,7 +265,7 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
    */
   function loadChainFromStorage() {
     try {
-      var raw = localStorage.getItem('nexus.wgpu.chain');
+      var raw = NX.Persist.getItem('nexus.wgpu.chain');
       if (!raw) return false;
       var j = JSON.parse(raw);
       if (Array.isArray(j) && j.length) {
@@ -298,7 +298,7 @@ fn fs_pulse_safe(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   function saveChainToStorage() {
     try {
-      localStorage.setItem('nexus.wgpu.chain', JSON.stringify(chain.map(function (n) {
+      NX.Persist.setItem('nexus.wgpu.chain', JSON.stringify(chain.map(function (n) {
         return { type: n.type, intensity: n.intensity, bypass: !!n.bypass };
       })));
     } catch (e2) { /* ignore */ }

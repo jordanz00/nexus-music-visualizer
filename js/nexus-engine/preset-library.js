@@ -92,7 +92,8 @@
 
   function getFavorites() {
     try {
-      var j = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+      var rawF = NX.Persist && NX.Persist.getItem ? NX.Persist.getItem(FAV_KEY) : null;
+      var j = JSON.parse(rawF || '[]');
       return Array.isArray(j) ? j : [];
     } catch (e) { return []; }
   }
@@ -101,7 +102,9 @@
     var f = getFavorites();
     var i = f.indexOf(name);
     if (i >= 0) f.splice(i, 1); else f.push(name);
-    try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) { }
+    try {
+      if (NX.Persist && NX.Persist.setItem) NX.Persist.setItem(FAV_KEY, JSON.stringify(f));
+    } catch (e) { }
     return f;
   }
 

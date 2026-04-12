@@ -35,7 +35,12 @@
 <canvas id="nx-wgpu" aria-hidden="true"></canvas>
 <!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
 <div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
+<!-- Hosted cables.gl / MFX patch (see nexus-cables-guest.js — allowlisted https only) -->
+<div id="nx-cables-guest-wrap" class="nx-cables-guest-wrap" aria-hidden="true">
+  <iframe id="nx-cables-guest-frame" class="nx-cables-guest-frame" title="cables.gl guest patch (allowlisted embed)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen autoplay"></iframe>
+</div>
 <canvas id="c-three" aria-hidden="true"></canvas>
+<canvas id="c-playcanvas" aria-hidden="true"></canvas>
 <canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
 <div id="nx-clip-under" class="nx-clip-stack nx-clip-under" aria-hidden="true"></div>
 <div id="nx-clip-over" class="nx-clip-stack nx-clip-over" aria-hidden="true"></div>
@@ -101,6 +106,7 @@
       <option value="genres">Any Song</option>
       <option value="ai">AI Visuals</option>
       <option value="resolume">Resolume Killer</option>
+      <option value="asura_show">Asura + Cables</option>
     </select>
     <button type="button" class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
     <button type="button" class="top-btn top-btn-present" id="presentbtn" title="Clean output: hide chrome (keyboard P)" aria-pressed="false">Present</button>
@@ -261,6 +267,11 @@
           <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
           <label class="nx-inline">Kaleido <input type="range" id="nx-kaleido" min="0" max="100" value="0" title="Post kaleidoscope mix"></label>
           <label class="nx-inline">Glitch <input type="range" id="nx-glitch" min="0" max="100" value="0" title="Transient-driven glitch (base amount)"></label>
+          <label class="nx-inline">Asura <input type="range" id="nx-asura" min="0" max="100" value="0" title="MFX-style: barrel warp, radial chroma, scanlines, vignette"></label>
+          <label class="nx-inline" title="Embed real hosted cables.gl patch (default: MFX Asura) — allowlisted HTTPS only"><input type="checkbox" id="nx-cables-guest-on"> Cables guest</label>
+          <label class="nx-inline">Cables mix <input type="range" id="nx-cables-guest-opacity" min="0" max="100" value="48" title="Guest iframe opacity (screen blend)"></label>
+          <label class="nx-inline nx-cables-url-wrap" title="Apply an allowlisted https patch URL">Patch <input type="url" id="nx-cables-guest-url" class="nx-cables-guest-url" placeholder="https://mfx.drastic.net/view/asura/" spellcheck="false" autocapitalize="off" inputmode="url"></label>
+          <button type="button" class="sm-btn nx-touch-btn" id="nx-cables-guest-url-apply" title="Validate host + reload iframe">Apply URL</button>
         </div>
         <div class="ctrl-group nexus-group flex-grow">
           <span class="g-label">Spectra</span>
@@ -317,6 +328,24 @@
         <label class="nx-inline"><input type="checkbox" id="nx-fx-trails-chain" checked> Trails mix</label>
         <label class="nx-inline"><input type="checkbox" id="nx-fx-kaleido-chain" checked> Post kaleido</label>
         <label class="nx-inline"><input type="checkbox" id="nx-fx-glitch-chain" checked> Post glitch</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-fx-godray-chain" checked> God rays</label>
+      </div>
+      <div class="panel-row nx-show-row" style="margin-top:6px;flex-wrap:wrap;gap:10px 14px">
+        <label class="nx-inline">God-ray mix <input type="range" id="nx-godray-mix" min="0" max="100" value="45" style="width:min(220px,42vw);vertical-align:middle" aria-label="God ray mix"></label>
+        <label class="nx-inline"><input type="checkbox" id="nx-gpu-particles" checked> GPU particles</label>
+        <label class="nx-inline"><input type="checkbox" id="nx-bpm-timeline" checked> BPM phrase → next scene</label>
+        <label class="nx-inline">Every <select id="nx-bpm-phrase-beats" class="preset-select" title="Beats per phrase" aria-label="Beats per phrase">
+          <option value="4">4</option>
+          <option value="8">8</option>
+          <option value="16">16</option>
+          <option value="32" selected>32</option>
+          <option value="64">64</option>
+        </select> beats</label>
+        <label class="nx-inline">Sync <select id="nx-bpm-timeline-mode" class="preset-select" title="Beat source" aria-label="BPM timeline mode">
+          <option value="clock" selected>Phase (BPM clock)</option>
+          <option value="pulse">Mic bass pulses</option>
+        </select></label>
+        <p id="nx-gpu-particles-status" class="nx-show-status" style="margin:4px 0 0;width:100%;display:none" role="status" aria-live="polite"></p>
       </div>
       <h3 class="nx-section-title" id="nx-compose-wgpu">WebGPU WGSL chain</h3>
       <p class="nx-show-status">Multi-pass WGSL over a copy of the main WebGL canvas. Requires WebGPU (Chrome/Edge; Safari when enabled). Recording uses this layer when enabled.</p>
@@ -462,6 +491,7 @@
       </div>
       <div class="panel-row nx-show-row">
         <button type="button" class="sm-btn" id="nx-showfile-export">Export showfile</button>
+        <button type="button" class="sm-btn" id="nx-showfile-share" title="Copy link with show state in URL hash">Copy share link</button>
         <button type="button" class="sm-btn" id="nx-showfile-import">Import showfile…</button>
         <input type="file" id="nx-showfile-file" accept="application/json,.json" hidden aria-hidden="true">
       </div>
@@ -470,8 +500,23 @@
         <input type="text" id="nx-rec-brand-title" class="nx-rec-brand-title-input" maxlength="80" placeholder="NEXUS Engine Pro" aria-label="Recording title text">
         <label class="nx-inline nx-rec-brand-logo-lab">Logo <input type="file" id="nx-rec-brand-logo" accept="image/png,image/jpeg,image/webp" aria-label="Recording corner logo"></label>
       </div>
+      <details class="nx-acc nx-acc-inline" id="nx-evolve-blk" open>
+        <summary class="nx-acc-sum">Evolve &amp; BPM clip pad</summary>
+        <div class="nx-acc-body">
+          <p class="meta">Structure mood (when mic on) nudges bloom + morph. Genome mutates slowly; Shift+click a clip cell to store, plain click to launch.</p>
+          <div class="panel-row nx-show-row">
+            <span class="g-label" style="width:auto">Mood</span>
+            <code id="nx-structure-mood-disp" class="nx-seed-display meta">—</code>
+            <span class="g-label" style="width:auto">Genome</span>
+            <code id="nx-genome-disp" class="nx-seed-display meta">—</code>
+            <button type="button" class="sm-btn" id="nx-genome-copy">Copy</button>
+          </div>
+          <div class="panel-row nx-show-row" id="nx-clip-pad-host" aria-label="4 by 4 clip pad"></div>
+        </div>
+      </details>
       <div class="panel-row nx-show-row">
         <button type="button" class="sm-btn" id="nx-onboard-reset">Show tour again</button>
+        <button type="button" class="sm-btn" id="nx-hw-recalibrate" title="Re-run GPU probe; updates quality tier">Re-calibrate hardware</button>
       </div>
       <div class="panel-row">
         <div class="ctrl-group">
@@ -504,6 +549,7 @@
           <option value="club">Club</option>
           <option value="ambient_show">Ambient</option>
           <option value="psychedelic">Psychedelic</option>
+          <option value="asura_mfx">Asura (MFX)</option>
         </select>
       </div>
       <details class="nx-acc nx-acc-pro-guide nx-acc-inline">
@@ -512,6 +558,7 @@
           <p class="nx-pro-guide-lead">Show-first path: <strong>Launch</strong> → enable <strong>mic</strong> (M or Live tab) → drive <strong>WebGL</strong> and/or <strong>Aurora</strong> hybrid → <strong>Present</strong> (P) for clean output.</p>
           <ul class="nx-pro-guide-list">
             <li><strong>OBS:</strong> add <code class="nx-code-inline">?obs=1</code> to the URL for auto-present after load (see README).</li>
+            <li><strong>Optional 3D guests:</strong> <code class="nx-code-inline">?three=1</code> (Three.js, ~670 KB) or <code class="nx-code-inline">?playcanvas=1</code> (PlayCanvas, ~2.1 MB) — extra WebGL contexts; use one at a time on weak GPUs.</li>
             <li><strong>Repeatable looks:</strong> this tab — <strong>Reroll seed</strong> / <strong>Copy link</strong> — or URL <code class="nx-code-inline">?seed=</code>; <strong>Save</strong> on a preset recalls stack + DNA for that session.</li>
             <li><strong>FPS under load:</strong> use <strong>PERF</strong> (perf lock) and <strong>VIZ PERF</strong>; lower quality preset if needed.</li>
             <li><strong>MIDI + REC:</strong> Chrome or Edge for WebMIDI and the most predictable MediaRecorder path.</li>
@@ -539,10 +586,24 @@
           <ul class="nx-credits-list">
             <li><a href="https://github.com/jberg/butterchurn" target="_blank" rel="noopener noreferrer">Butterchurn</a> — WebGL MilkDrop preset player</li>
             <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
-            <li>Optional <strong>Three.js</strong> guest layer (<code>?three=1</code> or <code class="nx-code-inline">localStorage nexus.three.guest=1</code>): <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener noreferrer">three.js</a> (MIT) — see <code class="nx-code-inline">vendor/three.min.js</code> + <code class="nx-code-inline">js/nexus-three-guest.js</code>.</li>
+            <li>Optional <strong>Three.js</strong> guest layer (<code>?three=1</code> or <code class="nx-code-inline">localStorage nexus.three.guest=1</code>): <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener noreferrer">three.js</a> (MIT) — <code class="nx-code-inline">vendor/three.min.js</code> + <code class="nx-code-inline">js/nexus-three-guest.js</code>.</li>
+            <li>Optional <strong>PlayCanvas</strong> engine guest (<code>?playcanvas=1</code> or <code class="nx-code-inline">localStorage nexus.playcanvas.guest=1</code>): <a href="https://github.com/playcanvas/engine" target="_blank" rel="noopener noreferrer">playcanvas/engine</a> (MIT) — <code class="nx-code-inline">vendor/playcanvas.min.js</code> + <code class="nx-code-inline">js/nexus-playcanvas-guest.js</code> (<code class="nx-code-inline">#c-playcanvas</code>).</li>
+            <li>Optional <strong>cables.gl</strong> guest (<code>?cables=1</code>, <code>?cablesUrl=</code> + allowlisted <code>https</code> host, or Mix tab <strong>Cables guest</strong>): embeds a hosted patch (default <a href="https://mfx.drastic.net/view/asura/" target="_blank" rel="noopener noreferrer">MFX — Asura</a>) in <code class="nx-code-inline">#nx-cables-guest-wrap</code> — <code class="nx-code-inline">js/nexus-cables-guest.js</code>. Not a vendored cables runtime; network + third-party GPU in iframe.</li>
             <li><strong>Homage shaders</strong> (<code class="nx-code-inline">js/scenes/homage-gl-scenes.js</code>, <code class="nx-code-inline">preset-pack-2026.js</code>): original GLSL inspired by public web works — <a href="https://maninthedark.com/" target="_blank" rel="noopener noreferrer">Man in the Dark</a> (2004), <a href="https://a-way-to-go.com/" target="_blank" rel="noopener noreferrer">Way to Go</a> (NFB), <a href="https://www.yesnoif.com/" target="_blank" rel="noopener noreferrer">yes no if</a> (2014), <a href="https://www.chrisraff.com/3d-maze/" target="_blank" rel="noopener noreferrer">Chris Raff 3D Maze</a>, <a href="https://hackers-1995.vercel.app/" target="_blank" rel="noopener noreferrer">Hackers (1995) animated experience</a> (David Vidovic), <a href="https://angusnicneven.com/" target="_blank" rel="noopener noreferrer">Terminal 00</a> / <a href="https://angusnicneven.com/Irentaex" target="_blank" rel="noopener noreferrer">Irentaex</a> (Angus Nicneven). Not affiliated; no third-party assets or prose copied into the repo.</li>
             <li>WebGL scenes use common SDF / raymarch patterns (e.g. <a href="https://iquilezles.org/articles/distfunctions/" target="_blank" rel="noopener noreferrer">Inigo Quilez</a> articles) as engineering references.</li>
           </ul>
+          <details class="nx-acc nx-acc-research">
+            <summary class="nx-acc-sum nx-acc-sum-sub">Browser viz research (2015–2025) — OSS &amp; influences</summary>
+            <div class="nx-acc-body nx-research-body">
+              <p class="nx-research-lead"><strong>Not bundled</strong> unless listed in <code class="nx-code-inline">THIRD_PARTY_NOTICES.md</code>. Full write-up: <a href="docs/NEXUS-BROWSER-VIZ-RESEARCH.md" target="_blank" rel="noopener noreferrer">docs/NEXUS-BROWSER-VIZ-RESEARCH.md</a>. Append <code class="nx-code-inline">?research=1</code> to log a console pointer at boot.</p>
+              <p><strong>Track 1 — WebGL → WebGPU arc.</strong> Hydra <a href="https://github.com/hydra-synth/hydra" target="_blank" rel="noopener noreferrer">hydra-synth/hydra</a> · <a href="https://hydra.ojack.xyz/" target="_blank" rel="noopener noreferrer">hydra.ojack.xyz</a>; cables.gl <a href="https://cables.gl/" target="_blank" rel="noopener noreferrer">cables.gl</a> · <a href="https://cables.gl/docs/8_audio/2_realtime_visualization/realtime_visualization" target="_blank" rel="noopener noreferrer">audio / realtime viz</a>; PlayCanvas <a href="https://github.com/playcanvas/engine" target="_blank" rel="noopener noreferrer">engine</a>; WebGPU showcase <a href="https://www.webgpu.com/showcase/tendrils-emergent-webgl-particle-visuals/" target="_blank" rel="noopener noreferrer">Tendrils</a>; historical Milkdrop-style WebGL <a href="https://github.com/gattis/milkshake" target="_blank" rel="noopener noreferrer">milkshake</a> (stale — culture only).</p>
+              <p><strong>Track 2 — Audio-reactive 3D.</strong> <a href="https://github.com/dcyoung/r3f-audio-visualizer" target="_blank" rel="noopener noreferrer">r3f-audio-visualizer</a> · <a href="https://github.com/kuhung/audiovisualizer" target="_blank" rel="noopener noreferrer">kuhung/audiovisualizer</a> · <a href="https://github.com/LoanDeveloper/music-visualisation-3d" target="_blank" rel="noopener noreferrer">music-visualisation-3d</a> · <a href="https://github.com/Percobain/3d-audio-visualizer" target="_blank" rel="noopener noreferrer">3d-audio-visualizer</a>; MilkDrop-class ref <a href="https://github.com/Louis-Mascari/MangoWave" target="_blank" rel="noopener noreferrer">MangoWave</a> (AGPL — <em>not</em> shipped); GPU audio example <a href="https://threejs.org/examples/webgpu_compute_audio.html" target="_blank" rel="noopener noreferrer">three.js webgpu_compute_audio</a>.</p>
+              <p><strong>Track 3 — OSS shortlist.</strong> Prefer canonical Hydra; NEXUS ships <strong>Butterchurn</strong> for MilkDrop-class presets; <code class="nx-code-inline">nexus-cables-lite.js</code> echoes cables.gl <em>topology</em> only; optional guests: <code class="nx-code-inline">?three=1</code> (Three) + <code class="nx-code-inline">?playcanvas=1</code> (PlayCanvas on <code class="nx-code-inline">#c-playcanvas</code>); WebGPU probes via <code class="nx-code-inline">WgslGraph</code>.</p>
+              <p><strong>Track 4 — Bad Apple (Mega Drive).</strong> FMV on tight ROM/VDP — <a href="https://megabitesblog.wordpress.com/2014/04/25/bad-apple/" target="_blank" rel="noopener noreferrer">MegaBites</a> · <a href="https://forums.atariage.com/topic/205813-badapple-demo-for-sega-megadrive" target="_blank" rel="noopener noreferrer">AtariAge</a> · <a href="https://www.youtube.com/watch?v=2vPe452cegU" target="_blank" rel="noopener noreferrer">YouTube</a>. <em>Lessons:</em> custom codec + streaming, grayscale tradeoffs, banking — good analogues for <strong>REC / low bitrate readability</strong>.</p>
+              <p><strong>Track 5 — Demoscene &amp; C64.</strong> <a href="https://c64.ch/productions/7785/Bad_Apple_64" target="_blank" rel="noopener noreferrer">Bad Apple 64</a> · <a href="https://www.pouet.net/prod.php?which=63649" target="_blank" rel="noopener noreferrer">pouët</a> · <a href="https://csdb.dk/release/?id=131628" target="_blank" rel="noopener noreferrer">CSDb</a>; <a href="https://github.com/cnlohr/badderapple" target="_blank" rel="noopener noreferrer">badderapple</a>; 4k classics <a href="https://m.pouet.net/prod.php?which=2066" target="_blank" rel="noopener noreferrer">Shapeshifter</a> · <a href="https://www.pouet.net/prod.php?which=2859" target="_blank" rel="noopener noreferrer">Animate</a> · <a href="https://www.pouet.net/prod.php?which=1105" target="_blank" rel="noopener noreferrer">Heaven</a>. <em>Audio:</em> deterministic player clock + envelopes (demoscene) complements mic/FFT in browser VJ — NEXUS uses both via BPM + bands + worklet.</p>
+              <p><strong>NEXUS alignment.</strong> WebGPU staging: <code class="nx-code-inline">getComputeParticleStage()</code>; audio: <code class="nx-code-inline">ProceduralAudioBus</code> + <code class="nx-code-inline">NX.S</code> (BC, PH, crest, RMS).</p>
+            </div>
+          </details>
           <p class="nx-credits-note">Full vendor list and license notes: <a href="THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener noreferrer">THIRD_PARTY_NOTICES.md</a>. Internal mode values may still read <code>butterchurn</code> for compatibility.</p>
         </div>
       </details>
@@ -563,182 +624,7 @@
 <!-- Floating show/hide bottom panel (always reachable on touch; keyboard H) -->
 <button type="button" id="panel-fab" class="panel-fab" aria-controls="panel" aria-expanded="true" aria-label="Hide controls" hidden>Hide controls</button>
 
-<!-- ── SCRIPTS (load order matters: engine first, ui last) ────────── -->
-<script src="js/nexus-brand.js"></script>
-<script src="vendor/butterchurn.min.js"></script>
-<script src="vendor/butterchurnPresets.min.js"></script>
-<!-- More MilkDrop packs: run vendor/fetch-extra-presets.sh, add sibling <script src=…> lines before engine.js (see README). -->
-<script src="js/engine.js"></script>
-<script src="js/nexus-engine/session-seed.js"></script>
-<script src="js/nexus-bootstrap-query.js"></script>
-<script src="js/nexus-ship-defaults.js"></script>
-<script src="js/nexus-version.js"></script>
-<script src="js/nexus-engine/procedural-visual-drive.js"></script>
-<script src="js/nexus-engine/procedural-particles.js"></script>
-<script src="js/nexus-engine/modern-visual-stack.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/scenes.js"></script>
-<script src="js/scenes/cosmic.js"></script>
-<script src="js/scenes/energy.js"></script>
-<script src="js/scenes/fluid.js"></script>
-<script src="js/scenes/environment.js"></script>
-<script src="js/scenes/afterlife.js"></script>
-<script src="js/scenes/unique.js"></script>
-<script src="js/scenes/vision.js"></script>
-<script src="js/scenes/pro-upgrade.js"></script>
-<script src="js/scenes/roadmap-scenes.js"></script>
-<script src="js/nexus-engine/hybrid-layer-registry.js"></script>
-<script src="js/nexus-engine/nexus-audio-procedural-bus.js"></script>
-<script src="js/scenes/preset-pack-2026.js"></script>
-<script src="js/scenes/homage-gl-scenes.js"></script>
-<script src="js/camera.js"></script>
-<script src="js/post.js"></script>
-<script src="js/nexus-engine/audio-engine.js"></script>
-<script src="js/nexus-engine/bc-showcase.js"></script>
-<script src="js/nexus-engine/preset-library.js"></script>
-<script src="js/nexus-engine/bc-morph-conductor.js"></script>
-<script src="js/nexus-engine/pro-presets.js"></script>
-<script src="js/nexus-engine/visual-engine-manager.js"></script>
-<script src="js/nexus-engine/butterchurn-scene.js"></script>
-<script src="js/nexus-engine/shader-scene.js"></script>
-<script src="js/nexus-engine/scene-manager.js"></script>
-<script src="js/nexus-engine/nexus-homage-bridge.js"></script>
-<script src="js/nexus-engine/nexus-homage-dom-overlays.js"></script>
-<script src="js/nexus-engine/nexus-maze-three.js"></script>
-<script src="js/nexus-engine/nexus-isf-loader.js"></script>
-<script src="js/nexus-engine/nexus-cables-lite.js"></script>
-<script src="js/nexus-engine/wgsl-graph.js"></script>
-<script src="js/nexus-engine/ui-manager.js"></script>
-<script src="js/nexus-engine/midi-manager.js"></script>
-<script src="js/show/ltc-js-decoder.js"></script>
-<script src="js/show/ltc-decode-core.js"></script>
-<script src="js/show/ltc-wasm.js"></script>
-<script src="js/show/show-clock.js"></script>
-<script src="js/show/ola-client.js"></script>
-<script src="js/show/clip-layers.js"></script>
-<script src="js/show/cue-engine.js"></script>
-<script src="js/show/scene-presets.js"></script>
-<script src="js/show/fx-chain.js"></script>
-<script src="js/show/composition-ui.js"></script>
-<script src="js/show/lighting-deck.js"></script>
-<script src="js/show/show-workbench.js"></script>
-<script src="js/nexus-engine/engine-host.js"></script>
-<script src="js/nexus-three-guest.js"></script>
-<script src="js/nexus-webgpu-spike.js"></script>
-<script src="js/midi.js"></script>
-<script src="js/presets.js"></script>
-<script src="js/watermark.js"></script>
-<script src="js/auto-director.js"></script>
-<script src="js/demo-director.js"></script>
-<script src="js/nexus-onboard.js"></script>
-<script src="js/nexus-showfile.js"></script>
-<script src="js/nexus-rec-brand.js"></script>
-<script src="js/nexus-shell.js"></script>
-<script src="js/ui.js"></script>
-<script>
-/* ── Bootstrap: compile, wire, run ─────────────────────────────────── */
-(function () {
-  if (typeof window.NX === 'undefined') {
-    console.error('NEXUS: NX namespace missing — scripts likely failed to load (404 or blocked). Check Network tab.');
-    return;
-  }
-  if (NX._fatalNoWebGL) return;
-  try {
-    try {
-      var _nxBootUrl = new URL(location.href);
-      if (_nxBootUrl.searchParams.get('soak') === '1') window.__NX_SOAK__ = true;
-    } catch (_eSoak) { /* ignore */ }
-    if (typeof NX.compileScenes !== 'function') {
-      throw new Error('compileScenes missing — is js/scenes.js loading?');
-    }
-    if (!NX.post || typeof NX.post.compile !== 'function') {
-      throw new Error('post pipeline missing — is js/post.js loading?');
-    }
-    var ok = NX.compileScenes();
-    if (typeof NX.applyHomageSceneExtensions === 'function') {
-      try { NX.applyHomageSceneExtensions(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm0) { /* ignore */ }
-    }
-    if (typeof NX.applySessionSceneStart === 'function') NX.applySessionSceneStart();
-    if (typeof NX.applyHomageSceneExtensions === 'function') {
-      try { NX.applyHomageSceneExtensions(typeof NX.S.curS === 'number' ? NX.S.curS : 0); } catch (_eHm1) { /* ignore */ }
-    }
-    if (NX.ShipDefaults && typeof NX.ShipDefaults.applyColdStartVisuals === 'function') {
-      NX.ShipDefaults.applyColdStartVisuals();
-    }
-    console.log('Scenes compiled:', ok, '/', NX.scenes.length);
-    if (typeof console !== 'undefined' && console.info) {
-      console.info('[NEXUS] boot', {
-        scenes: NX.scenes.length,
-        compiled: ok,
-        seed: NX.SessionSeed && NX.SessionSeed.getSeed ? NX.SessionSeed.getSeed() : null
-      });
-    }
-    NX.post.compile();
-    NX.resize();
-    if (NX.ProcParticles && NX.ProcParticles.init) NX.ProcParticles.init();
-    /* iOS WebKit: first layout pass sometimes reports 0×0 until after first paint */
-    if (NX.S && NX.S._iosCoarsePointer) {
-      requestAnimationFrame(function () { NX.resize(); });
-      setTimeout(function () { NX.resize(); }, 320);
-    }
-    requestAnimationFrame(function () {
-      try { NX.resize(); } catch (e1) { }
-    });
-    setTimeout(function () {
-      try { NX.resize(); } catch (e2) { }
-    }, 50);
-    if (NX.ModernVisualStack && NX.ModernVisualStack.init) NX.ModernVisualStack.init();
-    if (window.NexusEngine) NexusEngine.init();
-    if (NX.watermark) NX.watermark.checkPro();
-    if (NX.autoDirector) NX.autoDirector.categorize();
-    NX.ui.init();
-    if (NX.ClipLayers && NX.ClipLayers.init) NX.ClipLayers.init();
-    if (NX.FxChain && NX.FxChain.init) NX.FxChain.init();
-    if (NX.CompositionUI && NX.CompositionUI.init) NX.CompositionUI.init();
-    if (NX.LightingDeck && NX.LightingDeck.init) NX.LightingDeck.init();
-    if (NX.ShowWorkbench && NX.ShowWorkbench.init) NX.ShowWorkbench.init();
-    if (NX.WgslGraph && NX.WgslGraph.tryInit) NX.WgslGraph.tryInit().catch(function () { });
-    (function nxOptionalThreeGuest() {
-      try {
-        var want = NX.ThreeGuest && typeof NX.ThreeGuest.wantsThreeFromEnv === 'function' && NX.ThreeGuest.wantsThreeFromEnv();
-        if (!want) return;
-        if (NX.MazeThree && typeof NX.MazeThree.isActive === 'function' && NX.MazeThree.isActive()) return;
-        if (window.THREE && NX.ThreeGuest && NX.ThreeGuest.bootstrapFromUrl) {
-          NX.ThreeGuest.bootstrapFromUrl();
-          return;
-        }
-        if (document.getElementById('nx-vendor-three')) return;
-        var st = document.createElement('script');
-        st.id = 'nx-vendor-three';
-        st.src = 'vendor/three.min.js';
-        st.async = true;
-        st.onload = function () {
-          try {
-            if (NX.ThreeGuest && NX.ThreeGuest.bootstrapFromUrl) NX.ThreeGuest.bootstrapFromUrl();
-          } catch (eB) { console.warn('NEXUS Three guest bootstrap:', eB); }
-        };
-        st.onerror = function () {
-          console.warn('NEXUS: vendor/three.min.js failed to load (check path / hosting)');
-        };
-        document.head.appendChild(st);
-      } catch (eTg) { /* ignore */ }
-    })();
-    if (NX.midi) NX.midi.init();
-    NX.showName(NX.S && typeof NX.S.curS === 'number' ? NX.S.curS : 0);
-    NX.loop();
-  } catch (err) {
-    console.error('NEXUS bootstrap failed:', err);
-    var sp = document.getElementById('splash');
-    if (sp) {
-      var detail = (err && err.message) ? String(err.message) : String(err);
-      var msg = document.createElement('p');
-      msg.style.cssText = 'color:#ff8a80;font-size:12px;margin-top:12px;max-width:28em;line-height:1.4';
-      msg.textContent = detail + ' — Open console (F12) for full trace. Use http://localhost or GitHub Pages URL with trailing slash if assets 404.';
-      var card = sp.querySelector('.nx-splash-card');
-      if (card) card.appendChild(msg);
-    }
-  }
-})();
-</script>
+<!-- ── App entry: ES module loader chains classic scripts (see js/app-loader.mjs) ────────── -->
+<script type="module" src="js/main.mjs"></script>
 </body>
 </html>

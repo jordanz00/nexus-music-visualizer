@@ -2,6 +2,13 @@
 
 All notable changes are documented in this file. Version chip in the app (`nexus-version.js`) should match the latest release entry.
 
+## 4.0.0 — 2026-04-12
+
+- **Pro platform:** ES module entry (`js/main.mjs`, `js/app-loader.mjs`), expanded Pro modules (workflow, engines, NDI/WebRTC paths, PlayCanvas guest, suite scenes, structure worker, Comfy client, GPU particles, film LUT, audio science, research brief), NX bootstrap/persist/store, clip pad, BPM timeline, hardware re-calibrate, structure mood / evolve stack. Details: `docs/CHANGELOG.md` (4.0.0-pro).
+- **Show / I/O:** Showfile hash restore ordering, large JSON guard, scene and cue updates across `js/show/*`.
+- **Tooling:** `tools/` WebRTC signaling + NDI bridge helpers; `vendor/fetch-playcanvas.sh` + vendored PlayCanvas.
+- **Dependencies:** Vitest 4.x, Playwright 1.59.x; `tools/package.json` `ws` 8.20.x.
+
 ## 1.1.11 — 2026-04-10
 
 - Removed **WORMHOLE PASSAGE** WebGL scene from `js/scenes/pro-upgrade.js`.

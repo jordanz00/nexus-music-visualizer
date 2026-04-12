@@ -1,6 +1,7 @@
 'use strict';
 /*  post.js — Bloom (knee + tinted), kawase blur, grading, anamorphic streak,
-    ACES output. Beat-driven lift uses smoothed `S.beatVisual` (see audio.js). */
+    ACES output. Optional `postFxAsura`: barrel warp, radial CA, scanlines, vignette
+    (demoscene / MFX-style look). Beat-driven lift uses smoothed `S.beatVisual` (audio.js). */
 
 (function () {
   /* Resolve GL at call time — same context as engine; avoids a stale closure if load order ever shifts. */
@@ -74,8 +75,9 @@
   /* ---- Final output: sharpen + grade + ACES + CA + flash ----------- */
   var OUTPUT_FS = [
     'precision mediump float;varying vec2 uv;',
-    'uniform sampler2D tex,bloom,streak;uniform vec2 R;',
-    'uniform float BT,T,B,M,H,FL,BM,HS,KA,GL,STK,ACES;uniform vec4 PC;',
+    '#define sat(x) clamp(x,0.,1.)',
+    'uniform sampler2D tex,bloom,streak,LUTT;uniform vec2 R,LM;',
+    'uniform float BT,T,B,M,H,FL,BM,HS,KA,GL,STK,ACES,AZ;uniform vec4 PC;',
     'vec3 rgb2hsv(vec3 c){',
     ' vec4 K=vec4(0.,-1./3.,2./3.,-1.);',
     ' vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));',
@@ -89,6 +91,33 @@
     ' return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y);',
     '}',
     'vec3 ACES(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}',
+    'vec3 lutFetch(sampler2D tex,float r,float g,float b,float N){',
+    ' float xx=r+g*N;',
+    ' float yy=b;',
+    ' return texture2D(tex,vec2((xx+.5)/(N*N),(yy+.5)/N)).rgb;',
+    '}',
+    'vec3 lutTri(sampler2D tex,vec3 c,float N){',
+    ' c=clamp(c,0.,1.);',
+    ' vec3 p=c*(N-1.);',
+    ' vec3 b0=floor(p);',
+    ' vec3 f=fract(p);',
+    ' vec3 b1=min(b0+vec3(1.),vec3(N-1.));',
+    ' vec3 c000=lutFetch(tex,b0.x,b0.y,b0.z,N);',
+    ' vec3 c100=lutFetch(tex,b1.x,b0.y,b0.z,N);',
+    ' vec3 c010=lutFetch(tex,b0.x,b1.y,b0.z,N);',
+    ' vec3 c110=lutFetch(tex,b1.x,b1.y,b0.z,N);',
+    ' vec3 c001=lutFetch(tex,b0.x,b0.y,b1.z,N);',
+    ' vec3 c101=lutFetch(tex,b1.x,b0.y,b1.z,N);',
+    ' vec3 c011=lutFetch(tex,b0.x,b1.y,b1.z,N);',
+    ' vec3 c111=lutFetch(tex,b1.x,b1.y,b1.z,N);',
+    ' vec3 x0=mix(c000,c100,f.x);',
+    ' vec3 x1=mix(c010,c110,f.x);',
+    ' vec3 y0=mix(x0,x1,f.y);',
+    ' vec3 x2=mix(c001,c101,f.x);',
+    ' vec3 x3=mix(c011,c111,f.x);',
+    ' vec3 y1=mix(x2,x3,f.y);',
+    ' return mix(y0,y1,f.z);',
+    '}',
     'vec2 nxKale(vec2 u,float k){',
     ' if(k<.0005)return u;',
     ' k*=1.-.38*PC.z;',
@@ -107,22 +136,37 @@
     ' float chop=step(.935,f);',
     ' return u+vec2(chop*g2*.03*sin(tim*7.4+row*.95),0.);',
     '}',
+    'vec2 nxAsBar(vec2 u,float a){',
+    ' if(a<.0004)return u;',
+    ' vec2 p=u-.5;',
+    ' float l2=dot(p,p);',
+    ' return u-p*a*l2*.62;',
+    '}',
     'void main(){',
     '  vec2 uvo=nxGli(nxKale(uv,KA),GL,T);',
+    '  vec2 uvb=nxAsBar(uvo,AZ);',
     '  vec2 px=vec2(1./max(R.x,1.),1./max(R.y,1.));',
     '  float ca=(.0024+BT*.0035+B*.0034+H*.0022+FL*.002)*(1.-.42*PC.x);',
-    '  vec3 cM=texture2D(tex,uvo).rgb;',
-    '  float r=texture2D(tex,vec2(uvo.x+ca,uvo.y)).r;',
+    '  ca*=1.+AZ*(.55+BT*.35+B*.25);',
+    '  vec2 cdir=uvb-.5;float clen=length(cdir);vec2 cnorm=clen>.0008?cdir/clen:vec2(1.,0.);',
+    '  float caR=ca*(1.+AZ*(1.15+2.4*clen));',
+    '  vec2 offH=vec2(caR,0.);',
+    '  vec2 offR=cnorm*caR*1.06;',
+    '  vec2 offB=-cnorm*caR*1.02;',
+    '  vec2 dR=mix(offH,offR,AZ);',
+    '  vec2 dB=mix(vec2(-offH.x,0.),offB,AZ);',
+    '  vec3 cM=texture2D(tex,uvb).rgb;',
+    '  float r=texture2D(tex,uvb+dR).r;',
     '  float g=cM.g;',
-    '  float b=texture2D(tex,vec2(uvo.x-ca,uvo.y)).b;',
+    '  float b=texture2D(tex,uvb+dB).b;',
     '  vec3 col=vec3(r,g,b);',
     /* sharpen */
-    '  vec3 up=texture2D(tex,uvo+vec2(0.,px.y)).rgb;',
-    '  vec3 dn=texture2D(tex,uvo-vec2(0.,px.y)).rgb;',
-    '  vec3 lf=texture2D(tex,uvo-vec2(px.x,0.)).rgb;',
-    '  vec3 rt=texture2D(tex,uvo+vec2(px.x,0.)).rgb;',
+    '  vec3 up=texture2D(tex,uvb+vec2(0.,px.y)).rgb;',
+    '  vec3 dn=texture2D(tex,uvb-vec2(0.,px.y)).rgb;',
+    '  vec3 lf=texture2D(tex,uvb-vec2(px.x,0.)).rgb;',
+    '  vec3 rt=texture2D(tex,uvb+vec2(px.x,0.)).rgb;',
     '  vec3 lap=cM*4.-up-dn-lf-rt;',
-    '  float shp=(.1+BT*.07+FL*.1+H*.07)*(1.-.35*PC.x);',
+    '  float shp=(.1+BT*.07+FL*.1+H*.07)*(1.-.35*PC.x)*(1.-.45*AZ);',
     '  col+=lap*shp;',
     /* soft highlight knee — broadcast rolloff before bloom add */
     '  float mxHi=max(max(col.r,col.g),col.b);',
@@ -141,6 +185,8 @@
     '  col+=vec3(1.)*BT*.042*smoothstep(.2,.88,BT);',
     /* S-curve contrast */
     '  col=col*col*(3.-2.*col);',
+    /* Film LUT (trilinear 3D strip — see nexus-film-lut.js) */
+    '  if(LM.y>1.5&&LM.x>0.0005){vec3 cL=lutTri(LUTT,col,LM.y);col=mix(col,cL,sat(LM.x));}',
     /* ACES */
     '  if(ACES>.5) col=ACES(col);',
     /* saturation pump */
@@ -156,8 +202,10 @@
     '  col+=igd*(1.-.4*PC.x)*(1.08-L);',
     /* hue (MIDI / UI color shift) */
     '  vec3 hsv=rgb2hsv(col); hsv.x=fract(hsv.x+HS); col=hsv2rgb(hsv);',
+    /* scanlines + subtle roll (Asura / CRT feel) */
+    '  if(AZ>.002){float sc=0.5+0.5*sin(uv.y*R.y*3.14159265);col*=1.-AZ*.09*sc;col*=1.-AZ*.035*sin(uv.x*R.x*6.28318+T*.12);}',
     /* vignette */
-    '  vec2 vp=uv*2.-1.;col*=1.-dot(vp,vp)*(.34-BT*.04-B*.05);',
+    '  vec2 vp=uv*2.-1.;float vigK=.34-BT*.04-B*.05+AZ*.28;col*=1.-dot(vp,vp)*vigK;',
     '  gl_FragColor=vec4(clamp(col,0.,1.),1.);',
     '}'
   ].join('\n');
@@ -181,17 +229,45 @@
 
   var TRAIL_FS = [
     'precision mediump float;varying vec2 uv;',
-    'uniform sampler2D cur,prev;uniform float tr;',
+    '#define sat(x) clamp(x,0.,1.)',
+    'uniform sampler2D cur,prev,AU;uniform float tr,FB_T,FB_B,FB_FLUX;',
     'void main(){',
-    ' vec3 c=texture2D(cur,uv).rgb,p=texture2D(prev,uv).rgb;',
+    ' vec2 au=texture2D(AU,vec2(uv.x,0.5)).rg;',
+    ' float wmag=FB_B*(0.006+au.x*0.018)+FB_FLUX*0.012;',
+    ' vec2 wob=vec2(cos(FB_T*0.42+uv.y*8.2),sin(FB_T*0.36+uv.x*7.4))*wmag;',
+    ' vec2 uvo=sat(uv+wob);',
+    ' vec3 c=texture2D(cur,uvo).rgb,p=texture2D(prev,sat(uvo*0.997+vec2(0.0003))).rgb;',
     ' gl_FragColor=vec4(min(c+p*tr,vec3(1.)),1.);',
     '}'
   ].join('');
 
+  var GODRAY_FS = SAT + [
+    'precision mediump float;varying vec2 uv;',
+    'uniform sampler2D tex;uniform vec2 R;uniform float GR_STR,BT,B,GR_T;',
+    'void main(){',
+    ' vec2 GR_SRC=vec2(0.62+0.08*sin(GR_T*0.17),0.38+0.06*cos(GR_T*0.21));',
+    ' vec2 d=uv-GR_SRC;',
+    ' float dl=length(d)+1e-5;',
+    ' vec2 dir=d/dl;',
+    ' vec3 acc=texture2D(tex,uv).rgb;',
+    ' float wsum=1.;',
+    ' for(int i=1;i<=12;i++){',
+    '  float fi=float(i);',
+    '  vec2 p=uv-dir*(0.0035+fi*0.0085)*(1.+BT*.4);',
+    '  float w=exp(-fi*0.2)*(1.+B*.38);',
+    '  acc+=texture2D(tex,p).rgb*w;',
+    '  wsum+=w;',
+    ' }',
+    ' vec3 base=texture2D(tex,uv).rgb;',
+    ' vec3 glow=(acc/wsum-base)*GR_STR*(.26+BT*.58)*(1.+B*.12);',
+    ' gl_FragColor=vec4(base+glow,1.);',
+    '}'
+  ].join('\n');
+
   /* ---- Compile ----------------------------------------------------- */
-  var bloomProg, blurProg, streakProg, outProg, blendProg, copyProg, trailProg;
+  var bloomProg, blurProg, streakProg, outProg, blendProg, copyProg, trailProg, godrayProg;
   var fbStreak = null;
-  var fbScratch = null, fbTr0 = null, fbTr1 = null;
+  var fbScratch = null, fbTr0 = null, fbTr1 = null, fbGod = null;
   var blackTex = null;
   var trailWhich = 0;
   var _auxW = 0, _auxH = 0;
@@ -204,7 +280,8 @@
     blendProg = NX.mkProg(NX.VS, BLEND_FS);
     copyProg = NX.mkProg(NX.VS, COPY_FS);
     trailProg = NX.mkProg(NX.VS, TRAIL_FS);
-    NX.postProgs = { bloom: bloomProg, blur: blurProg, streak: streakProg, out: outProg, blend: blendProg, copy: copyProg, trail: trailProg };
+    godrayProg = NX.mkProg(NX.VS, GODRAY_FS);
+    NX.postProgs = { bloom: bloomProg, blur: blurProg, streak: streakProg, out: outProg, blend: blendProg, copy: copyProg, trail: trailProg, godray: godrayProg };
     if (!trailProg) console.warn('NEXUS post: trail shader failed to compile — motion trails disabled');
     /* Trail is optional (trails UI off by default). Requiring it made the whole pipeline “fail” on some drivers. */
     var ok = !!(bloomProg && blurProg && outProg && blendProg && copyProg);
@@ -230,8 +307,8 @@
       if (!rt) return;
       gl.deleteTexture(rt.t); gl.deleteFramebuffer(rt.f);
     }
-    del(fbScratch); del(fbTr0); del(fbTr1);
-    fbScratch = fbTr0 = fbTr1 = null; _auxW = _auxH = 0;
+    del(fbScratch); del(fbTr0); del(fbTr1); del(fbGod);
+    fbScratch = fbTr0 = fbTr1 = fbGod = null; _auxW = _auxH = 0;
   }
 
   function ensureAuxTargets() {
@@ -239,7 +316,7 @@
     if (w < 4 || h < 4) return false;
     if (fbScratch && w === _auxW && h === _auxH) return true;
     releaseAux();
-    fbScratch = NX.mkRT(w, h); fbTr0 = NX.mkRT(w, h); fbTr1 = NX.mkRT(w, h);
+    fbScratch = NX.mkRT(w, h); fbTr0 = NX.mkRT(w, h); fbTr1 = NX.mkRT(w, h); fbGod = NX.mkRT(w, h);
     _auxW = w; _auxH = h;
     trailWhich = 0;
     return true;
@@ -247,6 +324,7 @@
 
   function drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm) {
     if (!outProg || !finalTex) return;
+    if (typeof NX.glProgramLinkReady === 'function' && !NX.glProgramLinkReady(outProg)) return;
     var gl = NX.gl;
     if (!gl) return;
     var pc = S.postChain;
@@ -281,6 +359,9 @@
     var acesOn = !pc || pc.grade !== false ? 1 : 0;
     gl.uniform1f(u(outProg, 'STK'), streakOn);
     gl.uniform1f(u(outProg, 'ACES'), acesOn);
+    var azBase = S.postFxAsura == null ? 0 : Math.max(0, Math.min(1, S.postFxAsura));
+    if (S.nexusVizPerformance) azBase *= 0.5;
+    gl.uniform1f(u(outProg, 'AZ'), azBase);
     var pcLoc = u(outProg, 'PC');
     if (pcLoc) {
       var arr = (NX.ProceduralDrive && NX.ProceduralDrive.getPostColorVec) ? NX.ProceduralDrive.getPostColorVec() : null;
@@ -293,13 +374,29 @@
       }
       gl.uniform4f(pcLoc, px, py, pz, pw);
     }
+    if (NX.FilmLUT && typeof NX.FilmLUT.bindForOutputPass === 'function') {
+      try {
+        NX.FilmLUT.bindForOutputPass(gl, outProg);
+      } catch (eLut) { /* ignore */ }
+    }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function postShadersLinked() {
+    if (typeof NX.glProgramLinkReady !== 'function') return true;
+    var list = [outProg, copyProg, bloomProg, blurProg, streakProg, blendProg, trailProg, godrayProg];
+    for (var i = 0; i < list.length; i++) {
+      var pr = list[i];
+      if (pr && !NX.glProgramLinkReady(pr)) return false;
+    }
+    return true;
   }
 
   /* ---- Render post chain ------------------------------------------- */
   function render(finalTex, fbBloom, fbBloomBlur, hw, hh) {
     var gl = NX.gl;
     if (!gl) return;
+    if (!postShadersLinked()) return;
     ensureBlackTex();
     var screenW = Math.max(1, NX.C.width | 0), screenH = Math.max(1, NX.C.height | 0);
     if (!outProg || !copyProg || !finalTex) {
@@ -368,6 +465,35 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbScratch.f); gl.viewport(0, 0, _auxW, _auxH);
     drawOutputToCurrentFBO(finalTex, bloomSam, streakSam, bm);
 
+    var trailSrcTex = fbScratch.t;
+    var grMix = typeof S.nexusGodRayMix === 'number' ? S.nexusGodRayMix : 0;
+    var pcGod = S.postChain;
+    if (godrayProg && fbGod && grMix > 0.02 && (!pcGod || pcGod.godray !== false)) {
+      if (typeof NX.glProgramLinkReady === 'function' && !NX.glProgramLinkReady(godrayProg)) {
+        trailSrcTex = fbScratch.t;
+      } else {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbGod.f); gl.viewport(0, 0, _auxW, _auxH);
+        gl.useProgram(godrayProg); bindQuad(godrayProg);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScratch.t); gl.uniform1i(u(godrayProg, 'tex'), 0);
+        gl.uniform2f(u(godrayProg, 'R'), S.FW, S.FH);
+        var grStr = Math.max(0, Math.min(2.2, grMix * (0.55 + 0.45 * postAudioWeight())));
+        try {
+          var qGod = document.getElementById('qsel');
+          var qg = qGod && qGod.value;
+          if (qg === 'perf' || S.nexusVizPerformance) grStr *= 0.58;
+          else if (qg === 'ultra') grStr *= 1.06;
+        } catch (eQg) { /* ignore */ }
+        gl.uniform1f(u(godrayProg, 'GR_STR'), grStr);
+        var bR2 = beatForPostRaw();
+        var paG = postAudioWeight();
+        gl.uniform1f(u(godrayProg, 'BT'), bR2 * paG);
+        gl.uniform1f(u(godrayProg, 'B'), shapeDrive(S.sBass, 1.84) * paG);
+        gl.uniform1f(u(godrayProg, 'GR_T'), S.GT || 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        trailSrcTex = fbGod.t;
+      }
+    }
+
     var trBase = S.nexusPostTrails == null ? 0 : Math.max(0, Math.min(1, S.nexusPostTrails));
     var tr = (!pc0 || pc0.trails !== false) ? trBase : 0;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, screenW, screenH);
@@ -377,9 +503,13 @@
       var nextRT = trailWhich === 0 ? fbTr1 : fbTr0;
       gl.bindFramebuffer(gl.FRAMEBUFFER, nextRT.f); gl.viewport(0, 0, _auxW, _auxH);
       gl.useProgram(trailProg); bindQuad(trailProg);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScratch.t); gl.uniform1i(u(trailProg, 'cur'), 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailSrcTex); gl.uniform1i(u(trailProg, 'cur'), 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prevRT.t); gl.uniform1i(u(trailProg, 'prev'), 1);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, NX.atex); gl.uniform1i(u(trailProg, 'AU'), 2);
       gl.uniform1f(u(trailProg, 'tr'), tr * 0.88);
+      gl.uniform1f(u(trailProg, 'FB_T'), S.GT || 0);
+      gl.uniform1f(u(trailProg, 'FB_B'), Math.max(0, Math.min(1, S.sBass || 0)));
+      gl.uniform1f(u(trailProg, 'FB_FLUX'), Math.max(0, Math.min(1, S.sFlux || 0)));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, screenW, screenH);
@@ -389,7 +519,7 @@
       trailWhich = 1 - trailWhich;
     } else {
       gl.useProgram(copyProg); bindQuad(copyProg);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScratch.t); gl.uniform1i(u(copyProg, 'tex'), 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailSrcTex); gl.uniform1i(u(copyProg, 'tex'), 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
   }

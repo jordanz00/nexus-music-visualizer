@@ -9,7 +9,7 @@
 
   function readSchmitt() {
     try {
-      var j = JSON.parse(localStorage.getItem('nexus.ltc.cal') || '{}');
+      var j = JSON.parse(NX.Persist.getItem('nexus.ltc.cal') || '{}');
       var hi = typeof j.hi === 'number' ? Math.max(0.02, Math.min(0.28, j.hi)) : 0.08;
       var lo = typeof j.lo === 'number' ? Math.min(-0.02, Math.max(-0.28, j.lo)) : -hi;
       return { hi: hi, lo: lo };
@@ -183,7 +183,7 @@
       hi = Math.max(0.02, Math.min(0.28, +hi || 0.08));
       lo = lo != null ? Math.max(-0.28, Math.min(-0.02, +lo)) : -hi;
       try {
-        localStorage.setItem('nexus.ltc.cal', JSON.stringify({ hi: hi, lo: lo }));
+        NX.Persist.setItem('nexus.ltc.cal', JSON.stringify({ hi: hi, lo: lo }));
       } catch (e) { /* ignore */ }
     }
   };

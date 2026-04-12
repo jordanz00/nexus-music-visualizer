@@ -21,7 +21,7 @@
   function loadGigPoolFromStorage() {
     if (gigPoolActive) return;
     try {
-      var raw = localStorage.getItem(GIG_STORAGE);
+      var raw = NX.Persist.getItem(GIG_STORAGE);
       if (!raw) return;
       var arr = JSON.parse(raw);
       if (!Array.isArray(arr) || !arr.length) return;
@@ -48,8 +48,8 @@
     gigKeys = normalizeGigKeys(arr || []);
     gigPoolActive = gigKeys.length > 0;
     try {
-      if (gigPoolActive) localStorage.setItem(GIG_STORAGE, JSON.stringify(gigKeys));
-      else localStorage.removeItem(GIG_STORAGE);
+      if (gigPoolActive) NX.Persist.setItem(GIG_STORAGE, JSON.stringify(gigKeys));
+      else NX.Persist.removeItem(GIG_STORAGE);
     } catch (e2) { /* ignore */ }
     rebuildPool();
   }
@@ -57,7 +57,7 @@
   function clearGigPool() {
     gigKeys = [];
     gigPoolActive = false;
-    try { localStorage.removeItem(GIG_STORAGE); } catch (e3) { /* ignore */ }
+    try { NX.Persist.removeItem(GIG_STORAGE); } catch (e3) { /* ignore */ }
     rebuildPool();
   }
 

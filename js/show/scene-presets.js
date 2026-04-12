@@ -1,13 +1,14 @@
 'use strict';
 /**
- * Named show bundles: scene index, postChain, visual mode, optional WGSL chain (localStorage).
+ * Named show bundles: scene index, postChain, visual mode, WGSL chain, I/O batch (god ray, trails, …),
+ * post Asura strength, and optional cables.gl guest iframe (allowlisted URL only) — localStorage.
  */
 (function () {
   var STORAGE = 'nexus.show.scenePresets.v1';
 
   function readAll() {
     try {
-      var j = localStorage.getItem(STORAGE);
+      var j = NX.Persist.getItem(STORAGE);
       var o = j ? JSON.parse(j) : {};
       return o && typeof o === 'object' ? o : {};
     } catch (e) {
@@ -17,7 +18,7 @@
 
   function writeAll(o) {
     try {
-      localStorage.setItem(STORAGE, JSON.stringify(o));
+      NX.Persist.setItem(STORAGE, JSON.stringify(o));
     } catch (e2) { /* quota */ }
   }
 
@@ -33,7 +34,27 @@
       sceneIndex: S ? S.curS : 0,
       postChain: S && S.postChain ? JSON.parse(JSON.stringify(S.postChain)) : null,
       visualMode: S ? (S.visualMode || 'hybrid') : 'hybrid',
-      wgpuChain: NX.WgslGraph && NX.WgslGraph.getChain ? NX.WgslGraph.getChain() : null
+      wgpuChain: NX.WgslGraph && NX.WgslGraph.getChain ? NX.WgslGraph.getChain() : null,
+      fxBatch2: S ? {
+        godRayMix: typeof S.nexusGodRayMix === 'number' ? S.nexusGodRayMix : 0.32,
+        postTrails: typeof S.nexusPostTrails === 'number' ? S.nexusPostTrails : 0,
+        postFxAsura: typeof S.postFxAsura === 'number' ? S.postFxAsura : 0,
+        gpuParticles: !!S.nexusGpuParticlesEnabled,
+        bpmTimeline: !!S.nexusBpmTimelineEnabled,
+        bpmPhraseBeats: Math.max(1, Math.min(128, (S.nexusBpmPhraseBeats | 0) || 16)),
+        bpmTimelineMode: (S.nexusBpmTimelineMode === 'pulse' || S.nexusBpmTimelineMode === 'clock')
+          ? S.nexusBpmTimelineMode
+          : 'clock'
+      } : null,
+      cablesGuest: (function () {
+        if (!NX.CablesGuest || typeof NX.CablesGuest.getState !== 'function') return null;
+        var cg = NX.CablesGuest.getState();
+        return {
+          enabled: !!cg.enabled,
+          opacity: typeof cg.opacity === 'number' ? Math.max(0, Math.min(1, cg.opacity)) : 0.48,
+          url: cg.url || null
+        };
+      })()
     };
     var all = readAll();
     all[name] = bundle;
@@ -55,6 +76,44 @@
       S.postChain.streak = b.postChain.streak !== false;
       S.postChain.grade = b.postChain.grade !== false;
       S.postChain.trails = b.postChain.trails !== false;
+      if (typeof b.postChain.kaleido === 'boolean') S.postChain.kaleido = b.postChain.kaleido;
+      if (typeof b.postChain.glitch === 'boolean') S.postChain.glitch = b.postChain.glitch;
+      if (typeof b.postChain.godray === 'boolean') S.postChain.godray = b.postChain.godray;
+    }
+    if (S && b.fxBatch2 && typeof b.fxBatch2 === 'object') {
+      var f2 = b.fxBatch2;
+      if (typeof f2.godRayMix === 'number' && !isNaN(f2.godRayMix)) {
+        S.nexusGodRayMix = Math.max(0, Math.min(1, f2.godRayMix));
+      }
+      if (typeof f2.postTrails === 'number' && !isNaN(f2.postTrails)) {
+        S.nexusPostTrails = Math.max(0, Math.min(1, f2.postTrails));
+      }
+      if (typeof f2.gpuParticles === 'boolean') S.nexusGpuParticlesEnabled = f2.gpuParticles;
+      if (typeof f2.bpmTimeline === 'boolean') S.nexusBpmTimelineEnabled = f2.bpmTimeline;
+      if (typeof f2.bpmPhraseBeats === 'number' && !isNaN(f2.bpmPhraseBeats)) {
+        S.nexusBpmPhraseBeats = Math.max(1, Math.min(128, f2.bpmPhraseBeats | 0));
+      }
+      if (f2.bpmTimelineMode === 'pulse' || f2.bpmTimelineMode === 'clock') {
+        S.nexusBpmTimelineMode = f2.bpmTimelineMode;
+      }
+      if (typeof f2.postFxAsura === 'number' && !isNaN(f2.postFxAsura)) {
+        S.postFxAsura = Math.max(0, Math.min(1, f2.postFxAsura));
+      }
+    }
+    if (S && b.cablesGuest && typeof b.cablesGuest === 'object' && NX.CablesGuest) {
+      var cgB = b.cablesGuest;
+      if (cgB.url && typeof NX.CablesGuest.isAllowedHttpsUrl === 'function') {
+        var okU = NX.CablesGuest.isAllowedHttpsUrl(String(cgB.url));
+        if (okU && NX.CablesGuest.setPatchUrl) NX.CablesGuest.setPatchUrl(okU);
+      }
+      if (typeof cgB.opacity === 'number' && !isNaN(cgB.opacity) && NX.CablesGuest.setOpacity01) {
+        NX.CablesGuest.setOpacity01(Math.max(0, Math.min(1, cgB.opacity)));
+      }
+      if (typeof cgB.enabled === 'boolean' && NX.CablesGuest.setEnabled) {
+        NX.CablesGuest.setEnabled(!!cgB.enabled);
+      }
+    }
+    if (S && ((b.postChain && typeof b.postChain === 'object') || (b.fxBatch2 && typeof b.fxBatch2 === 'object'))) {
       if (NX.FxChain && NX.FxChain.syncCheckboxes) NX.FxChain.syncCheckboxes();
       if (NX.FxChain && NX.FxChain.applyFromUI) NX.FxChain.applyFromUI();
     }
@@ -67,6 +126,11 @@
     }
     if (typeof b.sceneIndex === 'number' && NX.goNext) {
       NX.goNext(b.sceneIndex | 0);
+    }
+    if (NX.ui && NX.ui.syncControls) {
+      try {
+        NX.ui.syncControls();
+      } catch (eSync) { /* ignore */ }
     }
     return true;
   }

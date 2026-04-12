@@ -30,10 +30,16 @@ window.NX = window.NX || {};
     return;
   }
   gl.getExtension('OES_texture_float');
+  /** @type {WebGLExtension|null} KHR_parallel_shader_compile — async program link (Chrome/Edge). */
+  var khrParallel = gl.getExtension('KHR_parallel_shader_compile');
+  NX._khrParallelCompile = khrParallel;
 
   /* iOS / memory pressure: allow context restore; preventDefault is required for restoration. */
   C.addEventListener('webglcontextlost', function (ev) {
     ev.preventDefault();
+    if (NX.GpuParticles && typeof NX.GpuParticles.tearDown === 'function') {
+      try { NX.GpuParticles.tearDown(); } catch (eGpuL) { /* ignore */ }
+    }
     if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: WebGL context lost — will rebuild if restored');
   }, true);
   C.addEventListener('webglcontextrestored', function () {
@@ -41,6 +47,15 @@ window.NX = window.NX || {};
       gl.getExtension('OES_texture_float');
       if (NX.compileScenes) NX.compileScenes();
       if (NX.post && typeof NX.post.compile === 'function') NX.post.compile();
+      if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
+        try { NX.GpuParticles.init({ force: true }); } catch (eGpuR) { /* ignore */ }
+      }
+      if (NX.BpmTimeline && typeof NX.BpmTimeline.init === 'function') {
+        try { NX.BpmTimeline.init(); } catch (eBpmR) { /* ignore */ }
+      }
+      if (NX.FxChain && typeof NX.FxChain.updateGpuParticlesStatus === 'function') {
+        try { NX.FxChain.updateGpuParticlesStatus(); } catch (eGpuSt) { /* ignore */ }
+      }
       if (NX.resize) NX.resize();
     } catch (eRest) {
       if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: context restore rebuild failed', eRest);
@@ -88,8 +103,18 @@ window.NX = window.NX || {};
     nexusPerfLock: false,
     nexusPostBloom: true,
     /** Effect chain bypass flags (Show tab); consumed by post.js */
-    postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true },
-    nexusPostTrails: 0,
+    postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true, godray: true },
+    /** 0–1 volumetric god-ray strength (post pass; I/O tab). */
+    nexusGodRayMix: 0.32,
+    /** GPU particle overlay (ping-pong sim; I/O tab — desktop / vertex-tex only). */
+    nexusGpuParticlesEnabled: true,
+    /** Phrase automation: call goNext every N beats (Show tab). */
+    nexusBpmTimelineEnabled: true,
+    /** Beats per phrase (4 / 8 / 16 / 32 typical). */
+    nexusBpmPhraseBeats: 32,
+    /** pulse = mic bass hits (`_beatPulseCount`); clock = wrap on `beatPhase`. */
+    nexusBpmTimelineMode: 'clock',
+    nexusPostTrails: 0.26,
     postBloomMul: 1,
     hueShift: 0,
     bcIntensity: 1,
@@ -123,6 +148,8 @@ window.NX = window.NX || {};
     /** Kaleido / glitch post strengths 0–1 */
     postFxKaleido: 0,
     postFxGlitch: 0,
+    /** 0–1 “Asura” / MFX-style post: barrel warp, radial CA, scanlines, heavier vignette (post.js). */
+    postFxAsura: 0,
     /** During recording: optional assist (restore nexusPerfLock on stop) */
     _recHadPerfAssist: false,
     _recPrevPerfLock: false,
@@ -144,7 +171,24 @@ window.NX = window.NX || {};
     _workletRmsTarget: 0,
     _workletCrestTarget: 0,
     _audioMeterWorkletNode: null,
-    _audioMeterWorkletReady: false
+    _audioMeterWorkletReady: false,
+    /** Pro suite — `PRO` shader uniform + workflow (see nexus-pro-audio-science.js, nexus-pro-workflow.js) */
+    proPR: 0, proPG: 0, proPB: 0, proPA: 0,
+    proChromaFlatness: 0, proPhaseCorr01: 0.5,
+    proFingerprintShort: '',
+    narrativePhase01: 0,
+    proBroadcastArmed: false,
+    proAiSceneHint: '',
+    proSyncRole: 'solo',
+    /** Film LUT (see nexus-film-lut.js): mix 0 = off; dim = lattice size (e.g. 33) */
+    filmLutMix: 0,
+    filmLutDim: 0,
+    /** Dedicated structure worker for chroma (default on) */
+    nexusProWorkerClassifier: true,
+    /** WebRTC clock offset ms (follower, see nexus-webrtc-multiscreen.js) */
+    webrtcClockOffsetMs: 0,
+    /** Follower: jump scene when leader sends curS over MultiscreenRTC */
+    proSyncFollowScenes: false
   };
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     S.morphDurationSec = Math.min(S.morphDurationSec, 0.85);
@@ -236,8 +280,51 @@ window.NX = window.NX || {};
     var v = mkSh(gl.VERTEX_SHADER, vs), f = mkSh(gl.FRAGMENT_SHADER, fs);
     if (!v || !f) return null;
     var p = gl.createProgram(); gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
+    if (khrParallel) {
+      gl.deleteShader(v); gl.deleteShader(f);
+      return p;
+    }
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error('Link:', gl.getProgramInfoLog(p)); return null; }
     gl.deleteShader(v); gl.deleteShader(f); return p;
+  }
+
+  /** True when program link finished successfully (KHR: wait for COMPLETION_STATUS_KHR first). */
+  function glProgramLinkReady(p) {
+    if (!p) return false;
+    if (!khrParallel) return !!gl.getProgramParameter(p, gl.LINK_STATUS);
+    if (!gl.getProgramParameter(p, khrParallel.COMPLETION_STATUS_KHR)) return false;
+    return !!gl.getProgramParameter(p, gl.LINK_STATUS);
+  }
+
+  function finalizeParallelLinkFailures() {
+    if (!khrParallel || !NX.sceneProgs) return;
+    var progs = NX.sceneProgs;
+    for (var i = 0; i < progs.length; i++) {
+      var p = progs[i];
+      if (!p || p._nxDead) continue;
+      if (!gl.getProgramParameter(p, khrParallel.COMPLETION_STATUS_KHR)) continue;
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+        console.error('NEXUS: scene program link failed', i, gl.getProgramInfoLog(p));
+        try { gl.deleteProgram(p); } catch (eDel) { /* ignore */ }
+        progs[i] = null;
+        p._nxDead = true;
+      }
+    }
+    if (NX.postProgs) {
+      var names = ['bloom', 'blur', 'streak', 'out', 'blend', 'copy', 'trail', 'godray'];
+      for (var j = 0; j < names.length; j++) {
+        var key = names[j];
+        var pr = NX.postProgs[key];
+        if (!pr || pr._nxDead) continue;
+        if (!gl.getProgramParameter(pr, khrParallel.COMPLETION_STATUS_KHR)) continue;
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) {
+          console.error('NEXUS: post program link failed', key);
+          try { gl.deleteProgram(pr); } catch (e2) { /* ignore */ }
+          NX.postProgs[key] = null;
+          pr._nxDead = true;
+        }
+      }
+    }
   }
   var qbuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, qbuf);
@@ -389,6 +476,18 @@ window.NX = window.NX || {};
       if (!hm || hm.length < 4) hm = [0, 0, 0, 0];
       gl.uniform4f(hmLoc, hm[0], hm[1], hm[2], hm[3]);
     }
+    var proLoc = u(prog, 'PRO');
+    if (proLoc) {
+      var prx = typeof S.proPR === 'number' ? S.proPR : 0;
+      var pry = typeof S.proPG === 'number' ? S.proPG : 0;
+      var prz = typeof S.proPB === 'number' ? S.proPB : 0;
+      var pra = typeof S.proPA === 'number' ? S.proPA : 0;
+      gl.uniform4f(proLoc,
+        prx < 0 ? 0 : (prx > 1 ? 1 : prx),
+        pry < 0 ? 0 : (pry > 1 ? 1 : pry),
+        prz < 0 ? 0 : (prz > 1 ? 1 : prz),
+        pra < 0 ? 0 : (pra > 1 ? 1 : pra));
+    }
   }
 
   /* ---- Vertex shader (shared) -------------------------------------- */
@@ -400,7 +499,7 @@ window.NX = window.NX || {};
   function blitTextureToCanvas(tex) {
     if (!tex) return;
     if (!blitFallbackProg) blitFallbackProg = mkProg(VS, BLIT_FALLBACK_FS);
-    if (!blitFallbackProg) return;
+    if (!blitFallbackProg || !glProgramLinkReady(blitFallbackProg)) return;
     gl.disable(gl.BLEND);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, Math.max(1, C.width | 0), Math.max(1, C.height | 0));
@@ -414,11 +513,11 @@ window.NX = window.NX || {};
 
   /* ---- Pre-warm uniform cache after programs are compiled ---------- */
   function prewarmCache(sceneProgs, postProgs) {
-    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD', 'WM', 'WC', 'PROC', 'DNA', 'HM'];
+    var sn = ['R', 'T', 'B', 'M', 'H', 'V', 'BT', 'EX', 'SP', 'WP', 'PAL', 'FL', 'SC', 'MX', 'PV', 'AU', 'BP', 'PH', 'BC', 'LD', 'WM', 'WC', 'PROC', 'DNA', 'HM', 'PRO'];
     sceneProgs.forEach(function (prog) { if (!prog) return; sn.forEach(function (n) { u(prog, n); }); });
     postProgs.forEach(function (prog) {
       if (!prog) return;
-      ['tex', 'bloom', 'streak', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2', 'BM', 'HS', 'KA', 'GL', 'PC'].forEach(function (n) { u(prog, n); });
+      ['tex', 'bloom', 'streak', 'LUTT', 'LM', 'thresh', 'dir', 'BT', 'T', 'B', 'M', 'H', 'FL', 'R', 'A', 'B2', 'mix2', 'BM', 'HS', 'KA', 'GL', 'PC'].forEach(function (n) { u(prog, n); });
     });
   }
 
@@ -502,6 +601,7 @@ window.NX = window.NX || {};
 
   function renderScene(idx, targetFBO, prevTex, w, h) {
     var prog = NX.sceneProgs[idx]; if (!prog) return;
+    if (!glProgramLinkReady(prog)) return;
     var rw = w || S.FW, rh = h || S.FH;
     gl.bindFramebuffer(gl.FRAMEBUFFER, targetFBO);
     gl.viewport(0, 0, rw, rh);
@@ -616,6 +716,11 @@ window.NX = window.NX || {};
       if (sc.tags.indexOf('fractal') >= 0) w += 1.1;
       if (sc.tags.indexOf('sacred') >= 0) w += 0.65;
       if (sc.tags.indexOf('tunnel') >= 0) w += 0.35;
+    } else if (macro === 'asura_mfx') {
+      if (sc.tags.indexOf('tunnel') >= 0) w += 0.9;
+      if (sc.tags.indexOf('fractal') >= 0) w += 0.78;
+      if (sc.tags.indexOf('intense') >= 0) w += 0.52;
+      if (sc.tags.indexOf('sacred') >= 0) w += 0.38;
     }
     if (S.nexusVizPerformance && sc.cost === 'high') w *= 0.35;
     else if (S.nexusVizPerformance && sc.cost === 'low') w *= 1.25;
@@ -686,6 +791,7 @@ window.NX = window.NX || {};
       }
     }
     if (gl.isContextLost && gl.isContextLost()) return;
+    finalizeParallelLinkFailures();
     if (!now) now = performance.now();
     var dt = Math.min((now - _lastTime) / 1000, 0.05);
     if (dt <= 0 || dt > 0.05) dt = 0.016;
@@ -697,6 +803,18 @@ window.NX = window.NX || {};
     S._emaFps += 0.15 * (instFps - S._emaFps);
     tickAdaptiveFps(dt);
     if (NX.audio && NX.audio.tick) NX.audio.tick();
+    if (NX.StructureMood && typeof NX.StructureMood.tick === 'function') {
+      try { NX.StructureMood.tick(dt); } catch (eSm) { /* ignore */ }
+    }
+    if (NX.EvolveStack && typeof NX.EvolveStack.tick === 'function') {
+      try { NX.EvolveStack.tick(dt, now); } catch (eEv) { /* ignore */ }
+    }
+    if (NX.BpmTimeline && typeof NX.BpmTimeline.tick === 'function') {
+      try { NX.BpmTimeline.tick(dt); } catch (eBt) { /* ignore */ }
+    }
+    if (NX.GpuParticles && typeof NX.GpuParticles.tick === 'function') {
+      try { NX.GpuParticles.tick(dt); } catch (eGt) { /* ignore */ }
+    }
     if (NX.ProceduralAudioBus && NX.ProceduralAudioBus.reducedMotionPostCaps) {
       try { NX.ProceduralAudioBus.reducedMotionPostCaps(S); } catch (eRm) { /* ignore */ }
     }
@@ -719,6 +837,23 @@ window.NX = window.NX || {};
     if (NX.HomageDOM && NX.HomageDOM.tick) NX.HomageDOM.tick(dt);
     if (NX.CueEngine && NX.CueEngine.tick) {
       try { NX.CueEngine.tick(dt); } catch (eCue) { /* ignore */ }
+    }
+    if (NX.ProPlatform && typeof NX.ProPlatform.tick === 'function') {
+      try { NX.ProPlatform.tick(dt); } catch (ePro) { /* ignore */ }
+    }
+    if (NX.MultiscreenRTC && S.proSyncRole === 'leader') {
+      NX._nxMsRtcAcc = (NX._nxMsRtcAcc || 0) + dt;
+      if (NX._nxMsRtcAcc > 0.12) {
+        NX._nxMsRtcAcc = 0;
+        try {
+          if (typeof NX.MultiscreenRTC.tickLeader === 'function') NX.MultiscreenRTC.tickLeader();
+        } catch (eMs) { /* ignore */ }
+      }
+    }
+    if (NX.ProThreeStack && typeof NX.ProThreeStack.renderFrame === 'function') {
+      try {
+        NX.ProThreeStack.renderFrame();
+      } catch (e3d) { /* ignore */ }
     }
     if (window.NexusEngine && NexusEngine.update) NexusEngine.update(dt);
 
@@ -758,7 +893,10 @@ window.NX = window.NX || {};
 
     if (drawShader && S.morphing && NX.postProgs && NX.postProgs.blend && fbMorph && fbMorph.f && fbB[0] && fbB[1]) {
       try {
-        if (S._morphFrame % 2 === 1) { renderScene(S.nxtS, fbB[1 - pingB].f, fbB[pingB].t, hw, hh); pingB = 1 - pingB; }
+        var nxtProg = NX.sceneProgs && NX.sceneProgs[S.nxtS | 0];
+        if (S._morphFrame % 2 === 1 && (!nxtProg || typeof NX.glProgramLinkReady !== 'function' || NX.glProgramLinkReady(nxtProg))) {
+          renderScene(S.nxtS, fbB[1 - pingB].f, fbB[pingB].t, hw, hh); pingB = 1 - pingB;
+        }
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbMorph.f); gl.viewport(0, 0, S.FW, S.FH);
         gl.useProgram(NX.postProgs.blend); bindQuad(NX.postProgs.blend);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, curOut); gl.uniform1i(u(NX.postProgs.blend, 'A'), 0);
@@ -790,6 +928,12 @@ window.NX = window.NX || {};
     }
 
     if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
+
+    if (NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
+      try {
+        NX.GpuParticles.renderOverlay();
+      } catch (eGp) { /* ignore */ }
+    }
 
     if (NX.WgslGraph && NX.WgslGraph.renderFrame) {
       try {
@@ -904,6 +1048,8 @@ window.NX = window.NX || {};
   NX.postProgs = {};
   NX.scenes = [];
   NX.mkProg = mkProg;
+  NX.glProgramLinkReady = glProgramLinkReady;
+  NX.finalizeParallelLinkFailures = finalizeParallelLinkFailures;
   NX.mkRT = mkRT;
   NX.u = u;
   NX.bindQuad = bindQuad;
@@ -936,6 +1082,7 @@ window.NX = window.NX || {};
       }
       if (S.nexusPostTrails > 0.06) S.nexusPostTrails = 0.06;
       if (S.postBloomMul > 1) S.postBloomMul = Math.min(S.postBloomMul, 0.98);
+      if (typeof S.postFxAsura === 'number' && S.postFxAsura > 0.38) S.postFxAsura *= 0.55;
       resize();
     } else {
       S.nexusVizPerformance = false;
