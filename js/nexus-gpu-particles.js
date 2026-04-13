@@ -19,14 +19,15 @@
   var FS_SIM = [
     'precision highp float;',
     'varying vec2 v_uv;',
-    'uniform sampler2D u_prev;uniform float u_time,u_bass,u_flux;',
+    'uniform sampler2D u_prev;uniform float u_time,u_bass,u_flux,u_mid,u_hi,u_si;',
     'float n2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
     'void main(){',
     ' vec4 s=texture2D(u_prev,v_uv);',
     ' vec2 p=s.xy*2.0-1.0;vec2 v=s.zw;',
-    ' vec2 g=vec2(n2(v_uv*30.7+u_time),n2(v_uv*22.3-u_time*.7))-0.5;',
-    ' v=v*.965+g*0.0022*(0.35+u_bass);',
-    ' v.y-=0.00035;',
+    ' vec2 g=vec2(n2(v_uv*(28.0+u_si*0.4)+u_time),n2(v_uv*(21.0+u_si*0.3)-u_time*.7))-0.5;',
+    ' v=v*.962+g*0.0025*(0.38+u_bass)*(0.75+u_mid*0.55);',
+    ' v+=vec2(n2(v_uv*55.0+u_hi*3.0)-0.5,n2(v_uv*48.0-u_hi*2.0)-0.5)*0.0009*(0.4+u_flux);',
+    ' v.y-=0.00032*(1.0-u_hi*0.35)+sin(u_time*0.5+u_si)*0.00008;',
     ' p+=v*(0.55+u_bass*0.85);',
     ' if(p.x>1.0)p.x-=2.0;if(p.x<-1.0)p.x+=2.0;',
     ' if(p.y>1.0)p.y-=2.0;if(p.y<-1.0)p.y+=2.0;',
@@ -43,15 +44,23 @@
   var VS_DRAW = [
     'attribute vec2 a_uv;',
     'uniform sampler2D u_state;',
-    'uniform float u_point;',
+    'uniform float u_point,u_bass,u_mid,u_hi,u_bv,u_si,u_flux;',
     'varying vec4 v_col;',
     'void main(){',
     ' vec4 st=texture2D(u_state,a_uv);',
     ' vec2 pos=st.xy*2.0-1.0;',
     ' gl_Position=vec4(pos,0.0,1.0);',
     ' float e=length(st.zw)+1e-5;',
-    ' v_col=vec4(0.35+st.z*0.4,0.55+st.w*0.35,0.95,0.22+e*1.8);',
-    ' gl_PointSize=u_point*(0.85+length(st.zw)*12.0);',
+    ' vec3 cA=vec3(0.12,0.52,1.0);',
+    ' vec3 cB=vec3(1.0,0.28,0.52);',
+    ' vec3 cC=vec3(0.32,0.95,0.62);',
+    ' float pk=fract(u_si*0.073+u_bv*0.22+u_mid*0.15);',
+    ' vec3 pal=mix(cA,cB,pk);pal=mix(pal,cC,u_mid*0.45);',
+    ' float tw=0.5+0.5*sin(u_bv*6.28318+u_si+a_uv.x*12.0);',
+    ' vec3 rgb=pal*(0.5+e*1.35)+vec3(u_hi*0.25,u_mid*0.12,u_bass*0.18);',
+    ' float al=0.16+e*1.55+u_bass*0.16+u_flux*0.1+tw*0.06;',
+    ' v_col=vec4(rgb,al);',
+    ' gl_PointSize=u_point*(0.82+length(st.zw)*14.0)*(1.0+u_bv*0.35);',
     '}'
   ].join('');
 
@@ -229,6 +238,9 @@
     gl.uniform1f(gl.getUniformLocation(simProg, 'u_time'), S.GT || 0);
     gl.uniform1f(gl.getUniformLocation(simProg, 'u_bass'), Math.max(0, Math.min(1, S.sBass || 0)));
     gl.uniform1f(gl.getUniformLocation(simProg, 'u_flux'), Math.max(0, Math.min(1, S.sFlux || 0)));
+    gl.uniform1f(gl.getUniformLocation(simProg, 'u_mid'), Math.max(0, Math.min(1, S.sMid || 0)));
+    gl.uniform1f(gl.getUniformLocation(simProg, 'u_hi'), Math.max(0, Math.min(1, S.sHigh || 0)));
+    gl.uniform1f(gl.getUniformLocation(simProg, 'u_si'), (S.curS | 0) * 1.0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.disableVertexAttribArray(al);
     ping = 1 - ping;
@@ -255,6 +267,12 @@
     gl.uniform1i(gl.getUniformLocation(drawProg, 'u_state'), 0);
     var pt = S._iosCoarsePointer ? 2.2 : 3.2;
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_point'), pt);
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_bass'), Math.max(0, Math.min(1, S.sBass || 0)));
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_mid'), Math.max(0, Math.min(1, S.sMid || 0)));
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_hi'), Math.max(0, Math.min(1, S.sHigh || 0)));
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_bv'), Math.max(0, Math.min(1.35, S.beatVisual || 0)));
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_si'), (S.curS | 0) * 1.0);
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_flux'), Math.max(0, Math.min(1, S.sFlux || 0)));
     gl.drawArrays(gl.POINTS, 0, N);
     gl.disableVertexAttribArray(al);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
