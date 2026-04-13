@@ -280,7 +280,10 @@
 
   function ensureInit() {
     var S = NX.S;
-    if (!S || S.nexusVolumetricProductEnabled === false) return;
+    if (!S || S.nexusVolumetricProductEnabled === false) {
+      if (ready) tearDown();
+      return;
+    }
     if (!NX.gl || NX._fatalNoWebGL) return;
     gl = NX.gl;
     if (ready && gl) return;
@@ -383,7 +386,10 @@
 
   function tick(dt) {
     var S = NX.S;
-    if (!S || S.nexusVolumetricProductEnabled === false) return;
+    if (!S || S.nexusVolumetricProductEnabled === false) {
+      if (ready) tearDown();
+      return;
+    }
     if (S.nexusMixParticlesEnabled === false) return;
     if (!S.nexusGpuParticlesEnabled) return;
     if (S.nexusPerfLock || S.nexusVizPerformance) return;

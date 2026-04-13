@@ -1,6 +1,6 @@
 # NEXUS volumetric particle product (`nx-volumetric`)
 
-**Default:** `S.nexusVolumetricProductEnabled` is **false** — the familiar `GpuParticles.renderOverlay()` path runs (same shaders as always).
+**Default:** `S.nexusVolumetricProductEnabled` is **false** — the familiar `GpuParticles.renderOverlay()` path runs (same shaders as always). Legacy overlay must **not** be skipped unless this flag is on *and* `NX.VolumetricFX` is ready (otherwise you only see the optional 2D mist layer).
 
 **Optional integrated path:** GPU sim still lives in `nexus-gpu-particles.js`. `NX.VolumetricFX` draws **the same NDC sprite formula** as `VS_DRAW` / `FS_DRAW` in that file (parallax, palette, soft disk, additive overlap) into an offscreen buffer, then composites **after** `NX.post` and **after** Butterchurn — same stack order as the legacy overlay. Point size is scaled for the smaller FBO vs `#c` width and clamped to `ALIASED_POINT_SIZE_RANGE` so sprites stay distinct instead of one clamped mega-disk.
 

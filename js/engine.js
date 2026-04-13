@@ -124,8 +124,8 @@ window.NX = window.NX || {};
     nexusParticleMatchGenre: false,
     /** Mix: optional metaball-ish screen pass inside particle FBO (desktop / non–viz-perf). */
     nexusVolAdvancedFX: false,
-    /** Mix tab: hybrid 2D canvas field (beat rings, band-driven forces) — default on with GPU stack. */
-    nexusProcParticlesEnabled: true,
+    /** Mix tab: hybrid 2D canvas mist (#nx-proc-particles) — default off so GPU sprites stay the hero read. */
+    nexusProcParticlesEnabled: false,
     /** Volumetric 3D GPU particle physics (see NX.VolumetricParticles + Composition sliders). */
     nexusVolTornado: 0.55,
     nexusVolOcean: 0.45,
@@ -964,11 +964,13 @@ window.NX = window.NX || {};
       }
     }
 
-    if (NX.VolumetricFX && typeof NX.VolumetricFX.setSourceSceneTexture === 'function') {
-      try { NX.VolumetricFX.setSourceSceneTexture(finalTex); } catch (eVs) { /* ignore */ }
-    }
-    if (NX.VolumetricFX && typeof NX.VolumetricFX.tick === 'function') {
-      try { NX.VolumetricFX.tick(dt); } catch (eVt) { /* ignore */ }
+    if (S.nexusVolumetricProductEnabled !== false) {
+      if (NX.VolumetricFX && typeof NX.VolumetricFX.setSourceSceneTexture === 'function') {
+        try { NX.VolumetricFX.setSourceSceneTexture(finalTex); } catch (eVs) { /* ignore */ }
+      }
+      if (NX.VolumetricFX && typeof NX.VolumetricFX.tick === 'function') {
+        try { NX.VolumetricFX.tick(dt); } catch (eVt) { /* ignore */ }
+      }
     }
 
     var postReady = !!(drawShader && finalTex && NX.post && NX.post.render && NX.postProgs && NX.postProgs.out && NX.postProgs.copy);

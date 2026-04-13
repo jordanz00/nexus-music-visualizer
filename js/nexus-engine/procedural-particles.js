@@ -309,11 +309,13 @@
     pushRing(0.58, 0.5);
   }
 
-  function drawLightingAndRings(dt, b, mid, hi, fl, pulseAmt, lite) {
+  function drawLightingAndRings(dt, b, mid, hi, fl, pulseAmt, lite, gpuOn) {
     var diag = Math.min(w, h);
-    if (pulseAmt > 0.14) {
+    var pulseTh = gpuOn ? 0.22 : 0.14;
+    if (pulseAmt > pulseTh) {
       var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, diag * 0.46);
       var core = 0.05 + pulseAmt * 0.13 + b * 0.05;
+      if (gpuOn) core *= 0.42;
       g.addColorStop(0, 'rgba(255,248,235,' + core + ')');
       g.addColorStop(0.25, 'rgba(255,190,120,' + (core * 0.46) + ')');
       g.addColorStop(0.58, 'rgba(255,90,40,' + (core * 0.17) + ')');
@@ -410,7 +412,7 @@
     ctx.fillRect(0, 0, w, h);
 
     var liteRings = perf || emaFps < 48;
-    drawLightingAndRings(dt, b, mid, hi, fl, pulse, liteRings);
+    drawLightingAndRings(dt, b, mid, hi, fl, pulse, liteRings, gpuOn);
 
     var n = parts.length;
     var i;

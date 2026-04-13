@@ -275,7 +275,7 @@
           <label class="nx-inline" title="Hybrid: Aurora (#c-bc) canvas opacity">Aurora layer <input type="range" id="nx-hybrid-bc-opacity" min="15" max="100" value="100"></label>
           <label class="nx-inline" title="Hybrid: WebGL (#c) canvas opacity">WebGL layer <input type="range" id="nx-hybrid-shader-opacity" min="25" max="100" value="100"></label>
           <label class="nx-inline" title="Master for GPU point sprites and optional 2D layer (I/O still toggles GPU sim when this is on)"><input type="checkbox" id="nx-mix-particles" checked> Particles</label>
-          <label class="nx-inline" title="Hybrid 2D canvas field: beat rings, curl noise, and band-driven motion layered with GPU particles (toggle off on low-power GPUs)"><input type="checkbox" id="nx-mix-proc-ambient" checked> Hybrid mist layer</label>
+          <label class="nx-inline" title="Optional 2D canvas mist over #c. Off by default so WebGL GPU particles stay crisp; enable for extra atmosphere."><input type="checkbox" id="nx-mix-proc-ambient"> Hybrid mist layer</label>
           <label class="nx-inline" title="Off by default. When on: same GPU particle sprites as the classic overlay (NDC formula), composited via an FBO after post. See nx-volumetric/README.md."><input type="checkbox" id="nx-volumetric-product"> Volumetric 3D path</label>
           <label class="nx-inline" title="Authoring preset for forces / proxy / ribbons">Particle look <select id="nx-particle-look" class="preset-select" style="min-width:108px" aria-label="Particle look preset">
             <option value="default" selected>Default</option>
