@@ -117,13 +117,6 @@
           document.head.appendChild(st);
         } catch (eTg) { /* ignore */ }
       })();
-      (function nxOptionalCablesGuest() {
-        try {
-          if (NX.CablesGuest && typeof NX.CablesGuest.initAfterBoot === 'function') {
-            NX.CablesGuest.initAfterBoot();
-          }
-        } catch (eCg) { /* ignore */ }
-      })();
       (function nxOptionalPlaycanvasGuest() {
         try {
           var wantPc = NX.PlaycanvasGuest && typeof NX.PlaycanvasGuest.wantsPlaycanvasFromEnv === 'function' && NX.PlaycanvasGuest.wantsPlaycanvasFromEnv();

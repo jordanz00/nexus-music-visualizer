@@ -33,10 +33,9 @@
 | **Presets** | Save/load engine + post + stack to localStorage; 4 built-in starting points (Afterlife Dark, Festival Energy, Ambient Chill, Laser Show) |
 | **UI** | Resolume-inspired dark pro theme with scene pads, audio meters, control sliders, palette selector |
 | **Performance** | 3 GPU quality presets, adaptive FPS; **Perf lock** caps DPR and internal resolution; `prefers-reduced-motion` support |
-| **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` / **`asura_show`** (ramps **Asura** post + optional **Cables guest** iframe) |
+| **Demo Director** | Pre-choreographed sequences for recording clips — top bar **DEMO** menu or URL `?demo=drop` / `festival` / `genres` / `ai` / `resolume` / **`asura_show`** (ramps **Asura** post + god rays) |
 | **Asura post (native)** | Mix tab **Asura** slider + built-in preset / Show macro — URL `?asura=1` (floor ~0.78) or `?asura=0.65` sets `postFxAsura` at boot ([`post.js`](js/post.js) barrel + radial chroma + scanlines + vignette). |
-| **Cables guest (iframe)** | Mix tab **Cables guest** / **Cables mix** / **Patch** — loads a **real** hosted cables.gl patch (default [MFX Asura](https://mfx.drastic.net/view/asura/)) in `#nx-cables-guest-frame`. **HTTPS + allowlisted host only** (`mfx.drastic.net`, `cables.gl`, `sandbox.cables.gl`). Boot: `?cables=1`, `?cables=asura`, `?cablesUrl=` (encoded URL), or `?cables=0` to force off. See [`js/nexus-cables-guest.js`](js/nexus-cables-guest.js). |
-| **Show scene presets** | I/O workbench bundles also snapshot **`postFxAsura`**, **`nexusGodRayMix`** (via `fxBatch2`), and **cables guest** `{ enabled, opacity, url }` for full recall ([`js/show/scene-presets.js`](js/show/scene-presets.js)). |
+| **Show scene presets** | I/O workbench bundles also snapshot **`postFxAsura`**, **`nexusGodRayMix`** (via `fxBatch2`) for recall ([`js/show/scene-presets.js`](js/show/scene-presets.js)). |
 | **AI Director** | Energy + drop detection for automatic scene switches — **AI DIR** (turns off auto-morph while active) |
 | **Free / Pro** | Free tier: corner watermark. **More → Unlock Pro** (or console): `NX.watermark.unlock('NEXUS_MK4_PRO')` or `earlyaccess2026` → stored in `localStorage` on this device |
 

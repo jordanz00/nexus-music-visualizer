@@ -80,7 +80,6 @@ const NX_SCRIPTS = [
   'js/show/show-workbench.js',
   'js/nexus-engine/engine-host.js',
   'js/nexus-three-guest.js',
-  'js/nexus-cables-guest.js',
   'js/nexus-playcanvas-guest.js',
   'js/nexus-webgpu-spike.js',
   'js/midi.js',

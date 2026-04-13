@@ -35,10 +35,6 @@
 <canvas id="nx-wgpu" aria-hidden="true"></canvas>
 <!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
 <div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
-<!-- Hosted cables.gl / MFX patch (see nexus-cables-guest.js — allowlisted https only) -->
-<div id="nx-cables-guest-wrap" class="nx-cables-guest-wrap" aria-hidden="true">
-  <iframe id="nx-cables-guest-frame" class="nx-cables-guest-frame" title="cables.gl guest patch (allowlisted embed)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen autoplay"></iframe>
-</div>
 <canvas id="c-three" aria-hidden="true"></canvas>
 <canvas id="c-playcanvas" aria-hidden="true"></canvas>
 <canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
@@ -106,7 +102,7 @@
       <option value="genres">Any Song</option>
       <option value="ai">AI Visuals</option>
       <option value="resolume">Resolume Killer</option>
-      <option value="asura_show">Asura + Cables</option>
+      <option value="asura_show">Asura show</option>
     </select>
     <button type="button" class="top-btn" id="fullbtn" title="Fullscreen (F)">⛶</button>
     <button type="button" class="top-btn top-btn-present" id="presentbtn" title="Clean output: hide chrome (keyboard P)" aria-pressed="false">Present</button>
@@ -268,10 +264,6 @@
           <label class="nx-inline">Kaleido <input type="range" id="nx-kaleido" min="0" max="100" value="0" title="Post kaleidoscope mix"></label>
           <label class="nx-inline">Glitch <input type="range" id="nx-glitch" min="0" max="100" value="0" title="Transient-driven glitch (base amount)"></label>
           <label class="nx-inline">Asura <input type="range" id="nx-asura" min="0" max="100" value="0" title="MFX-style: barrel warp, radial chroma, scanlines, vignette"></label>
-          <label class="nx-inline" title="Embed real hosted cables.gl patch (default: MFX Asura) — allowlisted HTTPS only"><input type="checkbox" id="nx-cables-guest-on"> Cables guest</label>
-          <label class="nx-inline">Cables mix <input type="range" id="nx-cables-guest-opacity" min="0" max="100" value="48" title="Guest iframe opacity (screen blend)"></label>
-          <label class="nx-inline nx-cables-url-wrap" title="Apply an allowlisted https patch URL">Patch <input type="url" id="nx-cables-guest-url" class="nx-cables-guest-url" placeholder="https://mfx.drastic.net/view/asura/" spellcheck="false" autocapitalize="off" inputmode="url"></label>
-          <button type="button" class="sm-btn nx-touch-btn" id="nx-cables-guest-url-apply" title="Validate host + reload iframe">Apply URL</button>
         </div>
         <div class="ctrl-group nexus-group flex-grow">
           <span class="g-label">Spectra</span>
@@ -588,7 +580,6 @@
             <li><a href="https://github.com/jberg/butterchurn-presets" target="_blank" rel="noopener noreferrer">butterchurn-presets</a> — official preset packs</li>
             <li>Optional <strong>Three.js</strong> guest layer (<code>?three=1</code> or <code class="nx-code-inline">localStorage nexus.three.guest=1</code>): <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener noreferrer">three.js</a> (MIT) — <code class="nx-code-inline">vendor/three.min.js</code> + <code class="nx-code-inline">js/nexus-three-guest.js</code>.</li>
             <li>Optional <strong>PlayCanvas</strong> engine guest (<code>?playcanvas=1</code> or <code class="nx-code-inline">localStorage nexus.playcanvas.guest=1</code>): <a href="https://github.com/playcanvas/engine" target="_blank" rel="noopener noreferrer">playcanvas/engine</a> (MIT) — <code class="nx-code-inline">vendor/playcanvas.min.js</code> + <code class="nx-code-inline">js/nexus-playcanvas-guest.js</code> (<code class="nx-code-inline">#c-playcanvas</code>).</li>
-            <li>Optional <strong>cables.gl</strong> guest (<code>?cables=1</code>, <code>?cablesUrl=</code> + allowlisted <code>https</code> host, or Mix tab <strong>Cables guest</strong>): embeds a hosted patch (default <a href="https://mfx.drastic.net/view/asura/" target="_blank" rel="noopener noreferrer">MFX — Asura</a>) in <code class="nx-code-inline">#nx-cables-guest-wrap</code> — <code class="nx-code-inline">js/nexus-cables-guest.js</code>. Not a vendored cables runtime; network + third-party GPU in iframe.</li>
             <li><strong>Homage shaders</strong> (<code class="nx-code-inline">js/scenes/homage-gl-scenes.js</code>, <code class="nx-code-inline">preset-pack-2026.js</code>): original GLSL inspired by public web works — <a href="https://maninthedark.com/" target="_blank" rel="noopener noreferrer">Man in the Dark</a> (2004), <a href="https://a-way-to-go.com/" target="_blank" rel="noopener noreferrer">Way to Go</a> (NFB), <a href="https://www.yesnoif.com/" target="_blank" rel="noopener noreferrer">yes no if</a> (2014), <a href="https://www.chrisraff.com/3d-maze/" target="_blank" rel="noopener noreferrer">Chris Raff 3D Maze</a>, <a href="https://hackers-1995.vercel.app/" target="_blank" rel="noopener noreferrer">Hackers (1995) animated experience</a> (David Vidovic), <a href="https://angusnicneven.com/" target="_blank" rel="noopener noreferrer">Terminal 00</a> / <a href="https://angusnicneven.com/Irentaex" target="_blank" rel="noopener noreferrer">Irentaex</a> (Angus Nicneven). Not affiliated; no third-party assets or prose copied into the repo.</li>
             <li>WebGL scenes use common SDF / raymarch patterns (e.g. <a href="https://iquilezles.org/articles/distfunctions/" target="_blank" rel="noopener noreferrer">Inigo Quilez</a> articles) as engineering references.</li>
           </ul>

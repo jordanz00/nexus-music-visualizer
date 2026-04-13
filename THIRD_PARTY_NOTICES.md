@@ -25,7 +25,7 @@ Optional extra packs installed via `vendor/fetch-extra-presets.sh` are subject t
 |-----------|-----------------|---------------------|
 | **projectM** | LGPL | **Not shipped.** Evaluated only for compatibility research. Commercial redistribution of LGPL WASM/native builds requires legal review; overlaps Butterchurn’s role for MilkDrop-class visuals. |
 | **Hydra** (hydra-synth) | AGPL-3.0 (typical for editor line) | **Not shipped.** Research / UX inspiration only; see `docs/NEXUS-BROWSER-VIZ-RESEARCH.md` and Credits. Do not embed without license + bundle review. |
-| **cables.gl** | MIT (project) | **Runtime not vendored** in this repo. `nexus-cables-lite.js` is an original whitelist helper inspired by node-graph topology (no cables player code). **Cables guest:** when the operator enables **Mix → Cables guest**, NEXUS sets an **iframe** `src` to an **allowlisted HTTPS** patch URL (default third-party site **mfx.drastic.net**). That loads **network content and WebGL executed in the third-party origin** — not shipped as our `vendor/` bundle; subject to that site’s availability, headers, and terms. |
+| **cables.gl** | MIT (project) | **Runtime not vendored** in this repo. `nexus-cables-lite.js` is an original whitelist helper inspired by node-graph topology (no cables player code). |
 | **MangoWave** | AGPL-3.0 | **Not shipped.** Third-party MilkDrop-class browser player — listed for comparison only; AGPL differs from NEXUS default stack. |
 | **Demoscene / pouët / CSDb links** | n/a | **Not shipped.** Educational links in docs and Credits only. |
 

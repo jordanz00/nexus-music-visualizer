@@ -73,11 +73,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--nx-bg-deep);co
 .nx-clip-cell{pointer-events:none}
 /* Ambient above clip-under, below main WebGL — screen blend works on older iOS; plus-lighter is Safari 17+ */
 .nx-ambient-layer{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.38;transition:opacity .45s ease}
-/* cables.gl / MFX iframe guest — same stack band as ambient / Three guest; no pointer capture */
-.nx-cables-guest-wrap{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .45s ease;mix-blend-mode:screen}
-.nx-cables-guest-wrap.nx-cables-guest-on{pointer-events:none}
-.nx-cables-guest-frame{width:100%;height:100%;border:0;display:block;background:#020204}
-.nx-cables-guest-url{max-width:min(240px,38vw);min-width:120px;font-size:11px;vertical-align:middle}
 @supports (mix-blend-mode: plus-lighter){
   .nx-ambient-layer{mix-blend-mode:plus-lighter;opacity:.52}
 }

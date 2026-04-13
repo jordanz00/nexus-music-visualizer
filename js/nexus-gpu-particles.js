@@ -159,10 +159,11 @@
     try {
       var q = document.getElementById('qsel');
       var v = q && q.value ? q.value : 'balanced';
-      if (v === 'ultra') return { w: 256, h: 256 };
-      if (v === 'perf') return { w: 128, h: 128 };
+      /* Sim + POINTS overlay scale with N — keep balanced lighter for proc + BC headroom. */
+      if (v === 'ultra') return { w: 176, h: 176 };
+      if (v === 'perf') return { w: 96, h: 96 };
     } catch (eQ) { /* ignore */ }
-    return { w: 192, h: 192 };
+    return { w: 128, h: 128 };
   }
 
   function init(opts) {

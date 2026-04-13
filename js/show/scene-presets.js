@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Named show bundles: scene index, postChain, visual mode, WGSL chain, I/O batch (god ray, trails, …),
- * post Asura strength, and optional cables.gl guest iframe (allowlisted URL only) — localStorage.
+ * post Asura strength — localStorage.
  */
 (function () {
   var STORAGE = 'nexus.show.scenePresets.v1';
@@ -45,16 +45,7 @@
         bpmTimelineMode: (S.nexusBpmTimelineMode === 'pulse' || S.nexusBpmTimelineMode === 'clock')
           ? S.nexusBpmTimelineMode
           : 'clock'
-      } : null,
-      cablesGuest: (function () {
-        if (!NX.CablesGuest || typeof NX.CablesGuest.getState !== 'function') return null;
-        var cg = NX.CablesGuest.getState();
-        return {
-          enabled: !!cg.enabled,
-          opacity: typeof cg.opacity === 'number' ? Math.max(0, Math.min(1, cg.opacity)) : 0.48,
-          url: cg.url || null
-        };
-      })()
+      } : null
     };
     var all = readAll();
     all[name] = bundle;
@@ -98,19 +89,6 @@
       }
       if (typeof f2.postFxAsura === 'number' && !isNaN(f2.postFxAsura)) {
         S.postFxAsura = Math.max(0, Math.min(1, f2.postFxAsura));
-      }
-    }
-    if (S && b.cablesGuest && typeof b.cablesGuest === 'object' && NX.CablesGuest) {
-      var cgB = b.cablesGuest;
-      if (cgB.url && typeof NX.CablesGuest.isAllowedHttpsUrl === 'function') {
-        var okU = NX.CablesGuest.isAllowedHttpsUrl(String(cgB.url));
-        if (okU && NX.CablesGuest.setPatchUrl) NX.CablesGuest.setPatchUrl(okU);
-      }
-      if (typeof cgB.opacity === 'number' && !isNaN(cgB.opacity) && NX.CablesGuest.setOpacity01) {
-        NX.CablesGuest.setOpacity01(Math.max(0, Math.min(1, cgB.opacity)));
-      }
-      if (typeof cgB.enabled === 'boolean' && NX.CablesGuest.setEnabled) {
-        NX.CablesGuest.setEnabled(!!cgB.enabled);
       }
     }
     if (S && ((b.postChain && typeof b.postChain === 'object') || (b.fxBatch2 && typeof b.fxBatch2 === 'object'))) {

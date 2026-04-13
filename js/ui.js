@@ -212,15 +212,6 @@
     if (ng) ng.value = String(Math.round((S.postFxGlitch == null ? 0 : S.postFxGlitch) * 100));
     var na = document.getElementById('nx-asura');
     if (na) na.value = String(Math.round((S.postFxAsura == null ? 0 : S.postFxAsura) * 100));
-    if (NX.CablesGuest && typeof NX.CablesGuest.getState === 'function') {
-      var cg = NX.CablesGuest.getState();
-      var cgOn = document.getElementById('nx-cables-guest-on');
-      var cgOp = document.getElementById('nx-cables-guest-opacity');
-      var cgUrl = document.getElementById('nx-cables-guest-url');
-      if (cgOn) cgOn.checked = !!cg.enabled;
-      if (cgOp) cgOp.value = String(Math.round((cg.opacity != null ? cg.opacity : 0.48) * 100));
-      if (cgUrl) cgUrl.value = cg.url || '';
-    }
     var nsm = document.getElementById('nx-show-macro');
     if (nsm) {
       var vm = S.visualMacro || '';
@@ -952,27 +943,6 @@
     if (nxGli) nxGli.addEventListener('input', function () { S.postFxGlitch = parseInt(this.value, 10) / 100; });
     var nxAsu = document.getElementById('nx-asura');
     if (nxAsu) nxAsu.addEventListener('input', function () { S.postFxAsura = parseInt(this.value, 10) / 100; });
-    var nxCgOn = document.getElementById('nx-cables-guest-on');
-    if (nxCgOn && NX.CablesGuest && typeof NX.CablesGuest.setEnabled === 'function') {
-      nxCgOn.addEventListener('change', function () {
-        NX.CablesGuest.setEnabled(!!this.checked);
-      });
-    }
-    var nxCgOp = document.getElementById('nx-cables-guest-opacity');
-    if (nxCgOp && NX.CablesGuest && typeof NX.CablesGuest.setOpacity01 === 'function') {
-      nxCgOp.addEventListener('input', function () {
-        NX.CablesGuest.setOpacity01(parseInt(this.value, 10) / 100);
-      });
-    }
-    var nxCgApply = document.getElementById('nx-cables-guest-url-apply');
-    if (nxCgApply && NX.CablesGuest && typeof NX.CablesGuest.setPatchUrl === 'function') {
-      nxCgApply.addEventListener('click', function () {
-        var inp = document.getElementById('nx-cables-guest-url');
-        if (!inp) return;
-        var ok = NX.CablesGuest.setPatchUrl(inp.value || '');
-        if (!ok && typeof console !== 'undefined' && console.warn) console.warn('NEXUS: cables guest URL rejected (use https + allowlisted host)');
-      });
-    }
     var nxShow = document.getElementById('nx-show-macro');
     if (nxShow) nxShow.addEventListener('change', function () {
       if (!this.value) { S.visualMacro = ''; syncControls(); return; }

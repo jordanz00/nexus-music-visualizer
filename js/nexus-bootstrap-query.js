@@ -1,7 +1,7 @@
 'use strict';
 /**
- * nexus-bootstrap-query.js — Safe URL/query helpers for demo, seed, Asura post, and cables guest flags.
- * WHO: boot + demo-director + nexus-cables-guest; WHAT: allowlist demo names, parse ?asura / ?cables*; WHY: avoid typos and centralize query parsing.
+ * nexus-bootstrap-query.js — Safe URL/query helpers for demo, seed, and Asura post strength.
+ * WHO: boot + demo-director; WHAT: allowlist demo names, parse ?asura=; WHY: avoid typos and centralize query parsing.
  */
 (function () {
   if (!window.NX) window.NX = {};
@@ -48,30 +48,10 @@
     }
   }
 
-  /**
-   * Raw flags from `?cables=` / `?cablesUrl=` (no host validation — use NX.CablesGuest.isAllowedHttpsUrl).
-   * @param {URLSearchParams} sp
-   * @returns {{ rawC: string|null, explicitUrl: string|null, forceOff: boolean, forceOn: boolean }}
-   */
-  function parseCablesGuestQueryBasics(sp) {
-    if (!sp || typeof sp.get !== 'function') {
-      return { rawC: null, explicitUrl: null, forceOff: false, forceOn: false };
-    }
-    var rawC = sp.get('cables');
-    var c = (rawC || '').trim().toLowerCase();
-    return {
-      rawC: rawC,
-      explicitUrl: sp.get('cablesUrl') || sp.get('cables_patch'),
-      forceOff: c === '0' || c === 'off' || c === 'false',
-      forceOn: c === '1' || c === 'on' || c === 'true' || c === 'asura'
-    };
-  }
-
   NX.BootstrapQuery = {
     normalizeDemo: normalizeDemo,
     hasExplicitSeedInUrl: hasExplicitSeedInUrl,
     allowedDemos: function () { return Object.keys(ALLOWED_DEMOS); },
-    parseAsuraPostParamFromHref: parseAsuraPostParamFromHref,
-    parseCablesGuestQueryBasics: parseCablesGuestQueryBasics
+    parseAsuraPostParamFromHref: parseAsuraPostParamFromHref
   };
 })();
