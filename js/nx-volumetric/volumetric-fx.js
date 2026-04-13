@@ -1,8 +1,9 @@
 'use strict';
 /**
- * volumetric-fx.js — Integrated volumetric particle product: proxy depth (luma + fwidth),
- * world-space point draw with depth buffer, spectrum texture upload, ribbon lines (GPU),
- * optional advanced screen pass when enabled. Composites additive after post copy to screen.
+ * volumetric-fx.js — Optional integrated path: same GPU sim as GpuParticles, but draws through
+ * an offscreen buffer then composites. Point sprites use the proven nexus-gpu-particles NDC
+ * formula (parallax + palette + soft disk), not perspective world blobs. Proxy depth is still
+ * computed in tick for future use; ribbons are off here (world-space lines smeared vs NDC).
  */
 (function () {
   var gl = null;
@@ -37,11 +38,9 @@
   var prxH = 0;
   var swHist = 0;
   var shHist = 0;
-  var matP = new Float32Array(16);
-  var matV = new Float32Array(16);
-  var matVP = new Float32Array(16);
   var gpuParams = new Float32Array(20);
-  var lastRibbonKey = '';
+  /** Max point sprite diameter in px (GPU cap); avoids one giant clamped disk = “blob”. */
+  var maxPointSpritePx = 340;
 
   var FS_PROXY = [
     '#extension GL_OES_standard_derivatives : enable',
@@ -69,73 +68,53 @@
     'void main(){gl_FragColor=texture2D(u_tex,uv);}'
   ].join('');
 
+  /* Same vertex math as nexus-gpu-particles.js VS_DRAW — NDC spread + parallax + per-point size. */
   var VS_WORLD = [
     'attribute vec2 a_uv;',
     'uniform sampler2D u_pos;',
-    'uniform mat4 uViewProj;',
-    'uniform float u_worldScale,u_point,u_bass,u_mid,u_hi,u_bv,u_flux,u_hue;',
+    'uniform float u_worldScale,u_point,u_bass,u_mid,u_hi,u_bv,u_si,u_flux,u_hue,u_time;',
+    'uniform float u_ptFbScale,u_psMax;',
     'uniform vec4 u_sigA;',
-    'uniform vec4 u_colLaw;',
     'varying vec4 v_col;',
     'void main(){',
     ' vec3 praw=texture2D(u_pos,a_uv).rgb;',
-    ' vec3 wp=praw*u_worldScale;',
-    ' vec4 clip=uViewProj*vec4(wp,1.0);',
-    ' gl_Position=clip;',
-    ' float e=length(praw)+0.15;',
+    ' float ws=u_worldScale*0.52;',
+    ' float dz=(praw.z-0.45)*1.75;',
+    ' float wx=dz*0.11*sin(u_time*(0.88+u_bv*0.65)+praw.y*5.3+u_bass*4.1)+dz*0.08*u_flux*cos(praw.x*6.2+u_time*1.1);',
+    ' float wy=dz*0.10*cos(u_time*(0.76+u_flux*0.72)+praw.x*4.8+u_mid*3.9)+dz*0.07*u_hi*sin(praw.y*5.5+u_time*0.95);',
+    ' gl_Position=vec4(praw.x*ws+wx,praw.y*ws+wy,0.0,1.0);',
     ' vec3 cA=vec3(0.12,0.52,1.0);',
     ' vec3 cB=vec3(1.0,0.28,0.52);',
-    ' float pk=fract(u_sigA.x+u_sigA.y+u_bv*0.2+u_mid*0.15);',
-    ' vec3 pal=mix(cA,cB,pk);',
-    ' float hyp=1.0+u_bass*u_colLaw.y+u_flux*u_colLaw.z+u_bv*u_colLaw.w;',
-    ' vec3 rgb=pal*(0.5+e*1.05)*hyp*u_colLaw.x+vec3(u_hi*0.25,u_mid*0.18,u_bass*0.32);',
-    ' float al=0.12+e*1.05+u_flux*0.14;',
-    ' v_col=vec4(rgb,al);',
-    ' float ps=u_point*(240.0/max(0.35,clip.w))*(0.85+abs(praw.z)*8.0)*(0.7+length(praw)*0.35);',
-    ' gl_PointSize=ps;',
+    ' vec3 cC=vec3(0.32,0.95,0.62);',
+    ' float pk=fract(u_si*0.073+u_bv*0.22+u_mid*0.15+u_sigA.x*0.4+u_sigA.y*0.3+u_hue*0.08);',
+    ' vec3 pal=mix(cA,cB,pk);pal=mix(pal,cC,u_mid*0.45);',
+    ' float e=length(praw)+0.15;',
+    ' float hyp=1.0+u_bass*0.85+u_mid*0.55+u_hi*0.45+u_flux*0.7+u_bv*0.65;',
+    ' vec3 rgb=pal*(0.48+e*1.12)*hyp+vec3(u_hi*0.38,u_mid*0.24,u_bass*0.42)+u_sigA.xyz*0.14;',
+    ' float hs=u_hue+u_bass*0.55+u_flux*0.4+a_uv.x*2.1+u_time*0.35;',
+    ' vec3 sh=mix(rgb,rgb.brg,0.28*sin(hs));',
+    ' sh=mix(sh,sh.grb,0.24*sin(hs*1.37+u_mid*3.1));',
+    ' float tw=0.5+0.5*sin(u_bv*6.28318+u_si+a_uv.x*14.0);',
+    ' float al=(0.14+e*1.28+u_bass*0.22+u_flux*0.18+tw*0.08)*mix(0.85,1.35,hyp*0.5);',
+    ' v_col=vec4(sh,al);',
+    ' float ps=u_point*(300.0)*(0.92+abs(praw.z)*10.5)*(1.0+u_bv*0.62)*(0.72+length(praw)*0.42)*hyp;',
+    ' gl_PointSize=min(ps*u_ptFbScale,u_psMax);',
     '}'
   ].join('');
 
+  /* Same fragment as nexus-gpu-particles.js FS_DRAW — crisp soft disk, not proxy-smeared blob. */
   var FS_WORLD = [
     'precision mediump float;',
-    'uniform sampler2D u_proxy;',
-    'uniform sampler2D u_spec;',
-    'uniform vec2 u_sceneUvScale;',
-    'uniform float u_softZ;',
     'varying vec4 v_col;',
     'void main(){',
     ' vec2 q=gl_PointCoord*2.0-1.0;',
-    ' if(length(q)>1.0)discard;',
-    ' float dz=1.0-smoothstep(0.0,u_softZ,gl_FragCoord.z);',
-    ' vec2 sceneUv=gl_FragCoord.xy*u_sceneUvScale;',
-    ' float pd=texture2D(u_proxy,sceneUv).r;',
-    ' float fog=smoothstep(0.15,0.92,pd);',
-    ' float sm=texture2D(u_spec,vec2(gl_PointCoord.x,0.12)).r;',
-    ' float a=v_col.a*(0.55+0.45*dz)*(0.65+fog*0.5)*(1.0+sm*0.22);',
-    ' vec3 rgb=v_col.rgb*(1.0+sm*0.12);',
+    ' float d=length(q);',
+    ' if(d>1.0)discard;',
+    ' float core=1.0-d*d;',
+    ' float vol=pow(max(0.0,1.0-d*d),1.65);',
+    ' float a=v_col.a*core*vol*0.95;',
+    ' vec3 rgb=v_col.rgb*(0.88+0.22*vol);',
     ' gl_FragColor=vec4(rgb,a);',
-    '}'
-  ].join('');
-
-  var VS_RIBBON = [
-    'attribute vec4 a_seg;',
-    'attribute float a_which;',
-    'uniform sampler2D u_pos;',
-    'uniform mat4 uViewProj;',
-    'uniform float u_worldScale;',
-    'void main(){',
-    ' vec2 uva=mix(a_seg.xy,a_seg.zw,a_which);',
-    ' vec3 praw=texture2D(u_pos,uva).rgb;',
-    ' vec3 wp=praw*u_worldScale;',
-    ' gl_Position=uViewProj*vec4(wp,1.0);',
-    '}'
-  ].join('');
-
-  var FS_RIBBON = [
-    'precision mediump float;',
-    'uniform vec4 u_color;',
-    'void main(){',
-    ' gl_FragColor=vec4(u_color.rgb,u_color.a*0.85);',
     '}'
   ].join('');
 
@@ -145,7 +124,7 @@
     'uniform sampler2D u_tex;',
     'void main(){',
     ' vec4 c=texture2D(u_tex,uv);',
-    ' gl_FragColor=vec4(c.rgb*c.a,c.a);',
+    ' gl_FragColor=vec4(c.rgb,c.a);',
     '}'
   ].join('');
 
@@ -166,67 +145,6 @@
     ' gl_FragColor=vec4(vec3(0.15,0.45,0.95)*m*0.35,m*0.22);',
     '}'
   ].join('');
-
-  function mat4PerspectiveRad(out, fovy, aspect, near, far) {
-    var f = 1.0 / Math.tan(fovy * 0.5);
-    var nf = 1 / (near - far);
-    out[0] = f / aspect; out[1] = out[2] = out[3] = 0;
-    out[4] = 0; out[5] = f; out[6] = out[7] = 0;
-    out[8] = out[9] = 0; out[10] = (far + near) * nf; out[11] = -1;
-    out[12] = out[13] = 0; out[14] = (2 * far * near) * nf; out[15] = 0;
-  }
-
-  function mat4LookAt(out, ex, ey, ez, cx, cy, cz) {
-    var z0 = cx - ex;
-    var z1 = cy - ey;
-    var z2 = cz - ez;
-    var len = Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2) || 1e-6;
-    len = 1 / len;
-    z0 *= len; z1 *= len; z2 *= len;
-    var x0 = -z2;
-    var x1 = 0;
-    var x2 = z0;
-    len = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2) || 1;
-    len = 1 / len;
-    x0 *= len; x1 *= len; x2 *= len;
-    var y0 = z1 * x2 - z2 * x1;
-    var y1 = z2 * x0 - z0 * x2;
-    var y2 = z0 * x1 - z1 * x0;
-    out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
-    out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
-    out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
-    out[12] = -(x0 * ex + x1 * ey + x2 * ez);
-    out[13] = -(y0 * ex + y1 * ey + y2 * ez);
-    out[14] = -(z0 * ex + z1 * ey + z2 * ez);
-    out[15] = 1;
-  }
-
-  function mat4Multiply(out, a, b) {
-    var i;
-    var j;
-    for (i = 0; i < 4; i++) {
-      for (j = 0; j < 4; j++) {
-        out[i + j * 4] =
-          a[i] * b[j * 4] +
-          a[i + 4] * b[1 + j * 4] +
-          a[i + 8] * b[2 + j * 4] +
-          a[i + 12] * b[3 + j * 4];
-      }
-    }
-  }
-
-  function buildViewProj(S, cw, ch) {
-    var aspect = ch > 0 ? cw / ch : 1.5;
-    if (!(aspect > 0.05) || aspect > 20) aspect = 1.5;
-    mat4PerspectiveRad(matP, (50 * Math.PI) / 180, aspect, 0.06, 32);
-    var t = S.GT || 0;
-    var mx = S.mouseSmooth || [0, 0];
-    var cam = NX.camera && typeof NX.camera.get === 'function'
-      ? NX.camera.get('orbit', t, { az: 0.32 + mx[0] * 2.2, el: 0.36 + mx[1] * 0.8, dist: 4.2 })
-      : { ro: [2.0, 1.2, 3.6], ta: [0, 0, 0] };
-    mat4LookAt(matV, cam.ro[0], cam.ro[1], cam.ro[2], cam.ta[0], cam.ta[1], cam.ta[2]);
-    mat4Multiply(matVP, matP, matV);
-  }
 
   function mkFboColorDepth(w, h) {
     var color = gl.createTexture();
@@ -255,19 +173,6 @@
       return null;
     }
     return { f: f, t: color, depthRb: rb };
-  }
-
-  function buildRibbonBuffer(Wg, Hg, step) {
-    var verts = [];
-    var y;
-    var x;
-    for (y = 0; y < Hg; y += step) {
-      for (x = 0; x < Wg - 1; x++) {
-        verts.push((x + 0.5) / Wg, (y + 0.5) / Hg, (x + 1.5) / Wg, (y + 0.5) / Hg, 0);
-        verts.push((x + 0.5) / Wg, (y + 0.5) / Hg, (x + 1.5) / Wg, (y + 0.5) / Hg, 1);
-      }
-    }
-    return new Float32Array(verts);
   }
 
   function ensureSpectrum() {
@@ -335,7 +240,6 @@
     spectrumTex = null;
     ribbonBuf = simIdxBuf = quadBuf = null;
     prevSceneTex = null;
-    lastRibbonKey = '';
   }
 
   function ensureSceneHist(sw, sh) {
@@ -384,6 +288,12 @@
     gl = NX.gl;
     if (!gl) return;
     try { gl.getExtension('OES_standard_derivatives'); } catch (eDer) { /* ignore */ }
+    try {
+      var rps = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
+      if (rps && rps.length >= 2 && rps[1] > 0) {
+        maxPointSpritePx = Math.min(400, Math.max(80, rps[1] * 0.98));
+      }
+    } catch (ePs) { /* ignore */ }
     if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
       try { NX.GpuParticles.init({}); } catch (eI) { /* ignore */ }
     }
@@ -391,11 +301,11 @@
 
     proxyProg = NX.mkProg(NX.VS, FS_PROXY);
     worldDrawProg = NX.mkProg(VS_WORLD, FS_WORLD);
-    ribbonProg = NX.mkProg(VS_RIBBON, FS_RIBBON);
+    ribbonProg = null;
     screenAddProg = NX.mkProg(NX.VS, FS_SCREEN_ADD);
     advProg = NX.mkProg(NX.VS, FS_ADV);
     copySceneProg = NX.mkProg(NX.VS, FS_COPY);
-    if (!proxyProg || !worldDrawProg || !ribbonProg || !screenAddProg || !copySceneProg) {
+    if (!proxyProg || !worldDrawProg || !screenAddProg || !advProg || !copySceneProg) {
       tearDown();
       return;
     }
@@ -406,16 +316,8 @@
 
     var st = NX.GpuParticles.getSimReadState && NX.GpuParticles.getSimReadState();
     if (!st) return;
-    var preset0 = NX.VolumetricPresetResolve && NX.VolumetricPresetResolve.resolve
-      ? NX.VolumetricPresetResolve.resolve(S)
-      : null;
-    var pr0 = preset0 && preset0.primitives ? preset0.primitives : {};
-    var step = pr0.ribbonGridStep != null ? Math.max(1, Math.min(32, pr0.ribbonGridStep | 0)) : 8;
-    var rb = buildRibbonBuffer(st.W, st.H, step);
-    ribbonBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, ribbonBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, rb, gl.STATIC_DRAW);
-    ribbonVertCount = rb.length / 5;
+    ribbonBuf = null;
+    ribbonVertCount = 0;
 
     simIdxBuf = null;
     simN = st.N;
@@ -502,24 +404,6 @@
       gpuParams = NX.VolumetricPresetResolve.toGpuParams(preset);
     }
 
-    var stR = NX.GpuParticles.getSimReadState && NX.GpuParticles.getSimReadState();
-    if (stR && preset) {
-      var prR = preset.primitives || {};
-      var rStep = prR.ribbonGridStep != null ? Math.max(1, Math.min(32, prR.ribbonGridStep | 0)) : 8;
-      var rKey = stR.W + 'x' + stR.H + ':' + rStep;
-      if (rKey !== lastRibbonKey && gl) {
-        lastRibbonKey = rKey;
-        try {
-          if (ribbonBuf) gl.deleteBuffer(ribbonBuf);
-        } catch (eRb) { /* ignore */ }
-        var rb = buildRibbonBuffer(stR.W, stR.H, rStep);
-        ribbonBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, ribbonBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, rb, gl.STATIC_DRAW);
-        ribbonVertCount = rb.length / 5;
-      }
-    }
-
     uploadSpectrum(S);
 
     if (!sceneTexRef || !proxyProg) return;
@@ -586,13 +470,12 @@
     gl.clearColor(0, 0, 0, 0);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.depthMask(true);
+    try { gl.disable(gl.DEPTH_TEST); } catch (eDt) { /* ignore */ }
+    gl.depthMask(false);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    /* Match GpuParticles.renderOverlay: additive accumulation between overlapping sprites. */
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
-    buildViewProj(S, pw, ph);
     gl.useProgram(worldDrawProg);
     gl.bindBuffer(gl.ARRAY_BUFFER, simIdxBuf);
     var al2 = gl.getAttribLocation(worldDrawProg, 'a_uv');
@@ -601,62 +484,29 @@
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, st.texPos);
     gl.uniform1i(gl.getUniformLocation(worldDrawProg, 'u_pos'), 0);
-    gl.uniformMatrix4fv(gl.getUniformLocation(worldDrawProg, 'uViewProj'), false, matVP);
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_worldScale'), Math.max(0.4, Math.min(4.5, S.nexusVolWorldScale || 2.15)));
-    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_point'), S._iosCoarsePointer ? 2.2 : 3.6);
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_point'), S._iosCoarsePointer ? 2.6 : 4.1);
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_bass'), Math.max(0, Math.min(1, S.sBass || 0)));
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_mid'), Math.max(0, Math.min(1, S.sMid || 0)));
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_hi'), Math.max(0, Math.min(1, S.sHigh || 0)));
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_bv'), Math.max(0, Math.min(1.35, S.beatVisual || 0)));
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_si'), (S.curS | 0) * 1.0);
     gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_flux'), Math.max(0, Math.min(1, S.sFlux || 0)));
-    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_hue'), (S.nexusVolHuePhase || 0) * 0.02);
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_hue'), (S.nexusVolHuePhase || 0) + (S.hueShift || 0) * 0.02);
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_time'), S.GT || 0);
+    var cw0 = (NX.C && NX.C.width) ? NX.C.width : pw;
+    var ptFbScale = pw / Math.max(1, cw0);
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_ptFbScale'), ptFbScale);
+    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_psMax'), maxPointSpritePx);
     var pk = (NX.ParticleSignature && NX.ParticleSignature.pack)
       ? NX.ParticleSignature.pack(S.curS | 0, S.bcLastPresetKey || '', NX.P && NX.P.PAL != null ? NX.P.PAL : 0)
       : { u_sigA: new Float32Array([0.5, 0.5, 0.5, 0.5]) };
     gl.uniform4f(gl.getUniformLocation(worldDrawProg, 'u_sigA'), pk.u_sigA[0], pk.u_sigA[1], pk.u_sigA[2], pk.u_sigA[3]);
-    var sat = gpuParams[9] != null ? gpuParams[9] : 1;
-    var br = gpuParams[10] != null ? gpuParams[10] : 1;
-    var bf = gpuParams[11] != null ? gpuParams[11] : 0.35;
-    var hs = gpuParams[8] != null ? gpuParams[8] : 0;
-    gl.uniform4f(gl.getUniformLocation(worldDrawProg, 'u_colLaw'), sat * (1 + hs), br, 0.85, bf);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, texProxy);
-    gl.uniform1i(gl.getUniformLocation(worldDrawProg, 'u_proxy'), 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, spectrumTex || texProxy);
-    gl.uniform1i(gl.getUniformLocation(worldDrawProg, 'u_spec'), 2);
-    gl.uniform2f(gl.getUniformLocation(worldDrawProg, 'u_sceneUvScale'), 1 / Math.max(1, pw), 1 / Math.max(1, ph));
-    gl.uniform1f(gl.getUniformLocation(worldDrawProg, 'u_softZ'), 0.025);
     gl.drawArrays(gl.POINTS, 0, simN);
     gl.disableVertexAttribArray(al2);
 
     var preset = NX.VolumetricPresetResolve ? NX.VolumetricPresetResolve.resolve(S) : {};
     var prims = preset.primitives || {};
-    var wantRibbon = prims.points !== false && ribbonBuf && ribbonProg && ribbonVertCount > 0;
-    if (S.nexusVizPerformance && preset.lod && preset.lod.disableRibbonUnderVizPerf) wantRibbon = false;
-    if (wantRibbon) {
-      gl.depthMask(false);
-      gl.lineWidth(1);
-      gl.useProgram(ribbonProg);
-      gl.bindBuffer(gl.ARRAY_BUFFER, ribbonBuf);
-      var locSeg = gl.getAttribLocation(ribbonProg, 'a_seg');
-      var locWh = gl.getAttribLocation(ribbonProg, 'a_which');
-      gl.enableVertexAttribArray(locSeg);
-      gl.vertexAttribPointer(locSeg, 4, gl.FLOAT, false, 20, 0);
-      gl.enableVertexAttribArray(locWh);
-      gl.vertexAttribPointer(locWh, 1, gl.FLOAT, false, 20, 16);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, st.texPos);
-      gl.uniform1i(gl.getUniformLocation(ribbonProg, 'u_pos'), 0);
-      gl.uniformMatrix4fv(gl.getUniformLocation(ribbonProg, 'uViewProj'), false, matVP);
-      gl.uniform1f(gl.getUniformLocation(ribbonProg, 'u_worldScale'), Math.max(0.4, Math.min(4.5, S.nexusVolWorldScale || 2.15)));
-      var ro = prims.ribbonOpacity != null ? prims.ribbonOpacity : 0.4;
-      gl.uniform4f(gl.getUniformLocation(ribbonProg, 'u_color'), 0.35, 0.78, 1.0, ro);
-      gl.drawArrays(gl.LINES, 0, ribbonVertCount);
-      gl.disableVertexAttribArray(locSeg);
-      gl.disableVertexAttribArray(locWh);
-      gl.depthMask(true);
-    }
 
     if (S.nexusVolAdvancedFX && !S._iosCoarsePointer && advProg && prims.metaballScreenPass) {
       gl.disable(gl.DEPTH_TEST);

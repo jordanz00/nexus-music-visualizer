@@ -117,7 +117,7 @@ window.NX = window.NX || {};
     /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
     nexusMixParticlesEnabled: true,
     /** Integrated volumetric draw path (proxy depth + world FBO); when off, legacy GpuParticles screen overlay only. */
-    nexusVolumetricProductEnabled: true,
+    nexusVolumetricProductEnabled: false,
     /** Mix: authored look — default | trance | ambient (see nx-volumetric/preset-resolve.js). */
     nexusParticleLook: 'default',
     /** Mix: merge pack from Pro genre filter when enabled. */

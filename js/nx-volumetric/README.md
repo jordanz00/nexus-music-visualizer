@@ -1,6 +1,10 @@
 # NEXUS volumetric particle product (`nx-volumetric`)
 
-Integrated volumetric draw path: **GPU sim** stays in `nexus-gpu-particles.js` (ping-pong float textures). **Draw + composite** run in `volumetric-fx.js` as `NX.VolumetricFX` — world-space points (and optional ribbon lines) into an **RGBA + depth** FBO, then **additive** blend onto the main canvas **after** `NX.post` grading and **after** `NexusEngine.renderButterchurnLayer()` (same stacking order the legacy `GpuParticles.renderOverlay` used).
+**Default:** `S.nexusVolumetricProductEnabled` is **false** — the familiar `GpuParticles.renderOverlay()` path runs (same shaders as always).
+
+**Optional integrated path:** GPU sim still lives in `nexus-gpu-particles.js`. `NX.VolumetricFX` draws **the same NDC sprite formula** as `VS_DRAW` / `FS_DRAW` in that file (parallax, palette, soft disk, additive overlap) into an offscreen buffer, then composites **after** `NX.post` and **after** Butterchurn — same stack order as the legacy overlay. Point size is scaled for the smaller FBO vs `#c` width and clamped to `ALIASED_POINT_SIZE_RANGE` so sprites stay distinct instead of one clamped mega-disk.
+
+World-space perspective ribbons were removed here (they read as a smeared “blob” vs the classic field).
 
 ## Render order (per frame)
 
