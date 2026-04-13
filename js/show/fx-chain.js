@@ -37,6 +37,7 @@
     if (grMix) NX.S.nexusGodRayMix = Math.max(0, Math.min(1, (parseInt(grMix.value, 10) || 0) / 100));
     var gpu = document.getElementById('nx-gpu-particles');
     if (gpu) NX.S.nexusGpuParticlesEnabled = !!gpu.checked;
+    applyVolFromUI();
     var bpmOn = document.getElementById('nx-bpm-timeline');
     var bpmBeats = document.getElementById('nx-bpm-phrase-beats');
     var bpmMode = document.getElementById('nx-bpm-timeline-mode');
@@ -47,6 +48,25 @@
       try { NX.BpmTimeline.resetTracking(); } catch (eR) { /* ignore */ }
     }
     updateGpuParticlesStatus();
+  }
+
+  function applyVolFromUI() {
+    var S = NX.S;
+    if (!S) return;
+    var t = document.getElementById('nx-vol-tornado');
+    var o = document.getElementById('nx-vol-ocean');
+    var v = document.getElementById('nx-vol-vortex');
+    var g = document.getElementById('nx-vol-gravity');
+    var d = document.getElementById('nx-vol-depth');
+    var aw = document.getElementById('nx-vol-autowind');
+    var ae = document.getElementById('nx-vol-autoexplode');
+    if (t) S.nexusVolTornado = Math.max(0, Math.min(1.5, (parseInt(t.value, 10) || 0) / 100));
+    if (o) S.nexusVolOcean = Math.max(0, Math.min(1.5, (parseInt(o.value, 10) || 0) / 100));
+    if (v) S.nexusVolVortex = Math.max(0, Math.min(1.5, (parseInt(v.value, 10) || 0) / 100));
+    if (g) S.nexusVolGravity = Math.max(-1, Math.min(1, (parseInt(g.value, 10) || 0) / 100));
+    if (d) S.nexusVolDepthTest = !!d.checked;
+    if (aw) S.nexusVolAutoWind = !!aw.checked;
+    if (ae) S.nexusVolAutoExplode = !!ae.checked;
   }
 
   function updateGpuParticlesStatus() {
@@ -89,6 +109,20 @@
     if (grMix) grMix.value = String(Math.round(Math.max(0, Math.min(1, S.nexusGodRayMix == null ? 0.32 : S.nexusGodRayMix)) * 100));
     var gpu = document.getElementById('nx-gpu-particles');
     if (gpu) gpu.checked = !!S.nexusGpuParticlesEnabled;
+    var vt = document.getElementById('nx-vol-tornado');
+    var vo = document.getElementById('nx-vol-ocean');
+    var vv = document.getElementById('nx-vol-vortex');
+    var vg = document.getElementById('nx-vol-gravity');
+    var vd = document.getElementById('nx-vol-depth');
+    var vaw = document.getElementById('nx-vol-autowind');
+    var vae = document.getElementById('nx-vol-autoexplode');
+    if (vt) vt.value = String(Math.round(Math.max(0, Math.min(1.5, S.nexusVolTornado != null ? S.nexusVolTornado : 0.55)) * 100));
+    if (vo) vo.value = String(Math.round(Math.max(0, Math.min(1.5, S.nexusVolOcean != null ? S.nexusVolOcean : 0.45)) * 100));
+    if (vv) vv.value = String(Math.round(Math.max(0, Math.min(1.5, S.nexusVolVortex != null ? S.nexusVolVortex : 0.35)) * 100));
+    if (vg) vg.value = String(Math.round(Math.max(-100, Math.min(100, (S.nexusVolGravity != null ? S.nexusVolGravity : -0.24) * 100))));
+    if (vd) vd.checked = S.nexusVolDepthTest !== false;
+    if (vaw) vaw.checked = S.nexusVolAutoWind !== false;
+    if (vae) vae.checked = S.nexusVolAutoExplode !== false;
     var bpmOn = document.getElementById('nx-bpm-timeline');
     var bpmBeats = document.getElementById('nx-bpm-phrase-beats');
     var bpmMode = document.getElementById('nx-bpm-timeline-mode');
@@ -125,6 +159,7 @@
     init: init,
     ensure: ensure,
     applyFromUI: applyFromUI,
+    applyVolFromUI: applyVolFromUI,
     syncCheckboxes: syncCheckboxes,
     updateGpuParticlesStatus: updateGpuParticlesStatus
   };

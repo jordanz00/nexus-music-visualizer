@@ -89,6 +89,25 @@
     if (viz && viz.setRendererSize) viz.setRendererSize(w, h);
   }
 
+  /**
+   * Stable id for the loaded MilkDrop JSON so particles track preset swaps even when no catalog key is passed.
+   * @param {object} presetObj
+   * @returns {string}
+   */
+  function stablePresetContentId(presetObj) {
+    if (!presetObj || typeof presetObj !== 'object') return '0';
+    try {
+      var s = JSON.stringify(presetObj);
+      if (s.length > 14000) s = s.slice(0, 14000);
+      if (typeof NX !== 'undefined' && NX.ParticleSignature && typeof NX.ParticleSignature.fnv1a === 'function') {
+        return (NX.ParticleSignature.fnv1a(s) >>> 0).toString(16);
+      }
+      return String(s.length);
+    } catch (e) {
+      return '0';
+    }
+  }
+
   function render() {
     if (!viz) return;
     try {
@@ -114,12 +133,21 @@
     if (!viz || !presetObj) return;
     blendSec = blendSec == null ? 2 : blendSec;
     flags = flags || {};
-    if (presetKey) {
-      S.bcLastPresetKey = presetKey;
+    S.bcPresetContentId = stablePresetContentId(presetObj);
+    if (presetKey != null && String(presetKey) !== '') {
+      S.bcLastPresetKey = String(presetKey);
       if (!flags.fromConductor && NX.BcMorphConductor && NX.BcMorphConductor.notifyManualPresetLoad) {
-        NX.BcMorphConductor.notifyManualPresetLoad(presetKey);
+        NX.BcMorphConductor.notifyManualPresetLoad(S.bcLastPresetKey);
       }
     }
+    try {
+      if (NX.GpuParticles && typeof NX.GpuParticles.notifyPresetChange === 'function') {
+        NX.GpuParticles.notifyPresetChange();
+      }
+      if (NX.ProcParticles && typeof NX.ProcParticles.notifyPresetChange === 'function') {
+        NX.ProcParticles.notifyPresetChange();
+      }
+    } catch (ePs) { /* ignore */ }
     var p = viz.loadPreset(presetObj, blendSec);
     if (p && typeof p.then === 'function') p.catch(function () { });
   }

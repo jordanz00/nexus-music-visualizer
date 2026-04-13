@@ -16,6 +16,7 @@ const NX_SCRIPTS = [
   'js/nexus-version.js',
   'js/nexus-engine/nexus-research-brief.js',
   'js/nexus-engine/procedural-visual-drive.js',
+  'js/nexus-engine/particle-signature.js',
   'js/nexus-engine/procedural-particles.js',
   'js/nexus-engine/modern-visual-stack.js',
   'js/audio.js',

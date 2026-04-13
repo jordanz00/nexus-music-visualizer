@@ -32,12 +32,13 @@
 <!-- ── CANVAS (Aurora Field back layer / WebGL front) ─────────────── -->
 <canvas id="c-bc" aria-hidden="true"></canvas>
 <canvas id="c"></canvas>
+<!-- Procedural particles: same z-band as #c, later in DOM → paints above WebGL for hybrid screen blend -->
+<canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
 <canvas id="nx-wgpu" aria-hidden="true"></canvas>
 <!-- Audio-reactive ambient: OKLCH + color-mix (see css/nexus.css, js/nexus-engine/modern-visual-stack.js) -->
 <div id="nx-ambient" class="nx-ambient-layer" aria-hidden="true"></div>
 <canvas id="c-three" aria-hidden="true"></canvas>
 <canvas id="c-playcanvas" aria-hidden="true"></canvas>
-<canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
 <div id="nx-clip-under" class="nx-clip-stack nx-clip-under" aria-hidden="true"></div>
 <div id="nx-clip-over" class="nx-clip-stack nx-clip-over" aria-hidden="true"></div>
 <div id="fps-badge" aria-hidden="true"></div>
@@ -338,6 +339,19 @@
           <option value="pulse">Mic bass pulses</option>
         </select></label>
         <p id="nx-gpu-particles-status" class="nx-show-status" style="margin:4px 0 0;width:100%;display:none" role="status" aria-live="polite"></p>
+        <div class="panel-row nx-show-row" style="margin-top:8px;flex-direction:column;align-items:stretch;gap:6px" aria-label="Volumetric 3D particle physics">
+          <span class="nx-inline" style="font-size:10px;color:rgba(255,255,255,.5)">Volumetric 3D (GPU): tornado · ocean · vortex · gravity · depth</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center">
+            <label class="nx-inline">Tornado <input type="range" id="nx-vol-tornado" min="0" max="150" value="55" style="width:min(120px,28vw)" aria-label="Tornado field strength"></label>
+            <label class="nx-inline">Ocean <input type="range" id="nx-vol-ocean" min="0" max="150" value="45" style="width:min(120px,28vw)" aria-label="Ocean wave field strength"></label>
+            <label class="nx-inline">Vortex <input type="range" id="nx-vol-vortex" min="0" max="150" value="35" style="width:min(120px,28vw)" aria-label="Vortex strength"></label>
+            <label class="nx-inline">Gravity <input type="range" id="nx-vol-gravity" min="-100" max="100" value="-24" style="width:min(120px,28vw)" aria-label="Gravity along Y in sim space"></label>
+            <label class="nx-inline"><input type="checkbox" id="nx-vol-depth" checked> Depth test vs scene</label>
+            <label class="nx-inline"><input type="checkbox" id="nx-vol-autowind" checked> Audio wind</label>
+            <label class="nx-inline"><input type="checkbox" id="nx-vol-autoexplode" checked> Transient bursts</label>
+            <button type="button" class="sm-btn" id="nx-vol-explode" title="Radial explosion impulse">Explosion</button>
+          </div>
+        </div>
       </div>
       <h3 class="nx-section-title" id="nx-compose-wgpu">WebGPU WGSL chain</h3>
       <p class="nx-show-status">Multi-pass WGSL over a copy of the main WebGL canvas. Requires WebGPU (Chrome/Edge; Safari when enabled). Recording uses this layer when enabled.</p>

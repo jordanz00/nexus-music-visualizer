@@ -108,6 +108,27 @@ window.NX = window.NX || {};
     nexusGodRayMix: 0.32,
     /** GPU particle overlay (ping-pong sim; I/O tab — desktop / vertex-tex only). */
     nexusGpuParticlesEnabled: true,
+    /** Volumetric 3D GPU particle physics (see NX.VolumetricParticles + Composition sliders). */
+    nexusVolTornado: 0.55,
+    nexusVolOcean: 0.45,
+    nexusVolVortex: 0.35,
+    nexusVolSpecial: 0.22,
+    nexusVolGravity: -0.24,
+    nexusVolWindX: 0,
+    nexusVolWindY: 0,
+    nexusVolWindZ: 0,
+    nexusVolWindAudio: 0.62,
+    nexusVolDragLin: 0.14,
+    nexusVolDragQuad: 0.065,
+    nexusVolExplosion: 0,
+    nexusVolExplodeCenterX: 0,
+    nexusVolExplodeCenterY: 0,
+    nexusVolExplodeCenterZ: 0,
+    nexusVolWorldScale: 2.15,
+    nexusVolHuePhase: 0,
+    nexusVolDepthTest: true,
+    nexusVolAutoWind: true,
+    nexusVolAutoExplode: true,
     /** Phrase automation: call goNext every N beats (Show tab). */
     nexusBpmTimelineEnabled: true,
     /** Beats per phrase (4 / 8 / 16 / 32 typical). */
@@ -133,6 +154,8 @@ window.NX = window.NX || {};
     _recT0: 0,
     /** Last Butterchurn preset filename/key (for HUD + morph conductor) */
     bcLastPresetKey: '',
+    /** Fingerprint of last loaded MilkDrop JSON — keeps GPU/CPU particles in sync with every loadPreset. */
+    bcPresetContentId: '',
     /** True on iPhone/iPad: coarser pointer smoothing + GPU-friendly caps */
     _iosCoarsePointer: false,
     /** 0–1 beat phase (BPM clock); set in audio.js when mic + stable BPM */

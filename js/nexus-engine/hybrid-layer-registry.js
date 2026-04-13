@@ -3,8 +3,9 @@
  * hybrid-layer-registry.js — Ordered hybrid stack metadata for NEXUS Engine Pro.
  *
  * WHO THIS IS FOR: operators and developers mapping “Resolume-style” layers to canvases.
- * WHAT IT DOES: documents the composite order (ambient → BC → WebGL → …) and exposes
- *   small helpers for presets / future SceneManager integration.
+ * WHAT IT DOES: documents the composite order (BC → ambient → WebGL → proc particles → …)
+ *   and exposes small helpers for presets / future SceneManager integration.
+ *   DOM paint for hybrid: #c-bc (z0) → #c (z3) → #nx-proc-particles (z3, above #c) → #nx-wgpu (z4).
  * HOW IT CONNECTS: read by presets and UI; does not replace SceneManager — registry only.
  *
  * See plan: nexus_pro_vj_parity (homage packs + PRESET_PACK_2026).
@@ -36,10 +37,10 @@
 
   /** @type {{ id: string, domId: string, role: string }[]} */
   var ORDERED_LAYERS = [
-    { id: 'ambient', domId: 'nx-ambient', role: 'OKLCH / color-mix wash' },
     { id: 'butterchurn', domId: 'c-bc', role: 'Aurora Field / Butterchurn' },
+    { id: 'ambient', domId: 'nx-ambient', role: 'OKLCH / color-mix wash' },
     { id: 'shader', domId: 'c', role: 'Main WebGL quad scenes' },
-    { id: 'procParticles', domId: 'nx-proc-particles', role: 'Procedural particle canvas' },
+    { id: 'procParticles', domId: 'nx-proc-particles', role: 'CPU + screen-blend mist; GPU POINTS overlay uses main GL' },
     { id: 'three', domId: 'c-three', role: 'Three.js guest layer' },
     { id: 'webgpu', domId: 'nx-wgpu', role: 'WebGPU WGSL overlay' },
     { id: 'clipUnder', domId: 'nx-clip-under', role: 'Clip stack under' },
