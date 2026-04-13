@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "default",
+  "depthMode": "proxy",
+  "kernelId": "default",
+  "forces": {
+    "tornadoMul": 1,
+    "oceanMul": 1,
+    "vortexMul": 1,
+    "noiseMul": 1,
+    "swellMul": 1,
+    "dragLinMul": 1,
+    "dragQuadMul": 1
+  },
+  "colorLaw": {
+    "hueShift": 0,
+    "saturationMul": 1,
+    "brightnessMul": 1,
+    "beatFlash": 0.35
+  },
+  "spawn": {
+    "radiusMul": 1,
+    "impulseOnPreset": 0.45
+  },
+  "proxyDepth": {
+    "lumaWeight": 0.55,
+    "motionWeight": 2.4,
+    "temporalBlend": 0.82
+  },
+  "primitives": {
+    "points": true,
+    "ribbonGridStep": 8,
+    "ribbonOpacity": 0.42,
+    "metaballScreenPass": false,
+    "fluidDriverWeight": 0
+  },
+  "lod": {
+    "particleFbScale": 0.75,
+    "disableRibbonUnderVizPerf": true
+  }
+}

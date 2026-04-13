@@ -40,6 +40,9 @@ window.NX = window.NX || {};
     if (NX.GpuParticles && typeof NX.GpuParticles.tearDown === 'function') {
       try { NX.GpuParticles.tearDown(); } catch (eGpuL) { /* ignore */ }
     }
+    if (NX.VolumetricFX && typeof NX.VolumetricFX.tearDown === 'function') {
+      try { NX.VolumetricFX.tearDown(); } catch (eVolL) { /* ignore */ }
+    }
     if (typeof console !== 'undefined' && console.warn) console.warn('NEXUS: WebGL context lost — will rebuild if restored');
   }, true);
   C.addEventListener('webglcontextrestored', function () {
@@ -49,6 +52,9 @@ window.NX = window.NX || {};
       if (NX.post && typeof NX.post.compile === 'function') NX.post.compile();
       if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
         try { NX.GpuParticles.init({ force: true }); } catch (eGpuR) { /* ignore */ }
+      }
+      if (NX.VolumetricFX && typeof NX.VolumetricFX.ensureInit === 'function') {
+        try { NX.VolumetricFX.ensureInit(); } catch (eVolR) { /* ignore */ }
       }
       if (NX.BpmTimeline && typeof NX.BpmTimeline.init === 'function') {
         try { NX.BpmTimeline.init(); } catch (eBpmR) { /* ignore */ }
@@ -108,6 +114,18 @@ window.NX = window.NX || {};
     nexusGodRayMix: 0.32,
     /** GPU particle overlay (ping-pong sim; I/O tab — desktop / vertex-tex only). */
     nexusGpuParticlesEnabled: true,
+    /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
+    nexusMixParticlesEnabled: true,
+    /** Integrated volumetric draw path (proxy depth + world FBO); when off, legacy GpuParticles screen overlay only. */
+    nexusVolumetricProductEnabled: true,
+    /** Mix: authored look — default | trance | ambient (see nx-volumetric/preset-resolve.js). */
+    nexusParticleLook: 'default',
+    /** Mix: merge pack from Pro genre filter when enabled. */
+    nexusParticleMatchGenre: false,
+    /** Mix: optional metaball-ish screen pass inside particle FBO (desktop / non–viz-perf). */
+    nexusVolAdvancedFX: false,
+    /** Mix tab: hybrid 2D canvas field (beat rings, band-driven forces) — default on with GPU stack. */
+    nexusProcParticlesEnabled: true,
     /** Volumetric 3D GPU particle physics (see NX.VolumetricParticles + Composition sliders). */
     nexusVolTornado: 0.55,
     nexusVolOcean: 0.45,
@@ -117,7 +135,7 @@ window.NX = window.NX || {};
     nexusVolWindX: 0,
     nexusVolWindY: 0,
     nexusVolWindZ: 0,
-    nexusVolWindAudio: 0.62,
+    nexusVolWindAudio: 0.78,
     nexusVolDragLin: 0.14,
     nexusVolDragQuad: 0.065,
     nexusVolExplosion: 0,
@@ -126,7 +144,7 @@ window.NX = window.NX || {};
     nexusVolExplodeCenterZ: 0,
     nexusVolWorldScale: 2.15,
     nexusVolHuePhase: 0,
-    nexusVolDepthTest: true,
+    nexusVolDepthTest: false,
     nexusVolAutoWind: true,
     nexusVolAutoExplode: true,
     /** Phrase automation: call goNext every N beats (Show tab). */
@@ -271,6 +289,9 @@ window.NX = window.NX || {};
     rebuildFBOs();
     if (NX.VisualEngineManager && NX.VisualEngineManager.resize) NX.VisualEngineManager.resize();
     if (NX.WgslGraph && NX.WgslGraph.resize) NX.WgslGraph.resize();
+    if (NX.VolumetricFX && typeof NX.VolumetricFX.resize === 'function') {
+      try { NX.VolumetricFX.resize(); } catch (eVolZ) { /* ignore */ }
+    }
   }
   addEventListener('resize', resize);
   window.addEventListener('load', function () { resize(); });
@@ -684,6 +705,15 @@ window.NX = window.NX || {};
     clearTimeout(n._t); n._t = setTimeout(function () { n.style.opacity = '0'; ni.style.opacity = '0'; }, 3000);
   }
 
+  function nxNotifyParticlePresetChange() {
+    if (NX.GpuParticles && typeof NX.GpuParticles.notifyPresetChange === 'function') {
+      try { NX.GpuParticles.notifyPresetChange(); } catch (eN1) { /* ignore */ }
+    }
+    if (NX.VolumetricFX && typeof NX.VolumetricFX.onPresetChange === 'function') {
+      try { NX.VolumetricFX.onPresetChange(); } catch (eN2) { /* ignore */ }
+    }
+  }
+
   function goNext(idx) {
     if (S.morphing) return;
     var len = NX.scenes.length;
@@ -703,6 +733,7 @@ window.NX = window.NX || {};
         if (NX.ui && NX.ui.setActiveScene) NX.ui.setActiveScene(S.curS);
         applyHomageSceneExtensions(S.curS);
       } catch (eUi) { /* ignore */ }
+      nxNotifyParticlePresetChange();
       return;
     }
     S.morphing = true; S.morphBlend = 0; S.presTimer = 0; S._morphFrame = 0;
@@ -894,6 +925,7 @@ window.NX = window.NX || {};
         try {
           applyHomageSceneExtensions(S.curS);
         } catch (eHm) { /* ignore */ }
+        nxNotifyParticlePresetChange();
       }
     }
 
@@ -932,6 +964,13 @@ window.NX = window.NX || {};
       }
     }
 
+    if (NX.VolumetricFX && typeof NX.VolumetricFX.setSourceSceneTexture === 'function') {
+      try { NX.VolumetricFX.setSourceSceneTexture(finalTex); } catch (eVs) { /* ignore */ }
+    }
+    if (NX.VolumetricFX && typeof NX.VolumetricFX.tick === 'function') {
+      try { NX.VolumetricFX.tick(dt); } catch (eVt) { /* ignore */ }
+    }
+
     var postReady = !!(drawShader && finalTex && NX.post && NX.post.render && NX.postProgs && NX.postProgs.out && NX.postProgs.copy);
     if (postReady) {
       try {
@@ -952,7 +991,13 @@ window.NX = window.NX || {};
 
     if (window.NexusEngine && NexusEngine.renderButterchurnLayer) NexusEngine.renderButterchurnLayer();
 
-    if (NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
+    var volFx = NX.VolumetricFX;
+    var volOk = volFx && S.nexusVolumetricProductEnabled !== false && typeof volFx.isReady === 'function' && volFx.isReady();
+    if (volOk && typeof volFx.compositeToScreen === 'function') {
+      try {
+        volFx.compositeToScreen(C.width | 0, C.height | 0);
+      } catch (eVolC) { /* ignore */ }
+    } else if (NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
       try {
         NX.GpuParticles.renderOverlay();
       } catch (eGp) { /* ignore */ }

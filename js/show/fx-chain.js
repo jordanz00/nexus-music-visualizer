@@ -37,6 +37,23 @@
     if (grMix) NX.S.nexusGodRayMix = Math.max(0, Math.min(1, (parseInt(grMix.value, 10) || 0) / 100));
     var gpu = document.getElementById('nx-gpu-particles');
     if (gpu) NX.S.nexusGpuParticlesEnabled = !!gpu.checked;
+    var mixP = document.getElementById('nx-mix-particles');
+    if (mixP) NX.S.nexusMixParticlesEnabled = !!mixP.checked;
+    var mixProc = document.getElementById('nx-mix-proc-ambient');
+    if (mixProc) NX.S.nexusProcParticlesEnabled = !!mixProc.checked;
+    var volProd = document.getElementById('nx-volumetric-product');
+    if (volProd) {
+      NX.S.nexusVolumetricProductEnabled = !!volProd.checked;
+      if (!volProd.checked && NX.VolumetricFX && typeof NX.VolumetricFX.tearDown === 'function') {
+        try { NX.VolumetricFX.tearDown(); } catch (eV0) { /* ignore */ }
+      }
+    }
+    var pLook = document.getElementById('nx-particle-look');
+    if (pLook) NX.S.nexusParticleLook = String(pLook.value || 'default');
+    var pMg = document.getElementById('nx-particle-match-genre');
+    if (pMg) NX.S.nexusParticleMatchGenre = !!pMg.checked;
+    var pAdv = document.getElementById('nx-vol-advanced-fx');
+    if (pAdv) NX.S.nexusVolAdvancedFX = !!pAdv.checked;
     applyVolFromUI();
     var bpmOn = document.getElementById('nx-bpm-timeline');
     var bpmBeats = document.getElementById('nx-bpm-phrase-beats');
@@ -73,13 +90,20 @@
     var el = document.getElementById('nx-gpu-particles-status');
     if (!el) return;
     var S = NX.S;
-    if (!S || !S.nexusGpuParticlesEnabled) {
+    if (!S || !S.nexusGpuParticlesEnabled || S.nexusMixParticlesEnabled === false) {
       el.textContent = '';
       el.style.display = 'none';
       return;
     }
     var ready = NX.GpuParticles && typeof NX.GpuParticles.isReady === 'function' && NX.GpuParticles.isReady();
     if (ready) {
+      var volOn = S.nexusVolumetricProductEnabled !== false;
+      var volR = NX.VolumetricFX && typeof NX.VolumetricFX.isReady === 'function' && NX.VolumetricFX.isReady();
+      if (volOn && volR) {
+        el.textContent = 'Volumetric 3D path active (world FBO + proxy depth).';
+        el.style.display = 'block';
+        return;
+      }
       el.textContent = '';
       el.style.display = 'none';
       return;
@@ -109,6 +133,10 @@
     if (grMix) grMix.value = String(Math.round(Math.max(0, Math.min(1, S.nexusGodRayMix == null ? 0.32 : S.nexusGodRayMix)) * 100));
     var gpu = document.getElementById('nx-gpu-particles');
     if (gpu) gpu.checked = !!S.nexusGpuParticlesEnabled;
+    var mixP = document.getElementById('nx-mix-particles');
+    if (mixP) mixP.checked = S.nexusMixParticlesEnabled !== false;
+    var mixProc = document.getElementById('nx-mix-proc-ambient');
+    if (mixProc) mixProc.checked = S.nexusProcParticlesEnabled === true;
     var vt = document.getElementById('nx-vol-tornado');
     var vo = document.getElementById('nx-vol-ocean');
     var vv = document.getElementById('nx-vol-vortex');
@@ -144,6 +172,27 @@
     if (grMix) grMix.addEventListener('input', applyFromUI);
     var gpu = document.getElementById('nx-gpu-particles');
     if (gpu) gpu.addEventListener('change', applyFromUI);
+    var mixP = document.getElementById('nx-mix-particles');
+    if (mixP) mixP.addEventListener('change', applyFromUI);
+    var mixProc = document.getElementById('nx-mix-proc-ambient');
+    if (mixProc) mixProc.addEventListener('change', applyFromUI);
+    var volProd = document.getElementById('nx-volumetric-product');
+    if (volProd) volProd.addEventListener('change', applyFromUI);
+    var pLook = document.getElementById('nx-particle-look');
+    if (pLook) pLook.addEventListener('change', applyFromUI);
+    var pMg = document.getElementById('nx-particle-match-genre');
+    if (pMg) pMg.addEventListener('change', applyFromUI);
+    var pAdv = document.getElementById('nx-vol-advanced-fx');
+    if (pAdv) pAdv.addEventListener('change', applyFromUI);
+    function bumpParticlePreset() {
+      if (NX.VolumetricFX && typeof NX.VolumetricFX.onPresetChange === 'function') {
+        try { NX.VolumetricFX.onPresetChange(); } catch (eB) { /* ignore */ }
+      }
+    }
+    if (volProd) volProd.addEventListener('change', bumpParticlePreset);
+    if (pLook) pLook.addEventListener('change', bumpParticlePreset);
+    if (pMg) pMg.addEventListener('change', bumpParticlePreset);
+    if (pAdv) pAdv.addEventListener('change', bumpParticlePreset);
     var bpmOn = document.getElementById('nx-bpm-timeline');
     if (bpmOn) bpmOn.addEventListener('change', applyFromUI);
     var bpmBeats = document.getElementById('nx-bpm-phrase-beats');

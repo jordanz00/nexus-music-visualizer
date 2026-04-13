@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "pack.ambient",
+  "depthMode": "proxy",
+  "kernelId": "ambient",
+  "forces": {
+    "tornadoMul": 0.72,
+    "oceanMul": 1.35,
+    "vortexMul": 0.88,
+    "noiseMul": 0.78,
+    "swellMul": 0.9,
+    "dragLinMul": 1.12,
+    "dragQuadMul": 1.05
+  },
+  "colorLaw": {
+    "hueShift": 0.06,
+    "saturationMul": 0.88,
+    "brightnessMul": 1.12,
+    "beatFlash": 0.22
+  },
+  "spawn": {
+    "radiusMul": 1.08,
+    "impulseOnPreset": 0.32
+  },
+  "proxyDepth": {
+    "lumaWeight": 0.62,
+    "motionWeight": 1.6,
+    "temporalBlend": 0.9
+  },
+  "primitives": {
+    "points": true,
+    "ribbonGridStep": 10,
+    "ribbonOpacity": 0.28,
+    "metaballScreenPass": false,
+    "fluidDriverWeight": 0.15
+  },
+  "lod": {
+    "particleFbScale": 0.85,
+    "disableRibbonUnderVizPerf": true
+  }
+}

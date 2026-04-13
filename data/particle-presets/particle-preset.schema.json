@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexus.local/schemas/particle-preset.schema.json",
+  "title": "NEXUS volumetric particle preset",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
+    "depthMode": { "type": "string", "enum": ["proxy", "none", "three", "mrt"] },
+    "kernelId": { "type": "string", "enum": ["default", "tight", "ambient", "fluidDriver"] },
+    "forces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tornadoMul": { "type": "number" },
+        "oceanMul": { "type": "number" },
+        "vortexMul": { "type": "number" },
+        "noiseMul": { "type": "number" },
+        "swellMul": { "type": "number" },
+        "dragLinMul": { "type": "number" },
+        "dragQuadMul": { "type": "number" }
+      }
+    },
+    "colorLaw": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hueShift": { "type": "number" },
+        "saturationMul": { "type": "number" },
+        "brightnessMul": { "type": "number" },
+        "beatFlash": { "type": "number" }
+      }
+    },
+    "spawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radiusMul": { "type": "number" },
+        "impulseOnPreset": { "type": "number" }
+      }
+    },
+    "proxyDepth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lumaWeight": { "type": "number" },
+        "motionWeight": { "type": "number" },
+        "temporalBlend": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "primitives": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "points": { "type": "boolean" },
+        "ribbonGridStep": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "ribbonOpacity": { "type": "number" },
+        "metaballScreenPass": { "type": "boolean" },
+        "fluidDriverWeight": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "lod": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "particleFbScale": { "type": "number", "minimum": 0.25, "maximum": 1 },
+        "disableRibbonUnderVizPerf": { "type": "boolean" }
+      }
+    }
+  },
+  "required": ["schemaVersion", "id", "depthMode", "kernelId"]
+}

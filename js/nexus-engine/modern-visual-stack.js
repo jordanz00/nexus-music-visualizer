@@ -43,8 +43,8 @@
     var h = 175 + (S.sMid || 0) * 100 + (typeof S.beatVisual === 'number' ? S.beatVisual : 0) * 55 + (S.hueShift || 0) * 80;
     while (h > 360) h -= 360;
     while (h < 0) h += 360;
-    var c = 0.04 + (S.sBass || 0) * 0.14 + (typeof S.sTransient === 'number' ? S.sTransient : 0) * 0.1;
-    var l = 0.06 + (S.sVol || 0) * 0.1;
+    var c = 0.045 + (S.sBass || 0) * 0.165 + (typeof S.sTransient === 'number' ? S.sTransient : 0) * 0.12;
+    var l = 0.065 + (S.sVol || 0) * 0.115;
     if (reducedMotion) {
       c *= 0.45;
       l *= 0.75;
@@ -54,8 +54,8 @@
     if (vd > 1) vd = 1;
     c *= 0.35 + 0.65 * vd;
     l *= 0.5 + 0.5 * vd;
-    c = Math.min(0.28, c);
-    l = Math.min(0.22, l);
+    c = Math.min(0.32, c);
+    l = Math.min(0.26, l);
     if (NX.ProceduralDrive && typeof NX.ProceduralDrive.getAmbientDeltas === 'function') {
       var ad = NX.ProceduralDrive.getAmbientDeltas();
       if (ad) {

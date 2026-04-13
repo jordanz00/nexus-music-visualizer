@@ -229,6 +229,10 @@
     if (hBc) hBc.value = String(Math.round((typeof S.hybridBcOpacity === 'number' ? S.hybridBcOpacity : 1) * 100));
     var hSh = document.getElementById('nx-hybrid-shader-opacity');
     if (hSh) hSh.value = String(Math.round((typeof S.hybridShaderOpacity === 'number' ? S.hybridShaderOpacity : 1) * 100));
+    var mixPart = document.getElementById('nx-mix-particles');
+    if (mixPart) mixPart.checked = S.nexusMixParticlesEnabled !== false;
+    var mixProc = document.getElementById('nx-mix-proc-ambient');
+    if (mixProc) mixProc.checked = S.nexusProcParticlesEnabled === true;
   }
 
   function setPalette(idx) {
@@ -548,6 +552,7 @@
     var splashEl = document.getElementById('splash');
     var _splashLaunchDone = false;
     async function doLaunchFromSplash() {
+      if (!window.__NX_BOOT_INTERACTIVE__) return;
       if (_splashLaunchDone) return;
       _splashLaunchDone = true;
       try { await NX.audio.startMic(); } catch (e) { }

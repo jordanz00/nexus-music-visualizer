@@ -13,9 +13,9 @@
   var h = 0;
   var parts = [];
   var time = 0;
-  var baseCount = 520;
-  var maxParts = 920;
-  var perfCap = 280;
+  var baseCount = 780;
+  var maxParts = 1280;
+  var perfCap = 340;
   var inited = false;
   var lastSceneKey = '';
   var warmFrames = 0;
@@ -351,6 +351,15 @@
   function tick(dt) {
     if (reducedMotion() || !canvas || !ctx || w < 8 || h < 8) return;
     var S = window.NX && NX.S;
+    if (S && S.nexusMixParticlesEnabled === false) {
+      canvas.style.display = 'none';
+      return;
+    }
+    if (!S || S.nexusProcParticlesEnabled !== true) {
+      canvas.style.display = 'none';
+      return;
+    }
+    canvas.style.display = '';
     var perf = S && S.nexusPerfLock;
     if (canvas) canvas.classList.toggle('nx-proc-dim', !!perf);
     var vizPerf = S && S.nexusVizPerformance;
@@ -462,8 +471,8 @@
       }
 
       /* Audio acceleration field — pushes particles with the music (not “snow”). */
-      var axAudio = ((b - 0.5) * 2.2 * (90 + pulse * 140) + (mid - 0.45) * 55 * Math.sin(time * 2.1 + p.phase)) * ac * td;
-      var ayAudio = ((lm - 0.45) * 70 * Math.cos(time * 1.7 + p.y * 0.003) + (hi - 0.4) * 45 * Math.sin(time * 3.2 + p.x * 0.002)) * ac * td;
+      var axAudio = ((b - 0.5) * 2.55 * (105 + pulse * 165) + (mid - 0.45) * 64 * Math.sin(time * 2.1 + p.phase)) * ac * td;
+      var ayAudio = ((lm - 0.45) * 82 * Math.cos(time * 1.7 + p.y * 0.003) + (hi - 0.4) * 54 * Math.sin(time * 3.2 + p.x * 0.002)) * ac * td;
       p.vx += axAudio * (0.65 + p.z * 0.5);
       p.vy += ayAudio * (0.65 + p.z * 0.5);
 

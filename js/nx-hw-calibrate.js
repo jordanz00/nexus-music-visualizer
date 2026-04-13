@@ -92,7 +92,7 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
 
-    var frames = 48;
+    var frames = 22;
     var t0 = performance.now();
     gl.viewport(0, 0, W, H);
     gl.useProgram(prog);

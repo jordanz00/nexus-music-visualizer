@@ -4,7 +4,7 @@
  * Dual ping-pong RGBA float textures: vec3 position + pad, vec3 velocity + speed scalar.
  * Physics: gravity, quadratic + linear drag, wind, cylindrical tornado + lift, ocean phase field,
  * vortex axis, radial explosion, audio-reactive noise; scene+preset signature mix.
- * Draw: true perspective (view × projection), optional depth test vs scene buffer, additive POINTS.
+ * Draw: NDC billboard + z-parallax wobble (sim xyz → clip.xy), additive POINTS — no depth test on the main canvas buffer (avoids invisible sprites).
  * Self-disables if float FBO, vertex textures, or compile fails.
  */
 (function () {
@@ -24,9 +24,6 @@
   var idxBuf = null;
   var softImpulse = 0;
   var lastSigH = -1;
-  var matP = new Float32Array(16);
-  var matV = new Float32Array(16);
-  var matVP = new Float32Array(16);
 
   var VS_QUAD = 'attribute vec2 a_uv;varying vec2 v_uv;void main(){v_uv=a_uv;gl_Position=vec4(a_uv*2.0-1.0,0.0,1.0);}';
 
@@ -52,8 +49,11 @@
     ' float mo=u_modes.y;',
     ' float mv=u_modes.z;',
     ' float ms=u_modes.w;',
-    ' float ocean=(u_sigA.x*0.45+u_mid*0.4)*mo;',
-    ' float torn=(u_sigA.y*0.42+u_bass*0.5)*mt;',
+    ' float D=0.58+u_bass*0.62+u_mid*0.48+u_hi*0.36+u_flux*0.58+u_tr*0.50+u_bv*0.55;',
+    ' D=clamp(D,0.40,2.55);',
+    ' float sigW=0.55+0.45*u_sigA.x+0.35*u_sigA.y;',
+    ' float ocean=(u_sigA.x*0.45+u_mid*0.4)*mo*sigW;',
+    ' float torn=(u_sigA.y*0.42+u_bass*0.5)*mt*sigW;',
     ' float swirl=(0.32+u_sigB.x*0.55+u_hi*0.48+u_bv*0.32)*(0.35+mv);',
     ' vec3 tc=vec3(sin(t*0.72+u_sigB.y*6.28318),cos(t*0.58+u_sigA.z*6.28318),sin(t*0.31)*0.35);',
     ' vec3 rel=p-tc*0.58;',
@@ -69,7 +69,7 @@
     ' vec3 curl=cross(p,vec3(0.0,0.0,1.0))*(0.011+0.036*swirl)*(0.5+u_sigA.x);',
     ' vec3 vortex=normalize(cross(p,vec3(0.65,0.35,-0.28)))*mv*(0.018+u_hi*0.022);',
     ' vec3 spec=vec3(sin(p.z*5.0+t),cos(p.x*4.2-t*0.7),sin(p.y*3.8+t*1.1))*ms*(0.01+u_flux*0.018);',
-    ' vec3 noise=(vec3(n2(v_uv*37.0+t),n2(v_uv*41.0-t),n2(v_uv*43.0+t*0.7))-0.5)*(0.013+0.042*u_tr+0.028*u_flux);',
+    ' vec3 noise=(vec3(n2(v_uv*37.0+t),n2(v_uv*41.0-t),n2(v_uv*43.0+t*0.7))-0.5)*(0.022+0.068*u_tr+0.050*u_flux)*(0.9+0.55*D);',
     ' vec3 grav=u_gravity*(0.55+u_mid*0.5);',
     ' vec3 w=u_wind*(1.0+u_flux*0.55+u_hi*0.28);',
     ' float vlen=length(v)+1e-5;',
@@ -81,10 +81,14 @@
     '  vec3 dir=d/dist;',
     '  expl=dir*u_explStr/(dist*dist*0.55+0.14)*(0.022+u_bass*0.016);',
     ' }',
-    ' vec3 velN=v+tang+inward+oceanf+curl+vortex+spec+noise+grav+w+drag+expl;',
-    ' if(u_impulse>0.001)velN+=(vec3(n2(v_uv+u_impulse),n2(v_uv*31.0+u_impulse),n2(v_uv*29.0))-0.5)*u_impulse*1.15;',
+    ' tang*=D; inward*=mix(1.0,D,0.62); oceanf*=D; curl*=D; vortex*=D; spec*=D; noise*=D;',
+    ' w*=D; grav*=mix(1.0,D,0.32);',
+    ' vec3 swell=(vec3(sin(t*1.55+p.x*5.1+u_bv*6.28318),cos(t*1.18+p.y*4.6+u_mid*5.5),sin(t*0.92+p.z*6.8+u_hi*4.2))-vec3(0.0))*0.032*D*(0.35+u_bass);',
+    ' vec3 velN=v+tang+inward+oceanf+curl+vortex+spec+noise+grav+w+drag+expl+swell;',
+    ' if(u_impulse>0.001)velN+=(vec3(n2(v_uv+u_impulse),n2(v_uv*31.0+u_impulse),n2(v_uv*29.0))-0.5)*u_impulse*1.25;',
     ' float sp=length(velN);',
-    ' float vmax=mix(2.15,3.45,clamp(u_explStr*0.35,0.0,1.0));',
+    ' float vmax=mix(2.35,3.85,clamp(u_explStr*0.35,0.0,1.0));',
+    ' vmax+=0.35*u_bv+0.22*u_flux;',
     ' if(sp>vmax)velN*=vmax/sp;',
     ' gl_FragColor=vec4(velN,sp*0.15);',
     '}'
@@ -95,13 +99,14 @@
     'varying vec2 v_uv;',
     'uniform sampler2D u_pos;',
     'uniform sampler2D u_vel;',
-    'uniform float u_bass,u_dt,u_explStr;',
+    'uniform float u_bass,u_dt,u_explStr,u_flux;',
     'void main(){',
     ' vec3 p=texture2D(u_pos,v_uv).rgb;',
     ' vec3 v=texture2D(u_vel,v_uv).rgb;',
     ' float s=texture2D(u_vel,v_uv).a;',
     ' float sp=1.0+clamp(u_explStr,0.0,1.2)*0.35;',
-    ' vec3 p2=p+v*u_dt*(0.86+u_bass*0.58)*sp;',
+    ' float beat=1.0+u_bass*0.95+u_flux*0.48;',
+    ' vec3 p2=p+v*u_dt*(0.92+u_bass*0.72)*sp*beat;',
     ' float r=length(p2);',
     ' float rmax=1.42+clamp(u_explStr*0.55,0.0,1.1);',
     ' if(r>rmax)p2*=rmax/r;',
@@ -112,33 +117,31 @@
   var VS_DRAW = [
     'attribute vec2 a_uv;',
     'uniform sampler2D u_pos;',
-    'uniform mat4 uViewProj;',
-    'uniform float u_worldScale,u_point,u_bass,u_mid,u_hi,u_bv,u_si,u_flux,u_hue;',
+    'uniform float u_worldScale,u_point,u_bass,u_mid,u_hi,u_bv,u_si,u_flux,u_hue,u_time;',
     'uniform vec4 u_sigA;',
-    'uniform vec3 u_worldBias;',
     'varying vec4 v_col;',
-    'varying float v_eye;',
     'void main(){',
     ' vec3 praw=texture2D(u_pos,a_uv).rgb;',
-    ' vec3 wp=praw*u_worldScale+u_worldBias;',
-    ' vec4 clip=uViewProj*vec4(wp,1.0);',
-    ' gl_Position=clip;',
-    ' v_eye=max(0.35,clip.w);',
+    ' float ws=u_worldScale*0.52;',
+    ' float dz=(praw.z-0.45)*1.75;',
+    ' float wx=dz*0.11*sin(u_time*(0.88+u_bv*0.65)+praw.y*5.3+u_bass*4.1)+dz*0.08*u_flux*cos(praw.x*6.2+u_time*1.1);',
+    ' float wy=dz*0.10*cos(u_time*(0.76+u_flux*0.72)+praw.x*4.8+u_mid*3.9)+dz*0.07*u_hi*sin(praw.y*5.5+u_time*0.95);',
+    ' gl_Position=vec4(praw.x*ws+wx,praw.y*ws+wy,0.0,1.0);',
     ' vec3 cA=vec3(0.12,0.52,1.0);',
     ' vec3 cB=vec3(1.0,0.28,0.52);',
     ' vec3 cC=vec3(0.32,0.95,0.62);',
     ' float pk=fract(u_si*0.073+u_bv*0.22+u_mid*0.15+u_sigA.x*0.4+u_sigA.y*0.3+u_hue*0.08);',
     ' vec3 pal=mix(cA,cB,pk);pal=mix(pal,cC,u_mid*0.45);',
     ' float e=length(praw)+0.15;',
-    ' vec3 rgb=pal*(0.48+e*1.12)+vec3(u_hi*0.3,u_mid*0.16,u_bass*0.24)+u_sigA.xyz*0.09;',
-    ' float hs=u_hue+u_bass*0.55+u_flux*0.4+a_uv.x*2.1;',
-    ' vec3 sh=mix(rgb,rgb.brg,0.22*sin(hs));',
-    ' sh=mix(sh,sh.grb,0.18*sin(hs*1.37+u_mid*3.1));',
+    ' float hyp=1.0+u_bass*0.85+u_mid*0.55+u_hi*0.45+u_flux*0.7+u_bv*0.65;',
+    ' vec3 rgb=pal*(0.48+e*1.12)*hyp+vec3(u_hi*0.38,u_mid*0.24,u_bass*0.42)+u_sigA.xyz*0.14;',
+    ' float hs=u_hue+u_bass*0.55+u_flux*0.4+a_uv.x*2.1+u_time*0.35;',
+    ' vec3 sh=mix(rgb,rgb.brg,0.28*sin(hs));',
+    ' sh=mix(sh,sh.grb,0.24*sin(hs*1.37+u_mid*3.1));',
     ' float tw=0.5+0.5*sin(u_bv*6.28318+u_si+a_uv.x*14.0);',
-    ' float al=0.13+e*1.22+u_bass*0.15+u_flux*0.12+tw*0.065;',
+    ' float al=(0.14+e*1.28+u_bass*0.22+u_flux*0.18+tw*0.08)*mix(0.85,1.35,hyp*0.5);',
     ' v_col=vec4(sh,al);',
-    ' float ps=u_point*(220.0/v_eye)*(0.92+abs(praw.z)*9.5)*(1.0+u_bv*0.45)*(0.72+length(praw)*0.38);',
-    ' if(clip.w<0.12)ps=0.0;',
+    ' float ps=u_point*(300.0)*(0.92+abs(praw.z)*10.5)*(1.0+u_bv*0.62)*(0.72+length(praw)*0.42)*hyp;',
     ' gl_PointSize=ps;',
     '}'
   ].join('');
@@ -146,143 +149,17 @@
   var FS_DRAW = [
     'precision mediump float;',
     'varying vec4 v_col;',
-    'varying float v_eye;',
     'void main(){',
     ' vec2 q=gl_PointCoord*2.0-1.0;',
     ' float d=length(q);',
     ' if(d>1.0)discard;',
     ' float core=1.0-d*d;',
     ' float vol=pow(max(0.0,1.0-d*d),1.65);',
-    ' float a=v_col.a*core*vol*(0.55+0.45/(0.65+v_eye*0.08));',
+    ' float a=v_col.a*core*vol*0.95;',
     ' vec3 rgb=v_col.rgb*(0.88+0.22*vol);',
     ' gl_FragColor=vec4(rgb,a);',
     '}'
   ].join('');
-
-  function mat4PerspectiveRad(out, fovy, aspect, near, far) {
-    var f = 1.0 / Math.tan(fovy * 0.5);
-    var nf = 1 / (near - far);
-    out[0] = f / aspect;
-    out[1] = out[2] = out[3] = 0;
-    out[4] = 0;
-    out[5] = f;
-    out[6] = out[7] = 0;
-    out[8] = out[9] = 0;
-    out[10] = (far + near) * nf;
-    out[11] = -1;
-    out[12] = out[13] = 0;
-    out[14] = (2 * far * near) * nf;
-    out[15] = 0;
-  }
-
-  function mat4LookAt(out, ex, ey, ez, cx, cy, cz, ux, uy, uz) {
-    var z0 = cx - ex;
-    var z1 = cy - ey;
-    var z2 = cz - ez;
-    var len = Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
-    if (len < 1e-6) len = 1e-6;
-    len = 1 / len;
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
-    var x0 = uy * z2 - uz * z1;
-    var x1 = uz * z0 - ux * z2;
-    var x2 = ux * z1 - uy * z0;
-    len = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
-    if (len < 1e-6) {
-      x0 = 1;
-      x1 = x2 = 0;
-      len = 1;
-    } else len = 1 / len;
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-    var y0 = z1 * x2 - z2 * x1;
-    var y1 = z2 * x0 - z0 * x2;
-    var y2 = z0 * x1 - z1 * x0;
-    out[0] = x0;
-    out[1] = y0;
-    out[2] = z0;
-    out[3] = 0;
-    out[4] = x1;
-    out[5] = y1;
-    out[6] = z1;
-    out[7] = 0;
-    out[8] = x2;
-    out[9] = y2;
-    out[10] = z2;
-    out[11] = 0;
-    out[12] = -(x0 * ex + x1 * ey + x2 * ez);
-    out[13] = -(y0 * ex + y1 * ey + y2 * ez);
-    out[14] = -(z0 * ex + z1 * ey + z2 * ez);
-    out[15] = 1;
-  }
-
-  function mat4Multiply(out, a, b) {
-    var a00 = a[0];
-    var a01 = a[1];
-    var a02 = a[2];
-    var a03 = a[3];
-    var a10 = a[4];
-    var a11 = a[5];
-    var a12 = a[6];
-    var a13 = a[7];
-    var a20 = a[8];
-    var a21 = a[9];
-    var a22 = a[10];
-    var a23 = a[11];
-    var a30 = a[12];
-    var a31 = a[13];
-    var a32 = a[14];
-    var a33 = a[15];
-    var b0 = b[0];
-    var b1 = b[1];
-    var b2 = b[2];
-    var b3 = b[3];
-    out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-    out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-    out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-    out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-    b0 = b[4];
-    b1 = b[5];
-    b2 = b[6];
-    b3 = b[7];
-    out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-    out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-    out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-    out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-    b0 = b[8];
-    b1 = b[9];
-    b2 = b[10];
-    b3 = b[11];
-    out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-    out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-    out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-    out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-    b0 = b[12];
-    b1 = b[13];
-    b2 = b[14];
-    b3 = b[15];
-    out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-    out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-    out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-    out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-  }
-
-  function buildViewProj(S, cw, ch) {
-    var aspect = (ch > 0 ? cw / ch : 1.5);
-    if (!(aspect > 0.05) || aspect > 20) aspect = 1.5;
-    mat4PerspectiveRad(matP, (52 * Math.PI) / 180, aspect, 0.08, 48.0);
-    var t = S.GT || 0;
-    var mx = S.mouseSmooth || [0, 0];
-    var cam = NX.camera && typeof NX.camera.get === 'function'
-      ? NX.camera.get('orbit', t, { az: 0.35 + mx[0] * 2.4, el: 0.38 + mx[1] * 0.85, dist: 4.55 })
-      : { ro: [2.1, 1.35, 3.85], ta: [0, 0, 0] };
-    var ro = cam.ro;
-    var ta = cam.ta;
-    mat4LookAt(matV, ro[0], ro[1], ro[2], ta[0], ta[1], ta[2], 0, 1, 0);
-    mat4Multiply(matVP, matP, matV);
-  }
 
   function ensureVolDefaults(S) {
     if (S.nexusVolTornado == null) S.nexusVolTornado = 0.55;
@@ -302,7 +179,7 @@
     if (S.nexusVolExplodeCenterZ == null) S.nexusVolExplodeCenterZ = 0;
     if (S.nexusVolWorldScale == null) S.nexusVolWorldScale = 2.15;
     if (S.nexusVolHuePhase == null) S.nexusVolHuePhase = 0;
-    if (S.nexusVolDepthTest == null) S.nexusVolDepthTest = true;
+    if (S.nexusVolDepthTest == null) S.nexusVolDepthTest = false;
     if (S.nexusVolAutoWind == null) S.nexusVolAutoWind = true;
     if (S.nexusVolAutoExplode == null) S.nexusVolAutoExplode = true;
   }
@@ -513,7 +390,7 @@
 
   function tickFixed(dt) {
     var S = NX.S;
-    if (!ready || !S || !S.nexusGpuParticlesEnabled || S.nexusPerfLock || S.nexusVizPerformance) return;
+    if (!ready || !S || S.nexusMixParticlesEnabled === false || !S.nexusGpuParticlesEnabled || S.nexusPerfLock || S.nexusVizPerformance) return;
     if (!simVelProg || !simPosProg || !gl || (gl.isContextLost && gl.isContextLost())) return;
     ensureVolDefaults(S);
     ensureQuad();
@@ -616,6 +493,7 @@
     gl.bindTexture(gl.TEXTURE_2D, texVel[writeV]);
     gl.uniform1i(gl.getUniformLocation(simPosProg, 'u_vel'), 1);
     gl.uniform1f(gl.getUniformLocation(simPosProg, 'u_bass'), Math.max(0, Math.min(1, S.sBass || 0)));
+    gl.uniform1f(gl.getUniformLocation(simPosProg, 'u_flux'), Math.max(0, Math.min(1, S.sFlux || 0)));
     gl.uniform1f(gl.getUniformLocation(simPosProg, 'u_dt'), dtCl * 60 * 0.00115);
     gl.uniform1f(gl.getUniformLocation(simPosProg, 'u_explStr'), S.nexusVolExplosion || 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -631,7 +509,8 @@
 
   function renderOverlay() {
     var S = NX.S;
-    if (!ready || !S || !S.nexusGpuParticlesEnabled || S.nexusPerfLock || S.nexusVizPerformance) return;
+    if (NX.VolumetricFX && NX.VolumetricFX.useIntegratedPipeline && NX.VolumetricFX.isReady && NX.VolumetricFX.isReady()) return;
+    if (!ready || !S || S.nexusMixParticlesEnabled === false || !S.nexusGpuParticlesEnabled || S.nexusPerfLock || S.nexusVizPerformance) return;
     if (!drawProg || !gl || !NX.C || (gl.isContextLost && gl.isContextLost())) return;
     ensureVolDefaults(S);
     var readP = ping;
@@ -641,20 +520,11 @@
 
     var cw = NX.C.width | 0;
     var ch = NX.C.height | 0;
-    buildViewProj(S, cw, ch);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, cw, ch);
 
-    var useDepth = S.nexusVolDepthTest !== false;
-    if (useDepth) {
-      try {
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LEQUAL);
-      } catch (eD1) { /* ignore */ }
-    } else {
-      try { gl.disable(gl.DEPTH_TEST); } catch (eD0) { /* ignore */ }
-    }
+    try { gl.disable(gl.DEPTH_TEST); } catch (eD0) { /* ignore */ }
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.depthMask(false);
@@ -666,10 +536,8 @@
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texPos[readP]);
     gl.uniform1i(gl.getUniformLocation(drawProg, 'u_pos'), 0);
-    gl.uniformMatrix4fv(gl.getUniformLocation(drawProg, 'uViewProj'), false, matVP);
     var ws = Math.max(0.4, Math.min(4.5, S.nexusVolWorldScale));
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_worldScale'), ws);
-    gl.uniform3f(gl.getUniformLocation(drawProg, 'u_worldBias'), 0, 0, 0);
     var pt = S._iosCoarsePointer ? 2.6 : 4.1;
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_point'), pt);
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_bass'), Math.max(0, Math.min(1, S.sBass || 0)));
@@ -679,6 +547,7 @@
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_si'), (S.curS | 0) * 1.0);
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_flux'), Math.max(0, Math.min(1, S.sFlux || 0)));
     gl.uniform1f(gl.getUniformLocation(drawProg, 'u_hue'), (S.nexusVolHuePhase || 0) + (S.hueShift || 0) * 0.02);
+    gl.uniform1f(gl.getUniformLocation(drawProg, 'u_time'), S.GT || 0);
     gl.uniform4f(gl.getUniformLocation(drawProg, 'u_sigA'), pk2.u_sigA[0], pk2.u_sigA[1], pk2.u_sigA[2], pk2.u_sigA[3]);
     gl.drawArrays(gl.POINTS, 0, N);
     gl.disableVertexAttribArray(al);
@@ -752,6 +621,14 @@
   }
 
   window.NX = window.NX || {};
+  /**
+   * @returns {{ texPos: WebGLTexture, W: number, H: number, N: number }|null}
+   */
+  function getSimReadState() {
+    if (!ready || !texPos[ping]) return null;
+    return { texPos: texPos[ping], W: W, H: H, N: N };
+  }
+
   NX.GpuParticles = {
     init: function (opts) {
       init(opts);
@@ -763,7 +640,8 @@
     tick: tickFixed,
     renderOverlay: renderOverlay,
     isReady: function () { return ready; },
-    notifyPresetChange: notifyPresetChange
+    notifyPresetChange: notifyPresetChange,
+    getSimReadState: getSimReadState
   };
 
   NX.VolumetricParticles = {

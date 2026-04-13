@@ -1,5 +1,5 @@
 'use strict';
-/* nx-bootstrap.js — Deferred boot: Persist → SessionSeed → HW calibrate → compile + loop. */
+/* nx-bootstrap.js — Deferred boot: Persist → SessionSeed → compile + loop; GPU tier probe runs idle after UI is ready. */
 
 (function nxMainBootstrap() {
   function showBootErr(err) {
@@ -17,6 +17,9 @@
 
   function runBootCore() {
     try {
+      if (typeof window.__NX_BOOT_PHASE__ === 'function') {
+        window.__NX_BOOT_PHASE__('Compiling WebGL scenes…', 0.91);
+      }
       try {
         var _nxBootUrl = new URL(location.href);
         if (_nxBootUrl.searchParams.get('soak') === '1') window.__NX_SOAK__ = true;
@@ -57,6 +60,9 @@
         });
       }
       NX.post.compile();
+      if (typeof window.__NX_BOOT_PHASE__ === 'function') {
+        window.__NX_BOOT_PHASE__('Building post-FX & particles…', 0.94);
+      }
       if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
         try { NX.GpuParticles.init(); } catch (eGpu) { /* ignore */ }
       }
@@ -145,23 +151,43 @@
       if (NX.midi) NX.midi.init();
       if (NX.ResearchBrief && NX.ResearchBrief.tryConsoleLog) NX.ResearchBrief.tryConsoleLog();
       NX.showName(NX.S && typeof NX.S.curS === 'number' ? NX.S.curS : 0);
+      if (typeof window.__NX_BOOT_PHASE__ === 'function') {
+        window.__NX_BOOT_PHASE__('Starting render loop…', 0.98);
+      }
       NX.loop();
+      if (typeof window.__NX_BOOT_READY__ === 'function') {
+        try {
+          window.__NX_BOOT_READY__();
+        } catch (eReady) { /* ignore */ }
+      }
     } catch (err) {
       showBootErr(err);
     }
   }
 
+  function scheduleHwTierProbe() {
+    if (!NX.HwCalibrate || typeof NX.HwCalibrate.runIfNeeded !== 'function') return;
+    var runCal = function () {
+      try {
+        NX.HwCalibrate.runIfNeeded(function () {});
+      } catch (eC) { /* ignore */ }
+    };
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(runCal, { timeout: 60000 });
+    } else {
+      setTimeout(runCal, 400);
+    }
+  }
+
   function runAfterPersist() {
+    if (typeof window.__NX_BOOT_PHASE__ === 'function') {
+      window.__NX_BOOT_PHASE__('Restoring session & seed…', 0.895);
+    }
     try {
       if (NX.SessionSeed && typeof NX.SessionSeed.init === 'function') NX.SessionSeed.init();
     } catch (eSe) { /* ignore */ }
-    if (NX.HwCalibrate && typeof NX.HwCalibrate.runIfNeeded === 'function') {
-      NX.HwCalibrate.runIfNeeded(function () {
-        runBootCore();
-      });
-    } else {
-      runBootCore();
-    }
+    runBootCore();
+    scheduleHwTierProbe();
   }
 
   if (typeof window.NX === 'undefined') {
@@ -171,6 +197,9 @@
   if (NX._fatalNoWebGL) return;
 
   try {
+    if (typeof window.__NX_BOOT_PHASE__ === 'function') {
+      window.__NX_BOOT_PHASE__('Opening local storage…', 0.885);
+    }
     if (NX.Persist && typeof NX.Persist.init === 'function') {
       NX.Persist.init(runAfterPersist);
     } else {

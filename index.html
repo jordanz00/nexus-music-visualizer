@@ -22,10 +22,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
-  <meta name="description" content="NEXUS Engine Pro — professional live DJ/VJ suite for the browser: WebGL scenes, Aurora Field spectrum visuals (full MilkDrop-class library), hybrid stacks, MIDI, adaptive quality, and recording.">
-  <title>NEXUS Engine Pro — Live VJ Suite</title>
+  <meta name="description" content="NEXUS Engine Pro — broadcast-grade live visuals in the browser: hybrid WebGL + Aurora Field (MilkDrop-class), audio-reactive particles, volumetric GPU sim, MIDI, timecode, and recording for clubs, tours, and streams.">
+  <title>NEXUS Engine Pro — Live Visual Suite</title>
+  <link rel="preload" href="vendor/butterchurn.min.js" as="script">
+  <link rel="preload" href="vendor/butterchurnPresets.min.js" as="script">
+  <link rel="preload" href="js/engine.js" as="script">
   <link rel="stylesheet" href="css/nexus.css">
   <link rel="stylesheet" href="css/nexus-tokens.css">
+  <script src="js/nx-splash-viz.js"></script>
 </head>
 <body>
 
@@ -49,12 +53,23 @@
 
 <!-- ── SPLASH ─────────────────────────────────────────────────────── -->
 <div id="splash">
+  <canvas id="nx-splash-stage" class="nx-splash-stage" width="300" height="150" aria-hidden="true"></canvas>
+  <div class="nx-splash-grid" aria-hidden="true"></div>
+  <div class="nx-splash-vignette" aria-hidden="true"></div>
+  <div class="nx-splash-content">
   <div class="nx-splash-card">
-    <p class="nx-splash-eyebrow">Live visual suite</p>
-    <h1>NEXUS PRO</h1>
-    <p class="sub">Pro · hybrid WebGL + Aurora · touch-first</p>
-    <button class="start-btn" id="start-btn" type="button">Launch</button>
-    <p class="hint">Tap <strong>Launch</strong> or anywhere on this card to unlock audio. Visuals already run behind this screen.</p>
+    <p class="nx-splash-eyebrow">Live visuals · hybrid engine</p>
+    <h1>NEXUS <span class="nx-splash-pro">PRO</span></h1>
+    <p class="sub">WebGL scenes · Aurora Field spectrum · audio-reactive stack</p>
+    <button class="start-btn nx-splash-btn-wait" id="start-btn" type="button" disabled aria-disabled="true" aria-describedby="nx-boot-label">Enter show</button>
+    <div id="nx-boot-panel" class="nx-boot-panel" aria-live="polite">
+      <p id="nx-boot-label" class="nx-boot-label">Loading scripts…</p>
+      <div class="nx-boot-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="nx-boot-label">
+        <div id="nx-boot-bar" class="nx-boot-bar"></div>
+      </div>
+    </div>
+    <p class="hint">When the bar shows <strong>Ready</strong>, tap <strong>Enter show</strong> (or this card) to unlock audio. The engine keeps running while you load.</p>
+  </div>
   </div>
 </div>
 
@@ -259,6 +274,16 @@
           <label class="nx-inline" title="Morph cadence and crossfade muscle (100% = default)">Conductor <input type="range" id="nx-conductor-motion" min="65" max="135" value="100" step="1"></label>
           <label class="nx-inline" title="Hybrid: Aurora (#c-bc) canvas opacity">Aurora layer <input type="range" id="nx-hybrid-bc-opacity" min="15" max="100" value="100"></label>
           <label class="nx-inline" title="Hybrid: WebGL (#c) canvas opacity">WebGL layer <input type="range" id="nx-hybrid-shader-opacity" min="25" max="100" value="100"></label>
+          <label class="nx-inline" title="Master for GPU point sprites and optional 2D layer (I/O still toggles GPU sim when this is on)"><input type="checkbox" id="nx-mix-particles" checked> Particles</label>
+          <label class="nx-inline" title="Hybrid 2D canvas field: beat rings, curl noise, and band-driven motion layered with GPU particles (toggle off on low-power GPUs)"><input type="checkbox" id="nx-mix-proc-ambient" checked> Hybrid mist layer</label>
+          <label class="nx-inline" title="World-space particle FBO + proxy scene depth (see NEXUS/js/nx-volumetric/README.md). Falls back to screen-space sprites if unavailable."><input type="checkbox" id="nx-volumetric-product" checked> Volumetric 3D path</label>
+          <label class="nx-inline" title="Authoring preset for forces / proxy / ribbons">Particle look <select id="nx-particle-look" class="preset-select" style="min-width:108px" aria-label="Particle look preset">
+            <option value="default" selected>Default</option>
+            <option value="trance">Trance</option>
+            <option value="ambient">Ambient</option>
+          </select></label>
+          <label class="nx-inline" title="When on, blends the look with the Pro genre filter (Spectra row)"><input type="checkbox" id="nx-particle-match-genre"> Match genre</label>
+          <label class="nx-inline" title="Extra weighted blur pass on the particle buffer (Trance preset). Desktop only; skipped on iOS."><input type="checkbox" id="nx-vol-advanced-fx"> Particle glow pass</label>
           <label class="nx-inline"><input type="checkbox" id="nx-bloom" checked> Bloom</label>
           <label class="nx-inline">Trails <input type="range" id="nx-trails" min="0" max="100" value="0" title="Afterimage mix"></label>
           <label class="nx-inline"><input type="checkbox" id="nx-perf"> Perf lock</label>
@@ -346,7 +371,7 @@
             <label class="nx-inline">Ocean <input type="range" id="nx-vol-ocean" min="0" max="150" value="45" style="width:min(120px,28vw)" aria-label="Ocean wave field strength"></label>
             <label class="nx-inline">Vortex <input type="range" id="nx-vol-vortex" min="0" max="150" value="35" style="width:min(120px,28vw)" aria-label="Vortex strength"></label>
             <label class="nx-inline">Gravity <input type="range" id="nx-vol-gravity" min="-100" max="100" value="-24" style="width:min(120px,28vw)" aria-label="Gravity along Y in sim space"></label>
-            <label class="nx-inline"><input type="checkbox" id="nx-vol-depth" checked> Depth test vs scene</label>
+            <label class="nx-inline"><input type="checkbox" id="nx-vol-depth"> Depth test vs scene</label>
             <label class="nx-inline"><input type="checkbox" id="nx-vol-autowind" checked> Audio wind</label>
             <label class="nx-inline"><input type="checkbox" id="nx-vol-autoexplode" checked> Transient bursts</label>
             <button type="button" class="sm-btn" id="nx-vol-explode" title="Radial explosion impulse">Explosion</button>

@@ -40,8 +40,8 @@
     S.curS = ix;
     S.nxtS = (ix + 1) % len;
     S.nexusPostBloom = true;
-    if (typeof S.nexusPostTrails !== 'number' || S.nexusPostTrails < 0.22) S.nexusPostTrails = 0.28;
-    else if (S.nexusPostTrails < 0.35) S.nexusPostTrails = Math.min(0.45, S.nexusPostTrails + 0.08);
+    if (typeof S.nexusPostTrails !== 'number' || S.nexusPostTrails < 0.24) S.nexusPostTrails = 0.32;
+    else if (S.nexusPostTrails < 0.38) S.nexusPostTrails = Math.min(0.5, S.nexusPostTrails + 0.1);
     if (typeof S.bcSpeed === 'number' && S.bcSpeed < 0.72) S.bcSpeed = 0.72;
     if (typeof S.bcConductorMotion === 'number' && S.bcConductorMotion < 0.95) S.bcConductorMotion = 0.95;
     if (NX.showName) NX.showName(ix);

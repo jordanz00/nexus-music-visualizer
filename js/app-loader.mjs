@@ -1,6 +1,6 @@
 /**
- * app-loader.mjs — Single module entry: sequential classic script chain (parallel fetch where possible).
- * Preserves execution order for the NX global bootstrap.
+ * app-loader.mjs — Classic script chain with boot progress + main-thread yields.
+ * Post-load work (IndexedDB, scene compile) reports via __NX_BOOT_PHASE__ from nx-bootstrap.js.
  */
 
 const NX_SCRIPTS = [
@@ -45,6 +45,8 @@ const NX_SCRIPTS = [
   'js/nexus-film-lut.js',
   'js/post.js',
   'js/nexus-gpu-particles.js',
+  'js/nx-volumetric/preset-resolve.js',
+  'js/nx-volumetric/volumetric-fx.js',
   'js/nx-bpm-timeline.js',
   'js/nexus-engine/audio-engine.js',
   'js/nexus-engine/bc-showcase.js',
@@ -99,6 +101,41 @@ const NX_SCRIPTS = [
   'js/nx-bootstrap.js'
 ];
 
+const BOOT_SCRIPT_PCT = 88;
+
+function shortScriptLabel(rel) {
+  var p = rel.replace(/^js\//, '').replace(/^vendor\//, 'v/');
+  if (p.length > 42) p = p.slice(0, 40) + '…';
+  return p;
+}
+
+function setBootProgress(pct01, label) {
+  var bar = document.getElementById('nx-boot-bar');
+  var lbl = document.getElementById('nx-boot-label');
+  var track = document.querySelector('.nx-boot-track');
+  var p = Math.max(0, Math.min(100, Math.round((pct01 == null ? 0 : pct01) * 100)));
+  if (lbl) lbl.textContent = label || 'Loading…';
+  if (bar) bar.style.width = p + '%';
+  if (track) track.setAttribute('aria-valuenow', String(p));
+}
+
+window.__NX_BOOT_INTERACTIVE__ = false;
+
+window.__NX_BOOT_PHASE__ = function (label, pct01) {
+  setBootProgress(pct01, label);
+};
+
+window.__NX_BOOT_READY__ = function () {
+  window.__NX_BOOT_INTERACTIVE__ = true;
+  setBootProgress(1, 'Ready — tap Enter show to unlock audio');
+  var btn = document.getElementById('start-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.setAttribute('aria-disabled', 'false');
+    btn.classList.remove('nx-splash-btn-wait');
+  }
+};
+
 function resolveSrc(rel) {
   try {
     return new URL(rel, document.baseURI || window.location.href).href;
@@ -107,25 +144,45 @@ function resolveSrc(rel) {
   }
 }
 
+function yieldToPaint() {
+  return new Promise(function (resolve) {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () {
+        setTimeout(resolve, 0);
+      });
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
 function appendClassic(src) {
   return new Promise(function (resolve, reject) {
     var s = document.createElement('script');
     s.src = src;
     s.async = false;
-    s.onload = function () { resolve(); };
+    s.onload = function () {
+      yieldToPaint().then(resolve);
+    };
     s.onerror = function () { reject(new Error('NEXUS failed to load: ' + src)); };
     document.head.appendChild(s);
   });
 }
 
 async function main() {
-  for (var i = 0; i < NX_SCRIPTS.length; i++) {
-    await appendClassic(resolveSrc(NX_SCRIPTS[i]));
+  var total = NX_SCRIPTS.length;
+  for (var i = 0; i < total; i++) {
+    var rel = NX_SCRIPTS[i];
+    var frac = (i + 1) / total;
+    setBootProgress((frac * BOOT_SCRIPT_PCT) / 100, 'Loading ' + shortScriptLabel(rel) + ' (' + (i + 1) + '/' + total + ')');
+    await appendClassic(resolveSrc(rel));
   }
+  setBootProgress(0.9, 'Finishing engine setup…');
 }
 
 main().catch(function (err) {
   console.error(err);
+  setBootProgress(0, 'Load failed — see message below');
   var sp = document.getElementById('splash');
   if (sp) {
     var p = document.createElement('p');

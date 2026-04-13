@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "pack.trance",
+  "depthMode": "proxy",
+  "kernelId": "tight",
+  "forces": {
+    "tornadoMul": 1.25,
+    "oceanMul": 0.85,
+    "vortexMul": 1.15,
+    "noiseMul": 1.2,
+    "swellMul": 1.35,
+    "dragLinMul": 0.92,
+    "dragQuadMul": 1.08
+  },
+  "colorLaw": {
+    "hueShift": -0.04,
+    "saturationMul": 1.18,
+    "brightnessMul": 1.08,
+    "beatFlash": 0.55
+  },
+  "spawn": {
+    "radiusMul": 0.95,
+    "impulseOnPreset": 0.62
+  },
+  "proxyDepth": {
+    "lumaWeight": 0.48,
+    "motionWeight": 3.1,
+    "temporalBlend": 0.76
+  },
+  "primitives": {
+    "points": true,
+    "ribbonGridStep": 6,
+    "ribbonOpacity": 0.55,
+    "metaballScreenPass": true,
+    "fluidDriverWeight": 0
+  },
+  "lod": {
+    "particleFbScale": 0.72,
+    "disableRibbonUnderVizPerf": true
+  }
+}
