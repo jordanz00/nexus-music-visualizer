@@ -37,9 +37,6 @@ window.NX = window.NX || {};
   /* iOS / memory pressure: allow context restore; preventDefault is required for restoration. */
   C.addEventListener('webglcontextlost', function (ev) {
     ev.preventDefault();
-    if (NX.GpuParticles && typeof NX.GpuParticles.tearDown === 'function') {
-      try { NX.GpuParticles.tearDown(); } catch (eGpuL) { /* ignore */ }
-    }
     if (NX.VolumetricFX && typeof NX.VolumetricFX.tearDown === 'function') {
       try { NX.VolumetricFX.tearDown(); } catch (eVolL) { /* ignore */ }
     }
@@ -50,9 +47,6 @@ window.NX = window.NX || {};
       gl.getExtension('OES_texture_float');
       if (NX.compileScenes) NX.compileScenes();
       if (NX.post && typeof NX.post.compile === 'function') NX.post.compile();
-      if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
-        try { NX.GpuParticles.init({ force: true }); } catch (eGpuR) { /* ignore */ }
-      }
       if (NX.VolumetricFX && typeof NX.VolumetricFX.ensureInit === 'function') {
         try { NX.VolumetricFX.ensureInit(); } catch (eVolR) { /* ignore */ }
       }
@@ -112,11 +106,11 @@ window.NX = window.NX || {};
     postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true, godray: true },
     /** 0–1 volumetric god-ray strength (post pass; I/O tab). */
     nexusGodRayMix: 0.32,
-    /** GPU particle overlay (ping-pong sim; I/O tab — desktop / vertex-tex only). */
+    /** GPU particle layer (I/O tab); drives js/scenes/particles-gpu.js (NX.particles) on #c. */
     nexusGpuParticlesEnabled: true,
     /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
     nexusMixParticlesEnabled: true,
-    /** Integrated volumetric draw path (proxy depth + world FBO); when off, legacy GpuParticles screen overlay only. */
+    /** Integrated volumetric draw path (proxy depth + world FBO); requires a live particle sim source (stubbed legacy sim removed). */
     nexusVolumetricProductEnabled: false,
     /** Mix: authored look — default | trance | ambient (see nx-volumetric/preset-resolve.js). */
     nexusParticleLook: 'default',
@@ -706,9 +700,6 @@ window.NX = window.NX || {};
   }
 
   function nxNotifyParticlePresetChange() {
-    if (NX.GpuParticles && typeof NX.GpuParticles.notifyPresetChange === 'function') {
-      try { NX.GpuParticles.notifyPresetChange(); } catch (eN1) { /* ignore */ }
-    }
     if (NX.VolumetricFX && typeof NX.VolumetricFX.onPresetChange === 'function') {
       try { NX.VolumetricFX.onPresetChange(); } catch (eN2) { /* ignore */ }
     }
@@ -865,9 +856,6 @@ window.NX = window.NX || {};
     }
     if (NX.BpmTimeline && typeof NX.BpmTimeline.tick === 'function') {
       try { NX.BpmTimeline.tick(dt); } catch (eBt) { /* ignore */ }
-    }
-    if (NX.GpuParticles && typeof NX.GpuParticles.tick === 'function') {
-      try { NX.GpuParticles.tick(dt); } catch (eGt) { /* ignore */ }
     }
     if (NX.ProceduralAudioBus && NX.ProceduralAudioBus.reducedMotionPostCaps) {
       try { NX.ProceduralAudioBus.reducedMotionPostCaps(S); } catch (eRm) { /* ignore */ }

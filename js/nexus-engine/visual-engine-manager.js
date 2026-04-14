@@ -141,9 +141,6 @@
       }
     }
     try {
-      if (NX.GpuParticles && typeof NX.GpuParticles.notifyPresetChange === 'function') {
-        NX.GpuParticles.notifyPresetChange();
-      }
       if (NX.ProcParticles && typeof NX.ProcParticles.notifyPresetChange === 'function') {
         NX.ProcParticles.notifyPresetChange();
       }

@@ -365,7 +365,7 @@
     var perf = S && S.nexusPerfLock;
     if (canvas) canvas.classList.toggle('nx-proc-dim', !!perf);
     var vizPerf = S && S.nexusVizPerformance;
-    var gpuOn = !!(NX.GpuParticles && typeof NX.GpuParticles.isReady === 'function' && NX.GpuParticles.isReady() &&
+    var gpuOn = !!(NX.particles && NX.particles._ready && NX.particles.enabled !== false &&
       S && S.nexusGpuParticlesEnabled && !perf && !vizPerf);
     if (canvas) canvas.classList.toggle('nx-proc-subtle', gpuOn);
 

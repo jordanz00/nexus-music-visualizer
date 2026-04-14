@@ -604,7 +604,11 @@
   };
 
   NexusParticleSystem.prototype.render = function (audio) {
-    if (!this._ready || !this.enabled) return;
+    if (!this._ready) return;
+    if (window.NX && NX.S && typeof NX.S.nexusGpuParticlesEnabled === 'boolean') {
+      this.enabled = NX.S.nexusGpuParticlesEnabled;
+    }
+    if (!this.enabled) return;
     var gl   = this.gl;
 
     if (this._pendingRebuild) {
@@ -886,19 +890,6 @@
       };
       NX.setQualityPreset._nxpPatched = true;
     }
-
-    setTimeout(function () {
-      var labels = document.querySelectorAll('label');
-      for (var li = 0; li < labels.length; li++) {
-        var label = labels[li];
-        if (!label.textContent || label.textContent.toLowerCase().indexOf('gpu particles') < 0) continue;
-        var cb = label.querySelector('input[type=checkbox]') || label.previousElementSibling;
-        if (cb && cb.type === 'checkbox') {
-          sys.enabled = cb.checked;
-          cb.addEventListener('change', function () { sys.enabled = cb.checked; });
-        }
-      }
-    }, 2000);
 
     sys.applyPreset('Default', true);
     console.log('[NXP] Bootstrap complete. NX.particles ready.');

@@ -95,21 +95,15 @@
       el.style.display = 'none';
       return;
     }
-    var ready = NX.GpuParticles && typeof NX.GpuParticles.isReady === 'function' && NX.GpuParticles.isReady();
-    if (ready) {
-      var volOn = S.nexusVolumetricProductEnabled !== false;
-      var volR = NX.VolumetricFX && typeof NX.VolumetricFX.isReady === 'function' && NX.VolumetricFX.isReady();
-      if (volOn && volR) {
-        el.textContent = 'Volumetric 3D path active (world FBO + proxy depth).';
-        el.style.display = 'block';
-        return;
-      }
-      el.textContent = '';
-      el.style.display = 'none';
+    var nxp = NX.particles;
+    if (nxp && nxp._ready) {
+      el.style.display = 'block';
+      el.textContent = 'GPU particles active (NXP).';
       return;
     }
     el.style.display = 'block';
-    el.textContent = 'GPU particle sim unavailable on this device (float framebuffer or vertex texture fetch not supported).';
+    if (!nxp) el.textContent = 'GPU particles loading…';
+    else el.textContent = 'GPU particles unavailable (init failed or float textures not supported).';
   }
 
   function syncCheckboxes() {

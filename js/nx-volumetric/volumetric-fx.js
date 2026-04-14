@@ -1,9 +1,9 @@
 'use strict';
 /**
- * volumetric-fx.js — Optional integrated path: same GPU sim as GpuParticles, but draws through
- * an offscreen buffer then composites. Point sprites use the proven nexus-gpu-particles NDC
- * formula (parallax + palette + soft disk), not perspective world blobs. Proxy depth is still
- * computed in tick for future use; ribbons are off here (world-space lines smeared vs NDC).
+ * volumetric-fx.js — Optional integrated path: composites particle sprites through an offscreen
+ * buffer when a particle sim exposes textures via NX.GpuParticles.getSimReadState().
+ * Legacy nexus-gpu-particles.js was removed; stub keeps this module safe — integrated path stays
+ * inactive until a sim source returns ready + state. Live screen particles: NX.particles (particles-gpu.js).
  */
 (function () {
   var gl = null;
@@ -68,7 +68,7 @@
     'void main(){gl_FragColor=texture2D(u_tex,uv);}'
   ].join('');
 
-  /* Same vertex math as nexus-gpu-particles.js VS_DRAW — NDC spread + parallax + per-point size. */
+  /* NDC spread + parallax + per-point size (legacy VS_DRAW lineage). */
   var VS_WORLD = [
     'attribute vec2 a_uv;',
     'uniform sampler2D u_pos;',
@@ -102,7 +102,7 @@
     '}'
   ].join('');
 
-  /* Same fragment as nexus-gpu-particles.js FS_DRAW — crisp soft disk, not proxy-smeared blob. */
+  /* Crisp soft disk sprite (legacy FS_DRAW lineage). */
   var FS_WORLD = [
     'precision mediump float;',
     'varying vec4 v_col;',
@@ -479,7 +479,7 @@
     try { gl.disable(gl.DEPTH_TEST); } catch (eDt) { /* ignore */ }
     gl.depthMask(false);
     gl.enable(gl.BLEND);
-    /* Match GpuParticles.renderOverlay: additive accumulation between overlapping sprites. */
+    /* Additive accumulation between overlapping sprites (screen blend). */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
     gl.useProgram(worldDrawProg);

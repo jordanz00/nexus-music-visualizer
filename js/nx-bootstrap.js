@@ -63,9 +63,6 @@
       if (typeof window.__NX_BOOT_PHASE__ === 'function') {
         window.__NX_BOOT_PHASE__('Building post-FX & particles…', 0.94);
       }
-      if (NX.GpuParticles && typeof NX.GpuParticles.init === 'function') {
-        try { NX.GpuParticles.init(); } catch (eGpu) { /* ignore */ }
-      }
       if (NX.BpmTimeline && typeof NX.BpmTimeline.init === 'function') {
         try { NX.BpmTimeline.init(); } catch (eBpm) { /* ignore */ }
       }
