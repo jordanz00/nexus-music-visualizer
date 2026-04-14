@@ -106,7 +106,7 @@ window.NX = window.NX || {};
     postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true, godray: true },
     /** 0–1 volumetric god-ray strength (post pass; I/O tab). */
     nexusGodRayMix: 0.32,
-    /** GPU particle layer (I/O tab); drives js/scenes/particles-gpu.js (NX.particles) on #c. */
+    /** GPU particle layer (I/O tab); drives js/particles.js (NX.particles) on #c. */
     nexusGpuParticlesEnabled: true,
     /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
     nexusMixParticlesEnabled: true,
@@ -991,6 +991,12 @@ window.NX = window.NX || {};
       try {
         NX.GpuParticles.renderOverlay();
       } catch (eGp) { /* ignore */ }
+    }
+    /* Screen-space GPU particles (MFX overlay): must run after volumetric composite too, or they never draw. */
+    if (volOk && NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
+      try {
+        NX.GpuParticles.renderOverlay();
+      } catch (eGp2) { /* ignore */ }
     }
 
     if (NX.WgslGraph && NX.WgslGraph.renderFrame) {

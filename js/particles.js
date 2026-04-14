@@ -369,11 +369,37 @@
       this.enabled = false;
       return;
     }
-    this._fType = extF ? gl.FLOAT : extH.HALF_FLOAT_OES;
+    gl.getExtension('OES_texture_float_linear');
+    var extBufFloat = gl.getExtension('WEBGL_color_buffer_float');
+    var extBufHalf = gl.getExtension('EXT_color_buffer_half_float');
+    if (extH && extBufHalf) {
+      this._fType = extH.HALF_FLOAT_OES;
+    } else if (extF && extBufFloat) {
+      this._fType = gl.FLOAT;
+    } else if (extH) {
+      this._fType = extH.HALF_FLOAT_OES;
+    } else {
+      this._fType = gl.FLOAT;
+    }
 
     this._buildShaders();
+    if (!this._programsValid()) {
+      if (typeof console !== 'undefined' && console.error) console.error('[NXP] Shader link failed — particles disabled');
+      this.enabled = false;
+      return;
+    }
     this._buildQuad();
     this._rebuildBuffers(this._sz);
+    if (!this._fbosRenderable()) {
+      if (this._tryFallbackFloatType(extF, extH, extBufFloat, extBufHalf)) {
+        this._rebuildBuffers(this._sz);
+      }
+      if (!this._fbosRenderable()) {
+        if (typeof console !== 'undefined' && console.error) console.error('[NXP] Particle float FBO not color-renderable on this GPU — particles disabled');
+        this.enabled = false;
+        return;
+      }
+    }
 
     this._ready = true;
     if (NX.FxChain && typeof NX.FxChain.updateGpuParticlesStatus === 'function') {
@@ -409,6 +435,42 @@
     this._pVel = this._prog(QUAD_VERT, VEL_FRAG);
     this._pPos = this._prog(QUAD_VERT, POS_FRAG);
     this._pRender = this._prog(RENDER_VERT, RENDER_FRAG);
+  };
+
+  NexusParticles.prototype._programsValid = function () {
+    var gl = this._gl;
+    return !!(this._pVel && this._pPos && this._pRender &&
+      gl.getProgramParameter(this._pVel, gl.LINK_STATUS) &&
+      gl.getProgramParameter(this._pPos, gl.LINK_STATUS) &&
+      gl.getProgramParameter(this._pRender, gl.LINK_STATUS));
+  };
+
+  NexusParticles.prototype._fbosRenderable = function () {
+    var gl = this._gl;
+    if (!this._fPos || !this._fPos[0]) return false;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fPos[0]);
+    var st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return st === gl.FRAMEBUFFER_COMPLETE;
+  };
+
+  /**
+   * If RGBA+FLOAT ping-pong is incomplete, switch toward half-float when extensions allow.
+   * @returns {boolean} true if type changed and caller should rebuild buffers
+   */
+  NexusParticles.prototype._tryFallbackFloatType = function (extF, extH, extBufFloat, extBufHalf) {
+    var gl = this._gl;
+    if (this._fType === gl.FLOAT && extH && extBufHalf) {
+      this._fType = extH.HALF_FLOAT_OES;
+      if (typeof console !== 'undefined' && console.warn) console.warn('[NXP] Switched particle sim to half-float FBO (color-buffer compatibility)');
+      return true;
+    }
+    if (this._fType !== gl.FLOAT && extF && extBufFloat) {
+      this._fType = gl.FLOAT;
+      if (typeof console !== 'undefined' && console.warn) console.warn('[NXP] Retrying particle sim with float32 FBO');
+      return true;
+    }
+    return false;
   };
 
   NexusParticles.prototype._buildQuad = function () {
@@ -569,9 +631,11 @@
       else self._setVelUniforms(prog, audio);
       gl.bindBuffer(gl.ARRAY_BUFFER, self._quad);
       var al = gl.getAttribLocation(prog, 'aPos');
-      gl.enableVertexAttribArray(al);
-      gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (al >= 0) {
+        gl.enableVertexAttribArray(al);
+        gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
     }
 
     runUpdate(this._pVel, this._fVel[pong], this._tPos[this._ping], this._tVel[this._ping], false);
@@ -580,6 +644,10 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this._canvas.width, this._canvas.height);
     gl.useProgram(this._pRender);
+    var depthWas = gl.isEnabled(gl.DEPTH_TEST);
+    var depthMaskWas = gl.getParameter(gl.DEPTH_WRITEMASK);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
@@ -604,11 +672,16 @@
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._idxBuf);
     var idxLoc = gl.getAttribLocation(this._pRender, 'aIdx');
-    gl.enableVertexAttribArray(idxLoc);
-    gl.vertexAttribPointer(idxLoc, 1, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.POINTS, 0, this._count);
+    if (idxLoc >= 0) {
+      gl.enableVertexAttribArray(idxLoc);
+      gl.vertexAttribPointer(idxLoc, 1, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.POINTS, 0, this._count);
+    }
 
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    if (depthWas) gl.enable(gl.DEPTH_TEST);
+    else gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(depthMaskWas);
 
     this._ping = pong;
   };
@@ -661,17 +734,22 @@
 
     function patchGpuOverlay() {
       if (!win.NX.GpuParticles) NX.GpuParticles = {};
-      var prev = NX.GpuParticles.renderOverlay;
-      if (prev && prev._nxMfxParticles) return;
-      NX.GpuParticles.renderOverlay = function () {
+      var gp = NX.GpuParticles;
+      if (gp.renderOverlay && gp.renderOverlay._nxMfxParticles) return;
+      var prev = gp.renderOverlay;
+      gp.renderOverlay = function () {
         try {
-          if (prev && prev !== NX.GpuParticles.renderOverlay) prev();
-        } catch (e0) { /* ignore */ }
+          if (prev && prev !== gp.renderOverlay) prev();
+        } catch (e0) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('[NXP] GpuParticles chain (pre-overlay):', e0);
+        }
         try {
           if (sys._ready && sys.enabled) sys.render(getAudio());
-        } catch (e1) { /* ignore */ }
+        } catch (e1) {
+          if (typeof console !== 'undefined' && console.warn) console.warn('[NXP] render overlay:', e1);
+        }
       };
-      NX.GpuParticles.renderOverlay._nxMfxParticles = true;
+      gp.renderOverlay._nxMfxParticles = true;
     }
 
     setTimeout(function () { sys.init(); patchGpuOverlay(); }, 280);
