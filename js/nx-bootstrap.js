@@ -152,6 +152,15 @@
         window.__NX_BOOT_PHASE__('Starting render loop…', 0.98);
       }
       NX.loop();
+      (function nxLoadParticulaOverlay() {
+        try {
+          import('./particula/nexus-entry.mjs').catch(function (e) {
+            console.warn('NEXUS Particula overlay import failed:', e);
+          });
+        } catch (eImp) {
+          console.warn('NEXUS Particula overlay:', eImp);
+        }
+      })();
       if (typeof window.__NX_BOOT_READY__ === 'function') {
         try {
           window.__NX_BOOT_READY__();

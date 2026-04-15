@@ -106,7 +106,7 @@ window.NX = window.NX || {};
     postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true, godray: true },
     /** 0–1 volumetric god-ray strength (post pass; I/O tab). */
     nexusGodRayMix: 0.32,
-    /** GPU particle layer (I/O tab); drives js/particles.js (NX.particles) on #c-particles (dedicated GL). */
+    /** GPU particle layer (I/O tab); Particula-derived Three.js port (NX.particles) on #nx-particula-host. */
     nexusGpuParticlesEnabled: true,
     /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
     nexusMixParticlesEnabled: true,
@@ -197,7 +197,7 @@ window.NX = window.NX || {};
     /** Hybrid stack recipe: layer opacities 0–1 (SceneManager). */
     hybridBcOpacity: 1,
     hybridShaderOpacity: 1,
-    /** Mix tab: #c-particles GPU sprite layer opacity (SceneManager + particles.js). */
+    /** Mix tab: #nx-particula-host particle layer opacity (SceneManager + particula/nexus-entry.mjs). */
     hybridParticlesOpacity: 1,
     /** Homage shaders: [0]=YNI click state, [1]=MITD breath, [2]=echo phase, [3]=unused — see HM in scenes.js + nexus-homage-bridge.js */
     homageHM: [0, 0, 0, 0],
@@ -275,10 +275,8 @@ window.NX = window.NX || {};
     }
     C.width = rw0; C.height = rh0;
     C.style.width = S.W + 'px'; C.style.height = S.H + 'px';
-    var cPx = document.getElementById('c-particles');
+    var cPx = document.getElementById('nx-particula-host');
     if (cPx) {
-      cPx.width = rw0;
-      cPx.height = rh0;
       cPx.style.width = S.W + 'px';
       cPx.style.height = S.H + 'px';
     }
@@ -1010,7 +1008,7 @@ window.NX = window.NX || {};
         NX.GpuParticles.renderOverlay();
       } catch (eGp) { /* ignore */ }
     }
-    /* Screen-space GPU particles: dedicated #c-particles layer; must run after volumetric composite too. */
+    /* Screen-space GPU particles: dedicated #nx-particula-host layer; must run after volumetric composite too. */
     if (volOk && nxGpuParticlesOverlayAllowed() && NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
       try {
         NX.GpuParticles.renderOverlay();

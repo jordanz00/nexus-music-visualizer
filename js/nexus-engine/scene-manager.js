@@ -1,7 +1,7 @@
 'use strict';
 /**
  * SceneManager — visual stack (shader / Aurora / hybrid / GPU particle layer modes), crossfade, queued switches.
- * GPU particles render on #c-particles (dedicated WebGL) so CSS opacity on #c / #c-bc never hides them.
+ * MIX stack particles render on #nx-particula-host (dedicated Three.js canvas) so CSS opacity on #c / #c-bc never hides them.
  */
 (function () {
   var S = NX.S;
@@ -25,7 +25,7 @@
   function syncDOM() {
     var bc = document.getElementById('c-bc');
     var c = document.getElementById('c');
-    var cPx = document.getElementById('c-particles');
+    var cPx = document.getElementById('nx-particula-host');
     if (!bc || !c) return;
     var mode = S.visualMode || 'hybrid';
 

@@ -36,8 +36,14 @@
 <!-- ── CANVAS (Aurora Field back layer / WebGL front) ─────────────── -->
 <canvas id="c-bc" aria-hidden="true"></canvas>
 <canvas id="c"></canvas>
-<!-- GPU point-sprite layer: own WebGL context so stack CSS opacity on #c / #c-bc never hides particles -->
-<canvas id="c-particles" class="nx-gpu-particles-layer" aria-hidden="true"></canvas>
+<!-- Particula-derived Three.js layer: #nx-particula-host canvas + chrome (MIT port; see docs/PARTICULA-PORT.md) -->
+<div id="nx-particula-stack" class="nx-particula-stack-wrap" aria-hidden="true">
+  <div id="nx-particula-host" class="nx-gpu-particles-layer nx-particula-host"></div>
+  <div id="nx-particula-chrome" class="nx-particula-chrome">
+    <div id="nx-particula-preset-host"></div>
+    <div id="nx-particula-gui-host"></div>
+  </div>
+</div>
 <!-- Procedural particles: same z-band as #c, later in DOM → paints above WebGL for hybrid screen blend -->
 <canvas id="nx-proc-particles" class="nx-proc-particles" aria-hidden="true"></canvas>
 <canvas id="nx-wgpu" aria-hidden="true"></canvas>
@@ -280,7 +286,7 @@
           <label class="nx-inline" title="Morph cadence and crossfade muscle (100% = default)">Conductor <input type="range" id="nx-conductor-motion" min="65" max="135" value="100" step="1"></label>
           <label class="nx-inline" title="Hybrid: Aurora (#c-bc) canvas opacity">Aurora layer <input type="range" id="nx-hybrid-bc-opacity" min="15" max="100" value="100"></label>
           <label class="nx-inline" title="Hybrid: WebGL (#c) canvas opacity">WebGL layer <input type="range" id="nx-hybrid-shader-opacity" min="25" max="100" value="100"></label>
-          <label class="nx-inline" title="GPU particle layer (#c-particles) opacity — stack control like Aurora/WebGL">GPU layer <input type="range" id="nx-hybrid-particles-opacity" min="0" max="100" value="100"></label>
+          <label class="nx-inline" title="MIX stack particle layer (#nx-particula-host) opacity — stack control like Aurora/WebGL">GPU layer <input type="range" id="nx-hybrid-particles-opacity" min="0" max="100" value="100"></label>
           <label class="nx-inline" title="Master for GPU point sprites and optional 2D layer (I/O still toggles GPU sim when this is on)"><input type="checkbox" id="nx-mix-particles" checked> Particles</label>
           <label class="nx-inline" title="Optional 2D canvas mist over #c. Off by default so WebGL GPU particles stay crisp; enable for extra atmosphere."><input type="checkbox" id="nx-mix-proc-ambient"> Hybrid mist layer</label>
           <label class="nx-inline" title="Off by default. When on: same GPU particle sprites as the classic overlay (NDC formula), composited via an FBO after post. See nx-volumetric/README.md."><input type="checkbox" id="nx-volumetric-product"> Volumetric 3D path</label>

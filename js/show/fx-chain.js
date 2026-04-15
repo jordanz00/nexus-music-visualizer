@@ -99,12 +99,12 @@
     var nxp = NX.particles;
     if (nxp && nxp._ready) {
       el.style.display = 'block';
-      el.textContent = 'GPU particles active (NXP).';
+      el.textContent = 'MIX particles active (Particula-derived Three.js).';
       return;
     }
     el.style.display = 'block';
-    if (!nxp) el.textContent = 'GPU particles loading…';
-    else el.textContent = 'GPU particles unavailable (init failed or float textures not supported).';
+    if (!nxp) el.textContent = 'MIX particles loading…';
+    else el.textContent = 'MIX particles unavailable (overlay init failed).';
   }
 
   function syncCheckboxes() {

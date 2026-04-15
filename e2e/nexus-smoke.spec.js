@@ -21,7 +21,7 @@ test.describe('NEXUS smoke', () => {
           window.NX &&
           window.NX.GpuParticles &&
           window.NX.GpuParticles.renderOverlay &&
-          window.NX.GpuParticles.renderOverlay._nxMfxParticles
+          window.NX.GpuParticles.renderOverlay._nxParticula
         );
       },
       null,
@@ -31,10 +31,10 @@ test.describe('NEXUS smoke', () => {
       return {
         hasParticles: !!(window.NX && window.NX.particles),
         ready: !!(window.NX && window.NX.particles && window.NX.particles._ready),
-        hasParticleCanvas: !!document.getElementById('c-particles')
+        hasParticulaHost: !!document.getElementById('nx-particula-host')
       };
     });
-    expect(nx.hasParticleCanvas, '#c-particles layer present').toBeTruthy();
+    expect(nx.hasParticulaHost, '#nx-particula-host layer present').toBeTruthy();
     expect(nx.hasParticles, 'NX.particles object').toBeTruthy();
     if (!nx.ready && typeof console !== 'undefined') {
       console.warn('[e2e] GPU particle sim not _ready (software GL / float FBO); overlay hook verified.');

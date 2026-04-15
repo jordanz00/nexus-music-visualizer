@@ -3,7 +3,7 @@
  * nexus-gpu-particles-stub.js — Replaces removed nexus-gpu-particles.js.
  * Keeps NX.GpuParticles / NX.VolumetricParticles symbols so engine + volumetric + FxChain
  * stay stable; sim is inert (integrated volumetric path stays off until a new sim source exists).
- * Screen GPU particles: js/particles.js (NX.particles) → dedicated #c-particles GL layer.
+ * Screen GPU particles: js/particula/nexus-entry.mjs (NX.particles) → #nx-particula-host (Three.js r136).
  */
 (function () {
   window.NX = window.NX || {};

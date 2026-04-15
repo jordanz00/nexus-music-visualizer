@@ -45,7 +45,6 @@ const NX_SCRIPTS = [
   'js/nexus-film-lut.js',
   'js/post.js',
   'js/nexus-gpu-particles-stub.js',
-  'js/particles.js',
   'js/nx-volumetric/preset-resolve.js',
   'js/nx-volumetric/volumetric-fx.js',
   'js/nx-bpm-timeline.js',
