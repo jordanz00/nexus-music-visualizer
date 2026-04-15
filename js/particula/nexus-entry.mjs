@@ -13,11 +13,7 @@ import {
   getAudioData,
   getSmoothVolumeNXS
 } from './nexus-audio.mjs';
-import {
-  tickSpheres,
-  reinitializeParticlesForSphere,
-  updateColorsForSphere
-} from './nexus-spheres-core.mjs';
+import { tickSpheres, reinitializeParticlesForSphere } from './nexus-spheres-core.mjs';
 
 const PRESETS_STORAGE_KEY = 'nexusParticulaPresets';
 const PRESETS_JSON_URL = new URL('./data/particula_presets.json', import.meta.url);
@@ -126,10 +122,6 @@ function buildPresetToolbar(presetHost, filePresets, presets, spheres, mainGui, 
       if (!slice) return;
       const previousParticleCount = sphere.params.particleCount;
       Object.assign(sphere.params, JSON.parse(JSON.stringify(slice)));
-      const cycleDefaults = { colorCycleSpeed: 0.62, colorCycleSpread: 0.4, colorCycleAudio: 0.58 };
-      for (const k of Object.keys(cycleDefaults)) {
-        if (typeof sphere.params[k] !== 'number') sphere.params[k] = cycleDefaults[k];
-      }
       if (!('minFrequencyBeat' in sphere.params)) {
         sphere.params.minFrequencyBeat = sphere.params.minFrequency;
       }
@@ -162,12 +154,6 @@ function buildPresetToolbar(presetHost, filePresets, presets, spheres, mainGui, 
       sphere.particleSystem.visible = sphere.params.enabled;
       const sphereFolder = mainGui.__folders[`Sphere ${index + 1}`];
       if (sphereFolder) sphereFolder.__controllers.forEach((c) => c.updateDisplay());
-    });
-    spheres.forEach((sphere) => {
-      if ((sphere.params.colorCycleSpeed || 0) < 0.0001) {
-        updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors);
-        sphere.geometry.attributes.color.needsUpdate = true;
-      }
     });
     mainGui.updateDisplay();
   }
@@ -324,8 +310,8 @@ async function boot() {
   const fogParams = {
     enabled: true,
     color: '#000000',
-    near: 2.55,
-    far: 4.45
+    near: 2.7,
+    far: 3.7
   };
   function updateFog() {
     if (!fogParams.enabled) {
@@ -344,7 +330,7 @@ async function boot() {
 
   const camParams = {
     roam: 1,
-    distance: 2.28,
+    distance: 2.52,
     swayAmp: 0.28,
     pitchWiggle: 0.15,
     beatNod: 0.18
@@ -394,7 +380,7 @@ async function boot() {
   const defaultParams = spheres.map((s) => JSON.parse(JSON.stringify(s.params)));
 
   mainGui
-    .add({ globalParticleCount: 62000 }, 'globalParticleCount', 5000, 150000)
+    .add({ globalParticleCount: 20000 }, 'globalParticleCount', 1000, 100000)
     .step(1000)
     .onChange((value) => {
       spheres.forEach((sphere, index) => {
