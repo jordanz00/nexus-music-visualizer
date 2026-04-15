@@ -17,8 +17,10 @@
    * NX.audio (audio.js) exposes tick/startMic only — not band scalars.
    * GPU toggle: #nx-gpu-particles; mix master: #nx-mix-particles → NX.S flags.
    * Main loop: NX.loop (requestAnimationFrame); overlay tail calls GpuParticles.renderOverlay.
+   * Prefer dedicated #c-particles WebGL so MIX stack opacity on #c / #c-bc never hides sprites.
    */
   var CFG = {
+    particlesCanvasId: 'c-particles',
     canvasId: 'c',
     audioSource: 'S',
     audio: {
@@ -37,9 +39,14 @@
 
   var PRESETS = {
     Default: {
-      count: 65536,
-      physics: { gravity: 0, drag: 0.978, curl: 0.6, attract: 0.15, repel: 0.1, vortex: 0.3, blast: 0.1, spread: 2.2, speed: 0.35, life: 1, turbFreq: 0.5 },
-      visual: { size: 2.8, glow: 1.2, palette: 0, opacity: 0.82, colorCycle: 0.3, saturation: 0.85, brightness: 0.9 }
+      count: 98304,
+      physics: { gravity: 0, drag: 0.972, curl: 0.72, attract: 0.18, repel: 0.12, vortex: 0.38, blast: 0.12, spread: 2.35, speed: 0.42, life: 1.05, turbFreq: 0.52, ocean: 0.55, fluid: 0.65 },
+      visual: { size: 3.1, glow: 1.35, palette: 0, opacity: 0.9, colorCycle: 0.42, saturation: 0.92, brightness: 0.95 }
+    },
+    FluidShowcase: {
+      count: 196608,
+      physics: { gravity: -0.00012, drag: 0.987, curl: 1.18, attract: 0.26, repel: 0.2, vortex: 0.62, blast: 0.14, spread: 2.85, speed: 0.52, life: 1.28, turbFreq: 0.58, ocean: 1.38, fluid: 1.12 },
+      visual: { size: 3.55, glow: 1.72, palette: 3, opacity: 0.96, colorCycle: 0.62, saturation: 1, brightness: 1.06 }
     },
     Trance: {
       count: 98304,
@@ -82,9 +89,9 @@
       visual: { size: 2, glow: 1, palette: 2, opacity: 0.8, colorCycle: 0.4, saturation: 0.9, brightness: 1 }
     },
     Ocean: {
-      count: 65536,
-      physics: { gravity: 0.0003, drag: 0.99, curl: 0.4, attract: 0.1, repel: 0, vortex: 0.2, blast: 0.04, spread: 3.2, speed: 0.22, life: 1.7, turbFreq: 0.25 },
-      visual: { size: 3.5, glow: 1.4, palette: 3, opacity: 0.6, colorCycle: 0.12, saturation: 0.7, brightness: 0.9 }
+      count: 131072,
+      physics: { gravity: 0.0002, drag: 0.988, curl: 0.55, attract: 0.14, repel: 0, vortex: 0.28, blast: 0.06, spread: 3.25, speed: 0.28, life: 1.65, turbFreq: 0.32, ocean: 1.05, fluid: 0.88 },
+      visual: { size: 3.65, glow: 1.55, palette: 3, opacity: 0.78, colorCycle: 0.22, saturation: 0.82, brightness: 0.94 }
     },
     Gravity: {
       count: 131072,
@@ -112,7 +119,7 @@
     'uniform sampler2D uVel;',
     'uniform float uBass,uMid,uHigh,uBeat,uPhase,uCentroid,uFlux,uTime,uSeedOff;',
     'uniform float uGravity,uDrag,uCurl,uAttract,uRepel,uVortex;',
-    'uniform float uBlast,uSpread,uSpeed,uLife,uTurbFreq;',
+    'uniform float uBlast,uSpread,uSpeed,uLife,uTurbFreq,uOcean,uFluid;',
     'float h21(vec2 p){ p=fract(p*vec2(127.1,311.7)); p+=dot(p,p+19.19); return fract(p.x*p.y); }',
     'float h31(vec3 p){ return h21(p.xy+p.z*0.631); }',
     'vec3 h33(vec3 p){ return vec3(h31(p),h31(p+4.71),h31(p+9.37)); }',
@@ -167,6 +174,13 @@
     '  v.y-=(uGravity-uBass*0.00032)/mass;',
     '  if(d0<0.72&&d0>0.004) v+=normalize(p)*uRepel*0.009*(1.0-d0/0.72);',
     '  if(uVortex>0.01){ vec2 xz=normalize(vec2(-p.z,p.x)+vec2(0.0001)); v.xz+=xz*uVortex*0.0066*(1.0+uBass*0.52); }',
+    '  float wavX=sin(p.x*2.18+uTime*(0.58+0.62*uBass)+uPhase*1.1);',
+    '  float wavZ=cos(p.z*1.93-uTime*(0.51+0.48*uMid)+uCentroid*2.4);',
+    '  v.x+=wavX*uOcean*(0.0038+0.019*uMid)*(1.0+uFlux*0.55);',
+    '  v.z+=wavZ*uOcean*(0.0032+0.017*uHigh)*(1.0+uBeat*0.65);',
+    '  v.y+=sin(dot(p.xz,vec2(1.12,0.87))*2.1-uTime*1.15)*uOcean*(0.0016+0.009*uBass);',
+    '  float div=(snoise(p*0.64+uTime*0.095)-snoise(p*0.64))*uFluid;',
+    '  v-=normalize(p+vec3(0.0001))*div*0.0026;',
     '  v+=normalize(p+vec3(0.0001))*sin(uPhase*6.28318)*0.0025*uMid;',
     '  float sa=uTime*(1.35+uCentroid*4.8);',
     '  v.xz+=vec2(cos(sa),sin(sa))*uCentroid*0.0034;',
@@ -319,7 +333,7 @@
 
   function countToTexSize(n) {
     var target = Math.round((n || 65536) * getQualityScale());
-    var sizes = [64, 96, 128, 192, 256, 320, 384, 512];
+    var sizes = [64, 96, 128, 192, 256, 320, 384, 448, 512];
     for (var i = 0; i < sizes.length; i++) {
       if (sizes[i] * sizes[i] >= target) return sizes[i];
     }
@@ -337,7 +351,7 @@
     this._count = 65536;
     this._seed = Math.random();
     this._rebuild = false;
-    this._p = { gravity: 0, drag: 0.978, curl: 0.6, attract: 0.15, repel: 0.1, vortex: 0.3, blast: 0.1, spread: 2.2, speed: 0.35, life: 1, turbFreq: 0.5 };
+    this._p = { gravity: 0, drag: 0.978, curl: 0.6, attract: 0.15, repel: 0.1, vortex: 0.3, blast: 0.1, spread: 2.2, speed: 0.35, life: 1, turbFreq: 0.5, ocean: 0.5, fluid: 0.6 };
     this._pT = Object.assign({}, this._p);
     this._v = { size: 2.8, glow: 1.2, palette: 0, opacity: 0.82, colorCycle: 0.3, saturation: 0.85, brightness: 0.9 };
     this._lerpSpd = 0.028;
@@ -345,15 +359,25 @@
   }
 
   NexusParticles.prototype.init = function () {
-    var gl = win.NX && NX.gl ? NX.gl : null;
-    var canvas = gl && gl.canvas ? gl.canvas : document.getElementById(CFG.canvasId);
+    var pEl = document.getElementById(CFG.particlesCanvasId);
+    var canvas = pEl || document.getElementById(CFG.canvasId);
+    var gl = null;
+    if (pEl) {
+      gl = pEl.getContext('webgl', { alpha: true, premultipliedAlpha: false, antialias: false, stencil: false }) ||
+        pEl.getContext('experimental-webgl', { alpha: true, premultipliedAlpha: false });
+    }
+    if (!gl && win.NX && NX.gl) {
+      gl = NX.gl;
+      canvas = gl.canvas || canvas;
+    }
+    if (!gl && canvas) {
+      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false }) ||
+        canvas.getContext('experimental-webgl');
+    }
     if (!canvas && !gl) {
       var self = this;
       setTimeout(function () { self.init(); }, 400);
       return;
-    }
-    if (!gl) {
-      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false }) || canvas.getContext('experimental-webgl');
     }
     if (!gl) {
       if (typeof console !== 'undefined' && console.warn) console.warn('[NXP] WebGL not available');
@@ -406,9 +430,12 @@
       try { NX.FxChain.updateGpuParticlesStatus(); } catch (eFx) { /* ignore */ }
     }
     if (typeof console !== 'undefined' && console.info) {
-      console.info('[NXP] ✓ ' + this._count.toLocaleString() + ' particles ready (MFX-style overlay)');
+      console.info('[NXP] ✓ ' + this._count.toLocaleString() + ' particles on ' + (this._canvas && this._canvas.id ? '#' + this._canvas.id : 'canvas'));
     }
   };
+
+  /** Engine resize() already set bitmap CSS size; no GL rebuild required here. */
+  NexusParticles.prototype.onHostResize = function () { /* viewport follows this._canvas on next render */ };
 
   NexusParticles.prototype._sh = function (src, type) {
     var gl = this._gl;
@@ -549,6 +576,8 @@
     this._pT.attract = ph.attract; this._pT.repel = ph.repel; this._pT.vortex = ph.vortex;
     this._pT.blast = ph.blast; this._pT.spread = ph.spread; this._pT.speed = ph.speed;
     this._pT.life = ph.life; this._pT.turbFreq = ph.turbFreq;
+    this._pT.ocean = typeof ph.ocean === 'number' ? ph.ocean : 0.45;
+    this._pT.fluid = typeof ph.fluid === 'number' ? ph.fluid : 0.55;
     Object.assign(this._v, vis);
     if (instant) Object.assign(this._p, this._pT);
     var newSz = countToTexSize(pr.count);
@@ -572,6 +601,8 @@
     u1('uAttract', p.attract); u1('uRepel', p.repel); u1('uVortex', p.vortex);
     u1('uBlast', p.blast); u1('uSpread', p.spread); u1('uSpeed', p.speed);
     u1('uLife', p.life); u1('uTurbFreq', p.turbFreq);
+    u1('uOcean', typeof p.ocean === 'number' ? p.ocean : 0.5);
+    u1('uFluid', typeof p.fluid === 'number' ? p.fluid : 0.6);
   };
 
   NexusParticles.prototype._setPosUniforms = function (prog, audio) {
@@ -590,6 +621,11 @@
     var mix = document.getElementById(CFG.mixParticlesCheckboxId);
     if (gpu) S.nexusGpuParticlesEnabled = !!gpu.checked;
     if (mix) S.nexusMixParticlesEnabled = !!mix.checked;
+    var forced = NX.SceneManager && typeof NX.SceneManager.isParticleStackForced === 'function' && NX.SceneManager.isParticleStackForced();
+    if (forced) {
+      this.enabled = S.nexusMixParticlesEnabled !== false;
+      return;
+    }
     if (typeof S.nexusGpuParticlesEnabled === 'boolean') this.enabled = S.nexusGpuParticlesEnabled;
     if (typeof S.nexusMixParticlesEnabled === 'boolean' && !S.nexusMixParticlesEnabled) this.enabled = false;
   };
@@ -643,6 +679,8 @@
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this._canvas.width, this._canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this._pRender);
     var depthWas = gl.isEnabled(gl.DEPTH_TEST);
     var depthMaskWas = gl.getParameter(gl.DEPTH_WRITEMASK);
@@ -828,6 +866,10 @@
       cb._nxMfxWire = true;
       function sync() {
         if (NX.S) NX.S.nexusGpuParticlesEnabled = !!cb.checked;
+        if (NX.SceneManager && typeof NX.SceneManager.isParticleStackForced === 'function' && NX.SceneManager.isParticleStackForced()) {
+          sys.enabled = NX.S && NX.S.nexusMixParticlesEnabled !== false;
+          return;
+        }
         sys.enabled = !!cb.checked;
         if (NX.S && typeof NX.S.nexusMixParticlesEnabled === 'boolean' && !NX.S.nexusMixParticlesEnabled) sys.enabled = false;
       }
@@ -841,6 +883,10 @@
       cb._nxMfxWire = true;
       cb.addEventListener('change', function () {
         if (NX.S) NX.S.nexusMixParticlesEnabled = !!cb.checked;
+        if (NX.SceneManager && typeof NX.SceneManager.isParticleStackForced === 'function' && NX.SceneManager.isParticleStackForced()) {
+          sys.enabled = NX.S && NX.S.nexusMixParticlesEnabled !== false;
+          return;
+        }
         if (NX.S && !NX.S.nexusMixParticlesEnabled) sys.enabled = false;
         else if (document.getElementById(CFG.gpuCheckboxId)) {
           sys.enabled = !!document.getElementById(CFG.gpuCheckboxId).checked;

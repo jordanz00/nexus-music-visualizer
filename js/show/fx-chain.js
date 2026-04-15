@@ -90,7 +90,8 @@
     var el = document.getElementById('nx-gpu-particles-status');
     if (!el) return;
     var S = NX.S;
-    if (!S || !S.nexusGpuParticlesEnabled || S.nexusMixParticlesEnabled === false) {
+    var forced = NX.SceneManager && typeof NX.SceneManager.isParticleStackForced === 'function' && NX.SceneManager.isParticleStackForced();
+    if (!S || S.nexusMixParticlesEnabled === false || (!S.nexusGpuParticlesEnabled && !forced)) {
       el.textContent = '';
       el.style.display = 'none';
       return;

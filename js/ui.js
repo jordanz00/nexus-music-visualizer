@@ -229,6 +229,8 @@
     if (hBc) hBc.value = String(Math.round((typeof S.hybridBcOpacity === 'number' ? S.hybridBcOpacity : 1) * 100));
     var hSh = document.getElementById('nx-hybrid-shader-opacity');
     if (hSh) hSh.value = String(Math.round((typeof S.hybridShaderOpacity === 'number' ? S.hybridShaderOpacity : 1) * 100));
+    var hPt = document.getElementById('nx-hybrid-particles-opacity');
+    if (hPt) hPt.value = String(Math.round((typeof S.hybridParticlesOpacity === 'number' ? S.hybridParticlesOpacity : 1) * 100));
     var mixPart = document.getElementById('nx-mix-particles');
     if (mixPart) mixPart.checked = S.nexusMixParticlesEnabled !== false;
     var mixProc = document.getElementById('nx-mix-proc-ambient');
@@ -265,7 +267,7 @@
     var bcHud = document.getElementById('bc-preset-hud');
     if (bcHud) {
       var vm = st.visualMode || 'hybrid';
-      if ((vm === 'butterchurn' || vm === 'hybrid') && st.bcLastPresetKey) {
+      if ((vm === 'butterchurn' || vm === 'hybrid' || vm === 'hybrid_particles' || vm === 'butterchurn_particles' || vm === 'particles_showcase') && st.bcLastPresetKey) {
         var nm = st.bcLastPresetKey;
         bcHud.textContent = nm.length > 36 ? nm.slice(0, 34) + '…' : nm;
         bcHud.style.display = '';
@@ -876,6 +878,13 @@
     if (nxHybSh) {
       nxHybSh.addEventListener('input', function () {
         S.hybridShaderOpacity = Math.max(0.18, Math.min(1, (parseInt(this.value, 10) || 100) / 100));
+        if (NX.SceneManager && NX.SceneManager.syncDOM) NX.SceneManager.syncDOM();
+      });
+    }
+    var nxHybPt = document.getElementById('nx-hybrid-particles-opacity');
+    if (nxHybPt) {
+      nxHybPt.addEventListener('input', function () {
+        S.hybridParticlesOpacity = Math.max(0, Math.min(1, (parseInt(this.value, 10) || 100) / 100));
         if (NX.SceneManager && NX.SceneManager.syncDOM) NX.SceneManager.syncDOM();
       });
     }

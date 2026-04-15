@@ -26,7 +26,9 @@
       NX.SceneManager.tickQueue();
     }
     var snap = NX.AudioEngine ? NX.AudioEngine.getSnapshot() : {};
-    if ((S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') && NX.VisualEngineManager && NX.VisualEngineManager.isReady()) {
+    var vm0 = S.visualMode || 'hybrid';
+    var bcStack = vm0 === 'butterchurn' || vm0 === 'hybrid' || vm0 === 'hybrid_particles' || vm0 === 'butterchurn_particles' || vm0 === 'particles_showcase';
+    if (bcStack && NX.VisualEngineManager && NX.VisualEngineManager.isReady()) {
       var vd = typeof S._visualDrive === 'number' ? S._visualDrive : 0;
       if (vd < 0) vd = 0;
       if (vd > 1) vd = 1;
@@ -56,7 +58,8 @@
       return;
     }
     if (!NX.VisualEngineManager.isReady()) {
-      if (S.visualMode === 'butterchurn' || S.visualMode === 'hybrid') {
+      var vm1 = S.visualMode || 'hybrid';
+      if (vm1 === 'butterchurn' || vm1 === 'hybrid' || vm1 === 'hybrid_particles' || vm1 === 'butterchurn_particles' || vm1 === 'particles_showcase') {
         NX.VisualEngineManager.initVisualizer();
         NX.VisualEngineManager.connectAudio();
       }

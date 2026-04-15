@@ -106,7 +106,7 @@ window.NX = window.NX || {};
     postChain: { bloom: true, streak: true, grade: true, trails: true, kaleido: true, glitch: true, godray: true },
     /** 0–1 volumetric god-ray strength (post pass; I/O tab). */
     nexusGodRayMix: 0.32,
-    /** GPU particle layer (I/O tab); drives js/particles.js (NX.particles) on #c. */
+    /** GPU particle layer (I/O tab); drives js/particles.js (NX.particles) on #c-particles (dedicated GL). */
     nexusGpuParticlesEnabled: true,
     /** Mix tab master: when false, GPU + procedural particle layers are hidden (independent of I/O GPU checkbox). */
     nexusMixParticlesEnabled: true,
@@ -197,6 +197,8 @@ window.NX = window.NX || {};
     /** Hybrid stack recipe: layer opacities 0–1 (SceneManager). */
     hybridBcOpacity: 1,
     hybridShaderOpacity: 1,
+    /** Mix tab: #c-particles GPU sprite layer opacity (SceneManager + particles.js). */
+    hybridParticlesOpacity: 1,
     /** Homage shaders: [0]=YNI click state, [1]=MITD breath, [2]=echo phase, [3]=unused — see HM in scenes.js + nexus-homage-bridge.js */
     homageHM: [0, 0, 0, 0],
     /** AudioWorklet RMS 0–1 (smoothed) — see audio.js + js/audio-meter-processor.js */
@@ -273,6 +275,16 @@ window.NX = window.NX || {};
     }
     C.width = rw0; C.height = rh0;
     C.style.width = S.W + 'px'; C.style.height = S.H + 'px';
+    var cPx = document.getElementById('c-particles');
+    if (cPx) {
+      cPx.width = rw0;
+      cPx.height = rh0;
+      cPx.style.width = S.W + 'px';
+      cPx.style.height = S.H + 'px';
+    }
+    if (NX.particles && typeof NX.particles.onHostResize === 'function') {
+      try { NX.particles.onHostResize(rw0, rh0, S.W, S.H); } catch (ePr) { /* ignore */ }
+    }
     rawW = C.width; rawH = C.height;
     if (pendingRenderScale != null) { renderScale = pendingRenderScale; pendingRenderScale = null; }
     var effScale = S.nexusPerfLock ? Math.min(renderScale, 0.56) : renderScale;
@@ -805,6 +817,12 @@ window.NX = window.NX || {};
   /* ---- Main loop --------------------------------------------------- */
   var _lastTime = performance.now();
 
+  /** Mix stack + I/O toggles: skip GpuParticles.renderOverlay when user chose a stack without GPU particles. */
+  function nxGpuParticlesOverlayAllowed() {
+    if (!NX.SceneManager || typeof NX.SceneManager.shouldRenderGpuParticles !== 'function') return true;
+    return NX.SceneManager.shouldRenderGpuParticles();
+  }
+
   /** Reset GL state so fullscreen passes draw reliably (extracted for clarity). */
   function resetGlStateForCompositePass() {
     try {
@@ -987,13 +1005,13 @@ window.NX = window.NX || {};
       try {
         volFx.compositeToScreen(C.width | 0, C.height | 0);
       } catch (eVolC) { /* ignore */ }
-    } else if (NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
+    } else if (nxGpuParticlesOverlayAllowed() && NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
       try {
         NX.GpuParticles.renderOverlay();
       } catch (eGp) { /* ignore */ }
     }
-    /* Screen-space GPU particles (MFX overlay): must run after volumetric composite too, or they never draw. */
-    if (volOk && NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
+    /* Screen-space GPU particles: dedicated #c-particles layer; must run after volumetric composite too. */
+    if (volOk && nxGpuParticlesOverlayAllowed() && NX.GpuParticles && typeof NX.GpuParticles.renderOverlay === 'function') {
       try {
         NX.GpuParticles.renderOverlay();
       } catch (eGp2) { /* ignore */ }
