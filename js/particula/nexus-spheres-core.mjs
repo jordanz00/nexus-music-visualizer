@@ -66,6 +66,12 @@ export function reinitializeParticlesForSphere(THREE, sphere, sphereParams, sphe
   };
 }
 
+const _hslA = { h: 0, s: 0, l: 0 };
+const _hslB = { h: 0, s: 0, l: 0 };
+const _cShiftA = new THREE.Color();
+const _cShiftB = new THREE.Color();
+const _cMix = new THREE.Color();
+
 export function updateColorsForSphere(THREE, sphereParams, sphereGeometry, sphereColors) {
   const color1 = new THREE.Color(sphereParams.colorStart);
   const color2 = new THREE.Color(sphereParams.colorEnd);
@@ -78,11 +84,43 @@ export function updateColorsForSphere(THREE, sphereParams, sphereGeometry, spher
   sphereGeometry.attributes.color.needsUpdate = true;
 }
 
+/**
+ * Live gradient with hue drift + optional spread along particle index (beat can modulate speed).
+ */
+export function updateColorsAnimated(THREE, sphereParams, sphereColors, hueOffset, beatVisual) {
+  const pc = sphereParams.particleCount;
+  if (pc < 1) return;
+  const spread = typeof sphereParams.colorCycleSpread === 'number' ? sphereParams.colorCycleSpread : 0.32;
+  const audio = typeof sphereParams.colorCycleAudio === 'number' ? sphereParams.colorCycleAudio : 0.55;
+  const bv = typeof beatVisual === 'number' ? beatVisual : 0;
+  const hKick = (hueOffset + bv * audio * 0.14) % 1;
+  const cA = new THREE.Color(sphereParams.colorStart);
+  const cB = new THREE.Color(sphereParams.colorEnd);
+  cA.getHSL(_hslA);
+  cB.getHSL(_hslB);
+  const invPc = 1 / Math.max(1, pc - 1);
+  for (let i = 0; i < pc; i++) {
+    const t = i * invPc;
+    const twist = t * spread * 0.42;
+    _cShiftA.setHSL((_hslA.h + hKick + twist) % 1, _hslA.s, _hslA.l);
+    _cShiftB.setHSL((_hslB.h + hKick + twist * 0.85) % 1, _hslB.s, _hslB.l);
+    _cMix.r = _cShiftA.r * (1 - t) + _cShiftB.r * t;
+    _cMix.g = _cShiftA.g * (1 - t) + _cShiftB.g * t;
+    _cMix.b = _cShiftA.b * (1 - t) + _cShiftB.b * t;
+    const i3 = i * 3;
+    sphereColors[i3] = _cMix.r;
+    sphereColors[i3 + 1] = _cMix.g;
+    sphereColors[i3 + 2] = _cMix.b;
+  }
+}
+
 export function tickSpheres(ctx) {
   const {
     THREE, noise, beatManager, spheres, getAudioData, fillFrequencyBufferFromNXS,
     getSmoothVolumeNXS, currentTime, deltaTime
   } = ctx;
+  const S = typeof window !== 'undefined' && window.NX && window.NX.S ? window.NX.S : {};
+  const beatVisual = typeof S.beatVisual === 'number' ? S.beatVisual : 0;
   const frequencies = fillFrequencyBufferFromNXS();
   beatManager.update(deltaTime);
 
@@ -184,5 +222,14 @@ export function tickSpheres(ctx) {
     }
     sphere.particleSystem.rotation.y += sphere.lastRotationSpeed;
     if (shouldUpdate) sphere.lastValidVolume = smoothVolume;
+
+    const cycleSpeed = typeof params.colorCycleSpeed === 'number' ? params.colorCycleSpeed : 0;
+    if (cycleSpeed > 0.0001) {
+      const a = typeof params.colorCycleAudio === 'number' ? params.colorCycleAudio : 0.55;
+      const step = deltaTime * cycleSpeed * (0.38 + beatVisual * a * 0.55);
+      sphere._colorHueAcc = ((sphere._colorHueAcc || 0) + step) % 1;
+      updateColorsAnimated(THREE, params, sphere.colors, sphere._colorHueAcc, beatVisual);
+      geometry.attributes.color.needsUpdate = true;
+    }
   });
 }

@@ -39,14 +39,14 @@ const defaultFrequencies = [
 
 const sphereParams = { 
 enabled: index === 0, 
-sphereRadius: 1.0, 
-innerSphereRadius: 0.25, 
+sphereRadius: 1.52, 
+innerSphereRadius: 0.18, 
 rotationSpeed: 0.001, 
 rotationSpeedMin: 0, 
 rotationSpeedMax: 0.065, 
 rotationSmoothness: 0.3, 
-particleCount: 20000, 
-particleSize: 0.003, 
+particleCount: index === 0 ? 68000 : 42000, 
+particleSize: 0.0058, 
 particleLifetime: 3.0, 
 minFrequency: defaultFrequencies[index]?.minFrequency || 0, 
 maxFrequency: defaultFrequencies[index]?.maxFrequency || 22050, 
@@ -74,10 +74,13 @@ ellipsoidEz: 0.5,
 torusMajorRatio: 0.72,
 torusTubeRatio: 0.22,
 ringThickness: 0.04,
-floatSpread: 0.78,
+floatSpread: 1.05,
 floatSpeed: 0.11,
 noiseTempoSync: 0.48,
-noiseBpmSlow: 0.36
+noiseBpmSlow: 0.36,
+colorCycleSpeed: 0.62,
+colorCycleSpread: 0.4,
+colorCycleAudio: 0.58
 }; 
 
 const sphereGeometry = new THREE.BufferGeometry(); 
@@ -123,9 +126,10 @@ const sphereMaterial = new THREE.PointsMaterial({
 size: sphereParams.particleSize, 
 vertexColors: true, 
 transparent: true, 
-opacity: 0.8, 
+opacity: 0.96, 
 blending: THREE.AdditiveBlending, 
-fog: true 
+fog: true,
+depthWrite: false
 }); 
 
 const sphereParticleSystem = new THREE.Points(sphereGeometry, sphereMaterial); 
@@ -167,7 +171,7 @@ updateColorsForSphere(THREE, sphereParams, sphereGeometry, sphereColors);
 // GUI folder 
 const sphereFolder = mainGui.addFolder('Sphere ' + (index + 1)); 
 
-sphereFolder.add(sphere.params, 'particleCount', 1000, 100000).step(1000) 
+sphereFolder.add(sphere.params, 'particleCount', 4000, 150000).step(1000) 
 .onChange(() => { 
 const { 
 newPositions, 
@@ -194,7 +198,7 @@ sphere.geometry.attributes.position.needsUpdate = true;
 sphere.geometry.attributes.color.needsUpdate = true; 
 }); 
 
-sphereFolder.add(sphere.params, 'particleSize', 0.001, 0.01).step(0.001) 
+sphereFolder.add(sphere.params, 'particleSize', 0.0015, 0.018).step(0.0005) 
 .onChange(value => { 
 sphere.material.size = value; 
 }); 
@@ -332,9 +336,22 @@ sphereFolder.add(sphere.peakDetection, 'minTimeBetweenPeaks', 50, 5000).step(10)
 
 sphereFolder.add(sphere.params, 'turbulenceStrength', 0, 0.03).step(0.0001); 
 sphereFolder.addColor(sphere.params, 'colorStart') 
-.onChange(() => updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors)); 
+.onChange(() => {
+if ((sphere.params.colorCycleSpeed || 0) < 0.0001) {
+updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors);
+}
+}); 
 sphereFolder.addColor(sphere.params, 'colorEnd') 
-.onChange(() => updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors)); 
+.onChange(() => {
+if ((sphere.params.colorCycleSpeed || 0) < 0.0001) {
+updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors);
+}
+}); 
+sphereFolder.add(sphere.params, 'colorCycleSpeed', 0, 2.2).step(0.02).name('Color cycle').onChange((v) => {
+if (v < 0.0001) updateColorsForSphere(THREE, sphere.params, sphere.geometry, sphere.colors);
+});
+sphereFolder.add(sphere.params, 'colorCycleSpread', 0, 1).step(0.02).name('Cycle spread');
+sphereFolder.add(sphere.params, 'colorCycleAudio', 0, 1).step(0.02).name('Cycle ↔ beat');
 
 sphereFolder.add(sphereParams, 'minFrequencyBeat', 0, 22050).step(1).name('Min Freq Beat (Hz)') 
 .onChange(value => sphereParams.minFrequencyBeat = value); 
